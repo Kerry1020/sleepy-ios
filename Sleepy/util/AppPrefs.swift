@@ -24,6 +24,10 @@ final class AppPrefs {
     static let KEY_LANG = "language"
     static let KEY_DISPLAY_MODE = "display_mode" // "node" or "time"
     static let KEY_GRID_SUB_INFO = "grid_sub_info" // "room" / "teacher" / "none" — 网格卡片副信息(周视图网格卡课程名下方那行;左栏已有节次,故此处不再显示节次/时间)
+    static let KEY_CONFLICT_STYLE = "conflict_style" // "stack"/"fold"/"rail" — 冲突课程显示样式,默认 "rail"(← KEY_CONFLICT_STYLE v7.10.16s)
+    static let KEY_CONFLICT_TOP_INSET = "conflict_top_inset" // Double dp — 冲突顶卡收窄量: A=右/下偏移 d, C=右缘让宽; 滑杆 4..20dp, 默认 7dp(用户实测定版)
+    static let KEY_CONFLICT_FOLD_SIZE = "conflict_fold_size" // Double dp — 折角幅度(fold 样式): 折痕直角边长, 视觉符号与命中区共用; 默认 16dp
+    static let KEY_CONFLICT_DEFAULT_TOP = "conflict_default_top" // JSON {"day:startNode:step": layerRepId} — 冲突簇默认置顶图层
     static let KEY_SHOW_DATE = "show_date"       // boolean
     static let KEY_VISIBLE_DAYS = "visible_days" // "1,2,3,4,5,6,7"
     static let KEY_VERT_PUNCT_REPLACE = "vert_punct_replace" // bool default false (方案B开关)
@@ -177,6 +181,84 @@ final class AppPrefs {
         sp().set(value, forKey: Self.KEY_GRID_SUB_INFO)
     }
 
+    // ===== 冲突课程显示样式：叠层 / 折角 / 竖轨(← v7.10.16s) =====
+
+    /// 滑杆量程/默认值(← CONFLICT_TOP_INSET_RANGE / CONFLICT_FOLD_SIZE_RANGE)
+    static let CONFLICT_TOP_INSET_RANGE: ClosedRange<Double> = 4...20
+    static let CONFLICT_TOP_INSET_DEFAULT: Double = 7
+    static let CONFLICT_FOLD_SIZE_RANGE: ClosedRange<Double> = 8...28
+    static let CONFLICT_FOLD_SIZE_DEFAULT: Double = 16
+
+    func getConflictStyle() -> String { sp().string(forKey: Self.KEY_CONFLICT_STYLE) ?? "rail" }
+
+    func setConflictStyle(_ value: String) {
+        precondition(value == "stack" || value == "fold" || value == "rail")
+        sp().set(value, forKey: Self.KEY_CONFLICT_STYLE)
+    }
+
+    // ===== 冲突顶层卡收窄量(A 偏移 d / C 右缘让宽共用,用户可调) =====
+
+    func getConflictTopInset() -> Double {
+        let v = sp().double(forKey: Self.KEY_CONFLICT_TOP_INSET)
+        return v == 0 ? Self.CONFLICT_TOP_INSET_DEFAULT : v
+    }
+
+    func setConflictTopInset(_ value: Double) {
+        precondition(Self.CONFLICT_TOP_INSET_RANGE.contains(value))
+        sp().set(value, forKey: Self.KEY_CONFLICT_TOP_INSET)
+    }
+
+    // ===== 冲突折角幅度(fold 样式专有) — 折痕直角边长,视觉/命中区同一真值 =====
+
+    func getConflictFoldSize() -> Double {
+        let v = sp().double(forKey: Self.KEY_CONFLICT_FOLD_SIZE)
+        return v == 0 ? Self.CONFLICT_FOLD_SIZE_DEFAULT : v
+    }
+
+    func setConflictFoldSize(_ value: Double) {
+        precondition(Self.CONFLICT_FOLD_SIZE_RANGE.contains(value))
+        sp().set(value, forKey: Self.KEY_CONFLICT_FOLD_SIZE)
+    }
+
+    // ===== 冲突簇默认置顶图层 =====
+    // JSON Map<clusterKey, layerRepId>;内存真相源(@Published)保瞬时更新 —
+    // 点击 → set 同帧刷 UI(用户 2026-09-02:「勾选的那一瞬间课表就应该完成置顶更新」),
+    // UserDefaults 落盘异步不驱动 UI(← StateFlow 瞬时通道, v7.10.2)。
+
+    /// 冲突默认置顶内存真相源(实例级 — AppPrefs 单例,与 Kotlin object 对齐)
+    private let conflictDefaultTopSubject = ConflictDefaultTopStore.shared
+
+    func getConflictDefaultTop() -> [String: Int64] {
+        conflictDefaultTopSubject.map
+    }
+
+    func setConflictDefaultTop(_ map: [String: Int64]) {
+        conflictDefaultTopSubject.map = map
+        // ← encodeDefaultTopMap: JSONEncoder 过 Dictionary[String: Int64]
+        if let data = try? JSONEncoder().encode(map) {
+            sp().set(data, forKey: Self.KEY_CONFLICT_DEFAULT_TOP)
+        } else {
+            sp().removeObject(forKey: Self.KEY_CONFLICT_DEFAULT_TOP)
+        }
+    }
+
+    /// 修改单个 clusterKey;传 nil = 删除该键(回退系统默认)。
+    func putConflictDefaultTop(_ clusterKey: String, _ layerRepId: Int64?) {
+        var current = getConflictDefaultTop()
+        if let id = layerRepId { current[clusterKey] = id } else { current.removeValue(forKey: clusterKey) }
+        setConflictDefaultTop(current)
+    }
+
+    /// 冷启动加载磁盘值进内存真相源 — 幂等(磁盘值与内存一致时不发射)。
+    func primeConflictDefaultTop() {
+        guard let data = sp().data(forKey: Self.KEY_CONFLICT_DEFAULT_TOP),
+              let disk = try? JSONDecoder().decode([String: Int64].self, from: data) else { return }
+        conflictDefaultTopSubject.prime(disk)
+    }
+
+    /// SwiftUI 订阅入口(GridConflictLayer @ObservedObject 用)
+    static var sharedConflictDefaultTopStore: ConflictDefaultTopStore { ConflictDefaultTopStore.shared }
+
     // ===== 网格显示日期 =====
 
     func isShowDate() -> Bool { sp().bool(forKey: Self.KEY_SHOW_DATE) }
@@ -252,5 +334,16 @@ final class AppPrefs {
     }
     func setHolidayRanges(_ ranges: [HolidayRange]) {
         sp().set(HolidayRangeOps.encodeOverrides(ranges), forKey: Self.KEY_HOLIDAY_OVERRIDES)
+    }
+}
+
+/// 冲突默认置顶内存真相源(← MutableStateFlow) — @Published 供 SwiftUI 同帧刷 UI
+final class ConflictDefaultTopStore: ObservableObject {
+    static let shared = ConflictDefaultTopStore()
+    @Published var map: [String: Int64] = [:]
+
+    /// 幂等加载: 磁盘值与内存一致时不发射
+    func prime(_ disk: [String: Int64]) {
+        if map != disk { map = disk }
     }
 }

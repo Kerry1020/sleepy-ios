@@ -93,24 +93,14 @@ struct CardsGridView: View {
                                 .frame(width: timeW, height: slotH)
                                 .offset(y: rowH * CGFloat(i))
                         }
-                        // 课程卡片
-                        ForEach(courses) { course in
-                            if visibleDays.contains(course.day), (1...maxNode).contains(course.startNode) {
-                                let dayIdx = sortedDays.firstIndex(of: course.day) ?? 0
-                                let steps = min(max(course.step, 1), maxNode - course.startNode + 1)
-                                let cardX = timeW + gapW + (colW + gapW) * CGFloat(dayIdx)
-                                let cardY = rowH * CGFloat(course.startNode - 1)
-                                let cardH = rowH * CGFloat(steps) - gapH
-
-                                CourseOverlayCard(course: course, cardHeight: cardH,
-                                                  isDark: CourseColorUtil.isPaletteDark(palette),
-                                                  isGrey: greyDays.contains(course.day)) {
-                                    onCourseClick(course)
-                                }
-                                .frame(width: colW, height: cardH)
-                                .offset(x: cardX, y: cardY)
-                            }
-                        }
+                        // 课程卡片: 冲突簇整簇走 ConflictClusterCard, 非簇课保持原
+                        // CourseOverlayCard 单卡路径(回归保护)(← CourseTableView.kt Grid 主体)
+                        GridConflictLayer(
+                            courses: courses, visibleDays: visibleDays, sortedDays: sortedDays,
+                            maxNode: maxNode, timeW: timeW, colW: colW, rowH: rowH,
+                            gapW: gapW, gapH: gapH, greyDays: greyDays,
+                            isDark: CourseColorUtil.isPaletteDark(palette),
+                            onCourseClick: onCourseClick)
                     }
                     .frame(width: max(geo.size.width - sideInset, 0),
                            height: gridH, alignment: .topLeading)
@@ -124,9 +114,99 @@ struct CardsGridView: View {
 
 }
 
-// ← SingleTimeHeadCell
-private struct SingleTimeHeadCell: View {
+/// 冲突簇渲染层(← CourseTableView.kt Grid 内联逻辑, v7.10.16r 终态)
+/// 引擎聚簇后: 簇 → ConflictClusterCard(轮换/置顶 override 通道), 非簇课 → 原单卡路径。
+/// topOverrides=会话级切换态(内存), defaultTopMap=持久偏好(radio), rotationSteps=纯会话轮换。
+struct GridConflictLayer: View {
     @Environment(\.localWakeUpColors) private var colors
+    @ObservedObject private var defaultTopStore = AppPrefs.sharedConflictDefaultTopStore
+    let courses: [CourseEntity]
+    let visibleDays: Set<Int>
+    let sortedDays: [Int]
+    let maxNode: Int
+    let timeW: CGFloat
+    let colW: CGFloat
+    let rowH: CGFloat
+    let gapW: CGFloat
+    let gapH: CGFloat
+    let greyDays: Set<Int>
+    /// 深色判定(GridConflictLayer 无 palette 环境注入,由 CardsGridView 传入)
+    let isDark: Bool
+    let onCourseClick: (CourseEntity) -> Void
+
+    /// 会话级置顶切换(簇键 → courseId);App 重启清空(← topOverrides rememberSaveable 语义)
+    @State private var topOverrides: [String: Int64] = [:]
+    /// v7.10.16r 轮换态: 簇键 → 轮换步数,纯会话级不落盘
+    @State private var rotationSteps: [String: Int] = [:]
+
+    var body: some View {
+        let conflictStyle = AppPrefs.shared.getConflictStyle()
+        let defaultTopMap = defaultTopStore.map
+        let clusters = ConflictLayoutEngine.findClusters(courses)
+        let clusteredIds = Set(clusters.flatMap { $0.courses.map { $0.id } })
+
+        ZStack(alignment: .topLeading) {
+            let clusterItems = Array(clusters.enumerated())
+            ForEach(clusterItems, id: \.offset) { item in
+                let cluster = item.element
+                // 簇内课若因 visibleDays/maxNode 过滤全出界则整簇跳过
+                if visibleDays.contains(cluster.day) {
+                    let inGrid = cluster.courses.filter { (1...maxNode).contains($0.startNode) }
+                    if !inGrid.isEmpty {
+                        let anchor = cluster.courses.first! // 主课判定序首位,决定簇基点
+                        let dayIdx = sortedDays.firstIndex(of: cluster.day) ?? 0
+                        let cardX = timeW + gapW + (colW + gapW) * CGFloat(dayIdx)
+                        let cardY = rowH * CGFloat(anchor.startNode - 1)
+                        let clusterKey = ConflictLayoutEngine.conflictClusterKey(cluster)
+                        ConflictClusterCard(
+                            cluster: cluster,
+                            style: conflictStyle,
+                            topOverrideId: topOverrides[clusterKey] ?? defaultTopMap[clusterKey],
+                            onPickTop: { id in setTopOverride(clusterKey, id) },
+                            onCourseClick: onCourseClick,
+                            colW: colW, rowH: rowH, maxNode: maxNode,
+                            gapW: gapW, gapH: gapH,
+                            isGrey: greyDays.contains(cluster.day),
+                            rotationStep: rotationSteps[clusterKey],
+                            onRotate: {
+                                rotationSteps[clusterKey, default: (rotationSteps[clusterKey] ?? 0)] += 1
+                            },
+                            onPickFromBadge: { layerPos in
+                                // 气泡选课 = 换来看: 轮换步数使目标层转到首位(会话态)
+                                rotationSteps[clusterKey] = layerPos
+                            })
+                            .offset(x: cardX, y: cardY)
+                    }
+                }
+            }
+            ForEach(courses) { course in
+                if visibleDays.contains(course.day),
+                   (1...maxNode).contains(course.startNode),
+                   !clusteredIds.contains(course.id) { // 簇内课已由 ConflictClusterCard 绘制
+                    let dayIdx = sortedDays.firstIndex(of: course.day) ?? 0
+                    let steps = min(max(course.step, 1), maxNode - course.startNode + 1)
+                    let cardX = timeW + gapW + (colW + gapW) * CGFloat(dayIdx)
+                    let cardY = rowH * CGFloat(course.startNode - 1)
+                    let cardH = rowH * CGFloat(steps) - gapH
+                    CourseOverlayCard(course: course, cardHeight: cardH,
+                                      isDark: isDark,
+                                      isGrey: greyDays.contains(course.day)) {
+                        onCourseClick(course)
+                    }
+                    .frame(width: colW, height: cardH)
+                    .offset(x: cardX, y: cardY)
+                }
+            }
+        }
+    }
+
+    private func setTopOverride(_ key: String, _ courseId: Int64?) {
+        if let id = courseId { topOverrides[key] = id } else { topOverrides.removeValue(forKey: key) }
+    }
+}
+
+// ← SingleTimeHeadCell
+private struct SingleTimeHeadCell: View {    @Environment(\.localWakeUpColors) private var colors
     let slot: TimeSlot
 
     var body: some View {
@@ -357,16 +437,14 @@ private struct DaySummaryCell: View {
             if courses.isEmpty {
                 Spacer().frame(height: 14)
             } else {
-                ViewThatFits(in: .horizontal) {
-                    Text(L10n.format("course_count_format", courses.count))
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(chipFg)
-                        .lineLimit(1)
-                    Text("\(courses.count)")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(chipFg)
-                        .lineLimit(1)
-                }
+                // iOS 15 兼容:ViewThatFits 是 iOS16+ API。原语义 = fullText 放不下
+                // 回退纯数字;minimumScaleFactor 缩到 0.6 下限近似该意图(列宽极窄时
+                // 缩字号仍可读,不再二选一),iOS 16+ 视觉行为不变。
+                Text(L10n.format("course_count_format", courses.count))
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(chipFg)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
                 .padding(.horizontal, 7)
                 .padding(.vertical, 2)
                 .background(colors.surfaceVariant)
