@@ -28,6 +28,9 @@ struct TodayScreen: View {
             $0.day == dayOfWeek && $0.inWeek(actualWeek)
         })
             .sorted { $0.startNode < $1.startNode }
+        // v7.10.10 今日页冲突分栏 — 与周视图同一引擎同一分组(weekLaneRows):
+        // 冲突区域一行内并排分栏(栏间浅细竖线), 无冲突课整宽单行。
+        let laneRows = ConflictLayoutEngine.weekLaneRows(todayCourses)
 
         ScrollView {
             VStack(spacing: 16) {
@@ -39,9 +42,16 @@ struct TodayScreen: View {
                 } else {
                     SectionHead(title: L10n.format("widget_today_label"),
                                 action: L10n.format("n_periods", todayCourses.count))
-                    ForEach(todayCourses) { course in
-                        TodayCourseCard(course: course, timeJson: state.currentTable?.timeJson) {
-                            selectedCourse = course
+                    // v7.10.10 冲突分栏: 单栏整宽; 多栏并排+栏间浅细竖线(与周视图同款)
+                    ForEach(laneRows, id: \.courses.first!.id) { row in
+                        if row.laneCount == 1, let only = row.courses.first {
+                            TodayCourseCard(course: only, timeJson: state.currentTable?.timeJson) {
+                                selectedCourse = only
+                            }
+                        } else {
+                            TodayLaneRow(row: row, timeJson: state.currentTable?.timeJson) { c in
+                                selectedCourse = c
+                            }
                         }
                     }
                 }
@@ -59,6 +69,36 @@ struct TodayScreen: View {
                     selectedCourse = nil
                     onEditCourse?(c)
                 })
+        }
+    }
+}
+
+// v7.10.10 冲突分栏行 — 按 lane 并排(每栏均分), 同栏课程纵向堆叠;
+// 栏间浅细竖线: 0.5dp 宽, onSurface hairline 透明度, 高度随行(与周视图分栏同款)
+private struct TodayLaneRow: View {
+    @Environment(\.localWakeUpColors) private var colors
+    let row: ConflictLayoutEngine.WeekLaneRow
+    var timeJson: String? = nil
+    let onCourseClick: (CourseEntity) -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 6) {
+            ForEach(0..<row.laneCount, id: \.self) { li in
+                if li > 0 {
+                    Rectangle()
+                        .fill(colors.onSurface.opacity(SleepyTheme.Alpha.hairline))
+                        .frame(width: 0.5)
+                }
+                let laneCourses = row.courses.filter { row.laneOf[$0.id] == li }
+                VStack(spacing: 6) {
+                    ForEach(laneCourses) { laneCourse in
+                        TodayCourseCard(course: laneCourse, timeJson: timeJson) {
+                            onCourseClick(laneCourse)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
     }
 }

@@ -531,11 +531,40 @@ private struct DetailDayCard: View {
                     .foregroundColor(isGrey ? greyFg : colors.onSurfaceVariant)
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else {
+                // v7.10.6 行分组下沉引擎 + v7.10.10 栏间浅细竖分隔线:
+                // mergeOverlapping 区域是划分(每课恰属一区域), 冲突区域整区域一行
+                // (横向 laneCount 栏,同栏多门课纵向堆叠), 无冲突课一行一门全宽。
+                let rows = ConflictLayoutEngine.weekLaneRows(courses)
                 VStack(spacing: 7) {
-                    ForEach(courses) { c in
-                        LessonRow(course: c, displayMode: displayMode, timeJson: timeJson,
-                                  isGrey: isGrey) {
-                            onCourseClick(c)
+                    ForEach(rows, id: \.courses.first!.id) { row in
+                        if row.laneCount == 1, let only = row.courses.first {
+                            LessonRow(course: only, displayMode: displayMode, timeJson: timeJson,
+                                      isGrey: isGrey) {
+                                onCourseClick(only)
+                            }
+                        } else {
+                            // 冲突行: 按 lane 并排(每栏均分), 同栏课程纵向堆叠
+                            // (栏内课互不重叠——chainGroups 独立集保证,堆叠即正确时序)
+                            HStack(alignment: .top, spacing: 6) {
+                                ForEach(0..<row.laneCount, id: \.self) { li in
+                                    if li > 0 {
+                                        // 栏间浅细竖线: 0.5dp 宽, onSurface hairline, 高度随行
+                                        Rectangle()
+                                            .fill(colors.onSurface.opacity(SleepyTheme.Alpha.hairline))
+                                            .frame(width: 0.5)
+                                    }
+                                    let laneCourses = row.courses.filter { row.laneOf[$0.id] == li }
+                                    VStack(spacing: 5) {
+                                        ForEach(laneCourses) { laneCourse in
+                                            LessonRow(course: laneCourse, displayMode: displayMode,
+                                                      timeJson: timeJson, isGrey: isGrey) {
+                                                onCourseClick(laneCourse)
+                                            }
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                            }
                         }
                     }
                 }
