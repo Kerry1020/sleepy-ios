@@ -18,6 +18,9 @@
 "schedule_add_course" = "Add Course";
 "schedule_current_week" = "Week %1$d";
 "schedule_undo" = "Undo";
+"schedule_switch_table" = "Switch schedule";
+"all_tables_duplicate" = "Duplicate";
+"table_created_at" = "Imported %1$@";
 "schedule_undo_none" = "Nothing to undo";
 "schedule_no_course_today" = "No classes today";
 "import_title" = "Import Schedule";

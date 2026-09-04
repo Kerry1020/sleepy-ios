@@ -18,6 +18,9 @@
 "schedule_add_course" = "授業を追加";
 "schedule_current_week" = "第 %1$d 週";
 "schedule_undo" = "元に戻す";
+"schedule_switch_table" = "時間割の切り替え";
+"all_tables_duplicate" = "複製を作成";
+"table_created_at" = "インポート日時 %1$@";
 "schedule_undo_none" = "元に戻せる操作はありません";
 "schedule_no_course_today" = "今日は授業がありません";
 "import_title" = "時間割をインポート";

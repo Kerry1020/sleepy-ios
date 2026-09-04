@@ -20,6 +20,8 @@ struct ScheduleScreen: View {
     @State private var selectedCourse: CourseEntity? = nil
     // v7.10.16: 无可撤回时 toast 提示(按钮不隐藏保持布局稳定)
     @State private var showUndoNoneToast = false
+    // v7.10.14 顶栏 logo → 课表切换弹窗
+    @State private var showTableSwitcher = false
 
     var body: some View {
         let state = viewModel.state
@@ -59,7 +61,8 @@ struct ScheduleScreen: View {
                         if !viewModel.undoLastChange() {
                             showUndoNoneToast = true
                         }
-                    })
+                    },
+                    onSwitchTable: { showTableSwitcher = true })
 
                 // Segmented Switcher
                 SegmentedSwitcher(
@@ -79,6 +82,17 @@ struct ScheduleScreen: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        // v7.10.14 课表切换弹窗(← TableSwitcherDialog)
+        .sheet(isPresented: $showTableSwitcher) {
+            TableSwitcherSheet(
+                tables: state.tables,
+                selectedTableId: state.selectedTableId,
+                onSelect: { id in
+                    viewModel.selectTable(id)
+                    showTableSwitcher = false
+                },
+                onDismiss: { showTableSwitcher = false })
+        }
         // ← Android Toast schedule_undo_none
         .overlay(alignment: .bottom) {
             if showUndoNoneToast {
@@ -210,6 +224,7 @@ private struct ScheduleTopBar: View {
     let onJumpToActual: () -> Void
     let onSelectWeek: (Int) -> Void
     var onUndo: () -> Void = {}
+    var onSwitchTable: () -> Void = {}
 
     @State private var menuOpen = false
 
@@ -219,6 +234,10 @@ private struct ScheduleTopBar: View {
         let semesterStatus = DateUtils.semesterStatus(startDate: startDate, maxWeek: maxWeek)
 
         HStack {
+            // v7.10.14: 最左 logo — 点击弹课表切换弹窗
+            WeekNavButton(icon: "calendar", onClick: onSwitchTable)
+                .accessibilityIdentifier("switch_table")
+
             WeekNavButton(icon: "chevron.left", onClick: onPrevWeek)
 
             // 第 N 周 标签 — 点击行为根据是否在当前实际周而不同
@@ -296,6 +315,58 @@ private struct ScheduleTopBar: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 6)
         .background(colors.surface)
+    }
+}
+
+// v7.10.14 顶栏 logo 点击弹出的课表切换弹层 —
+// 列出全部课表, 当前行 primaryContainer 高亮 + 对勾, 点击即切换。
+private struct TableSwitcherSheet: View {
+    @Environment(\.localWakeUpColors) private var colors
+    let tables: [TimeTableEntity]
+    let selectedTableId: Int64?
+    let onSelect: (Int64) -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Text(L10n.format("schedule_switch_table"))
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(colors.onSurface)
+                .padding(.top, 16)
+            ScrollView {
+                VStack(spacing: 4) {
+                    ForEach(tables) { table in
+                        let isCurrent = table.id == selectedTableId
+                        Button {
+                            onSelect(table.id)
+                        } label: {
+                            HStack {
+                                Text(table.name)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(isCurrent ? colors.onPrimaryContainer : colors.onSurface)
+                                    .lineLimit(2)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                if isCurrent {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 15))
+                                        .foregroundColor(colors.primary)
+                                }
+                            }
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 8)
+                            .background(isCurrent ? colors.primaryContainer : colors.surfaceContainer)
+                            .cornerRadius(SleepyShapes.medium)
+                        }
+                        .buttonStyle(SleepyButtonStyle())
+                        .accessibilityIdentifier("switch_table_\(table.id)")
+                    }
+                }
+                .padding(.horizontal, 16)
+            }
+            .frame(maxHeight: 360)
+        }
+        .padding(.bottom, 16)
+        .sheetDetents([.medium])
     }
 }
 

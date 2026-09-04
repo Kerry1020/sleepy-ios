@@ -18,6 +18,9 @@
 "schedule_add_course" = "新增課程";
 "schedule_current_week" = "第 %1$d 週";
 "schedule_undo" = "撤回";
+"schedule_switch_table" = "切換課表";
+"all_tables_duplicate" = "建立副本";
+"table_created_at" = "匯入於 %1$@";
 "schedule_undo_none" = "沒有可撤回的操作";
 "schedule_no_course_today" = "今天沒有課";
 "import_title" = "匯入課表";

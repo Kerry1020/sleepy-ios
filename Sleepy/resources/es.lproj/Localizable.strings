@@ -18,6 +18,9 @@
 "schedule_add_course" = "Añadir curso";
 "schedule_current_week" = "Semana %1$d";
 "schedule_undo" = "Deshacer";
+"schedule_switch_table" = "Cambiar horario";
+"all_tables_duplicate" = "Duplicar";
+"table_created_at" = "Importado %1$@";
 "schedule_undo_none" = "Nada que deshacer";
 "schedule_no_course_today" = "No hay clases hoy";
 "import_title" = "Importar horario";

@@ -171,7 +171,11 @@ struct EditTableScreen: View {
             }
             Button(L10n.format("cancel"), role: .cancel) {}
         } message: {
-            Text(L10n.format("edit_table_delete_msg", table.name))
+            // 防呆: 删表=连带删全部课程, 明示数量让用户知道要失去多少数据
+            let courseCount = viewModel.state.courses.count
+            Text(courseCount == 0
+                 ? L10n.format("edit_table_delete_msg", table.name)
+                 : L10n.format("edit_table_delete_msg_count", table.name, courseCount))
         }
     }
 

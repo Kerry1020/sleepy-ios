@@ -159,6 +159,41 @@ final class ScheduleViewModel: ObservableObject {
         Task { try? repo.updateTable(table) }
     }
 
+    /// v7.10.15 创建课表副本 — 全量复制表配置+课程, 新副本不接管默认表也不切选中,
+    /// 命名沿用导入路径的去重规则(原名+"2"/"3"...)。
+    func duplicateTable(_ id: Int64) {
+        Task {
+            guard let source = try? repo.getTable(id) else { return }
+            let courses = (try? repo.getCourses(id)) ?? []
+            let existingNames = ((try? repo.getAllTables()) ?? []).map { $0.name }
+            var index = 2
+            var name = "\(source.name)2"
+            while existingNames.contains(name) { index += 1; name = "\(source.name)\(index)" }
+            var copy = source
+            copy.id = 0
+            copy.name = name
+            copy.isDefault = false
+            copy.createdAt = Int64(Date().timeIntervalSince1970 * 1000)
+            let newId = (try? repo.insertTable(copy)) ?? 0
+            if newId != 0 && !courses.isEmpty {
+                // groupId 整组映射到新 UUID — 同一门课的节次共享新组 ID, 副本内仍可整组编辑
+                var groupMap: [String: String] = [:]
+                for c in courses where groupMap[c.groupId] == nil {
+                    groupMap[c.groupId] = UUID().uuidString
+                }
+                let newCourses = courses.map { c -> CourseEntity in
+                    var n = c
+                    n.id = 0
+                    n.groupId = groupMap[c.groupId] ?? c.groupId
+                    n.tableId = newId
+                    return n
+                }
+                try? repo.insertCourses(newCourses)
+            }
+            onWidgetsNeedReload()
+        }
+    }
+
     func deleteTable(_ id: Int64) {
         Task {
             try? repo.deleteTable(id)

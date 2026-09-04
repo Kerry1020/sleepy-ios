@@ -43,8 +43,26 @@ struct AllTablesScreen: View {
                                         .foregroundColor(isCurrent
                                             ? colors.onPrimaryContainer.opacity(SleepyTheme.Alpha.highContent)
                                             : colors.onSurfaceVariant)
+                                    // v7.10.15 导入时间(createdAt>0 才显示; v1.0.16 前老表无此值)
+                                    if table.createdAt > 0 {
+                                        Text(L10n.format("table_created_at", Self.createdAtText(table.createdAt)))
+                                            .font(.system(size: 11))
+                                            .foregroundColor(isCurrent
+                                                ? colors.onPrimaryContainer.opacity(SleepyTheme.Alpha.highContent)
+                                                : colors.onSurfaceVariant)
+                                    }
                                 }
                                 Spacer()
+                                // v7.10.15 duplicate 图标 — 创建课表副本, 置于设置图标左边
+                                Button {
+                                    viewModel.duplicateTable(table.id)
+                                } label: {
+                                    Image(systemName: "doc.on.doc")
+                                        .font(.system(size: 18))
+                                        .foregroundColor(colors.onSurfaceVariant)
+                                }
+                                .buttonStyle(SleepyButtonStyle())
+                                .accessibilityIdentifier("table_duplicate_\(table.id)")
                                 Button {
                                     onOpenEditTable(table.id)
                                 } label: {
@@ -87,6 +105,16 @@ struct AllTablesScreen: View {
             }
         }
         .background(colors.background)
+    }
+}
+
+extension AllTablesScreen {
+    // yyyy-MM-dd HH:mm:ss 系统时区(← Android Instant+DateTimeFormatter)
+    static func createdAtText(_ millis: Int64) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        f.timeZone = .current
+        return f.string(from: Date(timeIntervalSince1970: Double(millis) / 1000))
     }
 }
 
