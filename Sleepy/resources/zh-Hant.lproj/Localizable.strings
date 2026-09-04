@@ -105,6 +105,7 @@
 "course_detail_edit" = "編輯";
 "course_detail_delete" = "刪除";
 "course_detail_edit_course" = "編輯這節課";
+"conflict_default_top_title" = "選擇預設置頂課程";
 "course_field_name" = "課程";
 "course_field_teacher" = "老師";
 "course_field_room" = "地點";

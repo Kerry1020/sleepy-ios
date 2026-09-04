@@ -105,6 +105,7 @@
 "course_detail_edit" = "Edit";
 "course_detail_delete" = "Delete";
 "course_detail_edit_course" = "Edit this class";
+"conflict_default_top_title" = "Choose default top course";
 "course_field_name" = "Course";
 "course_field_teacher" = "Teacher";
 "course_field_room" = "Room";

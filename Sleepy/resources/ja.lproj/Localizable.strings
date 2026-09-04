@@ -105,6 +105,7 @@
 "course_detail_edit" = "編集";
 "course_detail_delete" = "削除";
 "course_detail_edit_course" = "この授業を編集";
+"conflict_default_top_title" = "デフォルトの最上位コマを選択";
 "course_field_name" = "授業";
 "course_field_teacher" = "教員";
 "course_field_room" = "教室";

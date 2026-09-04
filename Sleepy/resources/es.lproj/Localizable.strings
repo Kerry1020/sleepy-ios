@@ -105,6 +105,7 @@
 "course_detail_edit" = "Editar";
 "course_detail_delete" = "Eliminar";
 "course_detail_edit_course" = "Editar esta clase";
+"conflict_default_top_title" = "Elegir curso superior por defecto";
 "course_field_name" = "Curso";
 "course_field_teacher" = "Profesor";
 "course_field_room" = "Aula";

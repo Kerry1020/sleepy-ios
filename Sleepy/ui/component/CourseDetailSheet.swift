@@ -9,10 +9,16 @@ struct CourseDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
     let course: CourseEntity?
     var timeString: String? = nil
+    var allCourses: [CourseEntity] = []
     var onEdit: ((CourseEntity) -> Void)? = nil
+
+    @ObservedObject private var defaultTopStore = ConflictDefaultTopStore.shared
 
     var body: some View {
         if let course = course {
+            // 冲突簇上下文(仅当 day 下 ≥2 课区间相交时才存在) — ← ConflictLayoutEngine.findClusters
+            let clusterInfo = clusterOf(course)
+
             VStack(alignment: .leading, spacing: 0) {
                 // Header ← SheetHeader (surface-container)
                 HStack {
@@ -57,6 +63,11 @@ struct CourseDetailSheet: View {
                         DetailRow(key: L10n.format("course_field_note"), value: course.note)
                     }
 
+                    if let cluster = clusterInfo {
+                        DefaultTopPickerSection(cluster: cluster,
+                                                selectedCourseId: course.id)
+                    }
+
                     if let onEdit = onEdit {
                         Button {
                             onEdit(course)
@@ -85,6 +96,62 @@ struct CourseDetailSheet: View {
 
     private func onDismiss() {
         dismiss()
+    }
+
+    /// 找出 course 所在冲突簇(仅当 day 下 ≥2 课区间相交时才返回)
+    private func clusterOf(_ course: CourseEntity) -> ConflictCluster? {
+        let sameDay = allCourses.filter { $0.day == course.day }
+        return ConflictLayoutEngine.findClusters(sameDay)
+            .first { $0.courses.contains { $0.id == course.id } }
+            .flatMap { $0.courses.count >= 2 ? $0 : nil }
+    }
+}
+
+// 默认置顶选择区(v7.9 设计):按图层一行,每行 = radio + 该图层全部课程名(顿号/、分隔);
+// 默认无勾选(系统按 primaryComparator 自动);选中 → 写 AppPrefs(持久化);再点同一项 = 取消。
+private struct DefaultTopPickerSection: View {
+    @Environment(\.localWakeUpColors) private var colors
+    @ObservedObject private var defaultTopStore = ConflictDefaultTopStore.shared
+    let cluster: ConflictCluster
+    let selectedCourseId: Int64
+
+    var body: some View {
+        let layers = ConflictLayoutEngine.chainGroups(cluster.courses)
+        let anchor = cluster.courses.first!
+        let clusterKey = "\(cluster.day):\(anchor.startNode):\(anchor.step)"
+        let savedRepId: Int64? = defaultTopStore.map[clusterKey]
+
+        VStack(alignment: .leading, spacing: 4) {
+            Text(L10n.format("conflict_default_top_title"))
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(colors.onSurface)
+                .padding(.top, 4)
+                .padding(.bottom, 2)
+
+            ForEach(Array(layers.enumerated()), id: \.offset) { _, layer in
+                let layerRepId = layer.first!.id
+                let label = layer.map { $0.courseName.isEmpty ? "—" : $0.courseName }.joined(separator: "、")
+                let selected = savedRepId == layerRepId
+                Button {
+                    AppPrefs.shared.putConflictDefaultTop(clusterKey, selected ? nil : layerRepId)
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: selected ? "largecircle.fill.circle" : "circle")
+                            .font(.system(size: 18))
+                            .foregroundColor(selected ? colors.primary : colors.onSurfaceVariant)
+                        Text(label)
+                            .font(.system(size: 14))
+                            .foregroundColor(colors.onSurface)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(.vertical, 6)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(SleepyButtonStyle())
+            }
+        }
     }
 }
 

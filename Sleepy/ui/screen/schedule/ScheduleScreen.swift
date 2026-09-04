@@ -76,6 +76,7 @@ struct ScheduleScreen: View {
             CourseDetailSheet(
                 course: course,
                 timeString: course.nodeString(),
+                allCourses: state.courses,
                 onEdit: { c in
                     selectedCourse = nil
                     onEditCourse(c)
