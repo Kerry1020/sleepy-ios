@@ -222,7 +222,7 @@ struct AboutScreen: View {
                                           startDownload(version: version, changelog: changelog, url: url)
                                       }
                                   })
-                .presentationDetents([.medium])
+                .sheetDetents([.medium])
         }
     }
 

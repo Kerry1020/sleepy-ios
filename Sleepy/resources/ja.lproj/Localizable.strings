@@ -366,6 +366,17 @@
 "settings_widget_colorless_sub" = "ウィジェットの背景色付き授業のみをニュートラルグレーに統一します。テキストのみの週表示には影響せず、色をカスタマイズした授業には適用されません";
 "settings_course_colorless" = "アプリ内授業カプセルの色を統一";
 "settings_course_colorless_sub" = "アプリ内の授業カプセルのみをニュートラルグレーに統一します。ウィジェット設定には影響せず、色をカスタマイズした授業には適用されません";
+"settings_conflict_style" = "コマの重なり表示";
+"settings_conflict_stack" = "重ねてずらして表示";
+"settings_conflict_stack_sub" = "コマを重ねてずらし、下のコマの端を見せる";
+"settings_conflict_fold" = "折り返しマーク";
+"settings_conflict_fold_sub" = "カード右上に折り返しを付け、下にコマがあることを示す";
+"settings_conflict_rail" = "サイドレール";
+"settings_conflict_rail_sub" = "右端のカラーレールに並べ、授業名は縦書きで表示";
+"settings_conflict_stack_inset" = "重ねのずらし幅";
+"settings_conflict_rail_inset" = "右端の余白";
+"settings_conflict_fold_size" = "折り返しの大きさ";
+"settings_conflict_fold_size_sub" = "折り返しマークの大きさ。見た目とタップ領域が連動して変わります";
 "settings_widget_separator" = "週表示の区切り線";
 "settings_widget_separator_sub" = "テキストのみの週表示で授業名の間に区切り線を表示";
 "edit_period_input" = "入力";

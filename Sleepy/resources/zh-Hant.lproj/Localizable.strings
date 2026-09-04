@@ -366,6 +366,17 @@
 "settings_widget_colorless_sub" = "僅將帶課程背景的小工具課程統一為中性底色；純文字週檢視不受影響，自訂顏色課程不受影響";
 "settings_course_colorless" = "課程膠囊統一底色";
 "settings_course_colorless_sub" = "僅將 App 內課程膠囊統一為中性底色；小工具設定不受影響，自訂顏色課程不受影響";
+"settings_conflict_style" = "衝突課程樣式";
+"settings_conflict_stack" = "疊層偏移";
+"settings_conflict_stack_sub" = "衝突課程層疊錯位，下層課程露出邊角";
+"settings_conflict_fold" = "摺角揭示";
+"settings_conflict_fold_sub" = "卡片右上摺角，提示該格還有下層課程";
+"settings_conflict_rail" = "側邊豎軌";
+"settings_conflict_rail_sub" = "右側色軌並排展示衝突課程，課名豎排";
+"settings_conflict_stack_inset" = "疊層偏移量";
+"settings_conflict_rail_inset" = "右緣讓寬";
+"settings_conflict_fold_size" = "摺角幅度";
+"settings_conflict_fold_size_sub" = "摺角符號的大小，拖動同步調整視覺與點按區域";
 "settings_widget_separator" = "週檢視分隔線";
 "settings_widget_separator_sub" = "純文字週檢視中課程名之間是否顯示分隔線";
 "edit_period_input" = "輸入";

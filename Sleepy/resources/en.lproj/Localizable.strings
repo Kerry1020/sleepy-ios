@@ -366,6 +366,17 @@
 "settings_widget_colorless_sub" = "Only courses with backgrounds in widgets use a neutral gray; pure-text week view is unaffected, and courses with custom colors are unaffected";
 "settings_course_colorless" = "Uniform course-pill colors";
 "settings_course_colorless_sub" = "Only course pills in the app use a neutral gray; widget settings are unaffected, and courses with custom colors are unaffected";
+"settings_conflict_style" = "Conflicting course style";
+"settings_conflict_stack" = "Stacked offset";
+"settings_conflict_stack_sub" = "Overlapping courses with the lower one peeking out at the edge";
+"settings_conflict_fold" = "Folded corner";
+"settings_conflict_fold_sub" = "A folded corner marks cards that hide more courses beneath";
+"settings_conflict_rail" = "Side rail";
+"settings_conflict_rail_sub" = "A color rail on the right lists conflicting courses with vertical names";
+"settings_conflict_stack_inset" = "Stack offset distance";
+"settings_conflict_rail_inset" = "Right-edge inset";
+"settings_conflict_fold_size" = "Fold corner size";
+"settings_conflict_fold_size_sub" = "Size of the folded mark; adjusts look and tap area together";
 "settings_widget_separator" = "Week view separator";
 "settings_widget_separator_sub" = "Show a divider between course names in the pure-text week view";
 "edit_period_input" = "Input";

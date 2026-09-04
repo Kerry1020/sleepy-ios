@@ -25,7 +25,9 @@ final class AppPrefs {
     static let KEY_DISPLAY_MODE = "display_mode" // "node" or "time"
     static let KEY_GRID_SUB_INFO = "grid_sub_info" // "room" / "teacher" / "none" — 网格卡片副信息(周视图网格卡课程名下方那行;左栏已有节次,故此处不再显示节次/时间)
     static let KEY_CONFLICT_STYLE = "conflict_style" // "stack"/"fold"/"rail" — 冲突课程显示样式,默认 "rail"(← KEY_CONFLICT_STYLE v7.10.16s)
-    static let KEY_CONFLICT_TOP_INSET = "conflict_top_inset" // Double dp — 冲突顶卡收窄量: A=右/下偏移 d, C=右缘让宽; 滑杆 4..20dp, 默认 7dp(用户实测定版)
+    static let KEY_CONFLICT_TOP_INSET = "conflict_top_inset" // Double dp — 旧共用收窄量 key: 仅作拆分迁移源,停写(用户 2026-09-04 拆分)
+    static let KEY_CONFLICT_STACK_INSET = "conflict_stack_inset" // Double dp — 叠层偏移量(STACK 专有, 用户 2026-09-04 拆分: 两样式独立配置不共享)
+    static let KEY_CONFLICT_RAIL_INSET = "conflict_rail_inset"   // Double dp — 右缘让宽(RAIL 专有, 同上)
     static let KEY_CONFLICT_FOLD_SIZE = "conflict_fold_size" // Double dp — 折角幅度(fold 样式): 折痕直角边长, 视觉符号与命中区共用; 默认 16dp
     static let KEY_CONFLICT_DEFAULT_TOP = "conflict_default_top" // JSON {"day:startNode:step": layerRepId} — 冲突簇默认置顶图层
     static let KEY_SHOW_DATE = "show_date"       // boolean
@@ -196,16 +198,39 @@ final class AppPrefs {
         sp().set(value, forKey: Self.KEY_CONFLICT_STYLE)
     }
 
-    // ===== 冲突顶层卡收窄量(A 偏移 d / C 右缘让宽共用,用户可调) =====
+    // ===== 冲突顶卡收窄量(用户 2026-09-04 拆分: 叠层/竖轨独立配置不共享) =====
+    // 首次读取时从旧共用 key 迁移一次(旧值复制到两新 key), 旧 key 停写保留仅作迁移源。
 
-    func getConflictTopInset() -> Double {
-        let v = sp().double(forKey: Self.KEY_CONFLICT_TOP_INSET)
+    func getConflictStackInset() -> Double {
+        if sp().object(forKey: Self.KEY_CONFLICT_STACK_INSET) == nil {
+            sp().set(sp().double(forKey: Self.KEY_CONFLICT_TOP_INSET) == 0
+                ? Self.CONFLICT_TOP_INSET_DEFAULT
+                : sp().double(forKey: Self.KEY_CONFLICT_TOP_INSET),
+                forKey: Self.KEY_CONFLICT_STACK_INSET)
+        }
+        let v = sp().double(forKey: Self.KEY_CONFLICT_STACK_INSET)
         return v == 0 ? Self.CONFLICT_TOP_INSET_DEFAULT : v
     }
 
-    func setConflictTopInset(_ value: Double) {
+    func setConflictStackInset(_ value: Double) {
         precondition(Self.CONFLICT_TOP_INSET_RANGE.contains(value))
-        sp().set(value, forKey: Self.KEY_CONFLICT_TOP_INSET)
+        sp().set(value, forKey: Self.KEY_CONFLICT_STACK_INSET)
+    }
+
+    func getConflictRailInset() -> Double {
+        if sp().object(forKey: Self.KEY_CONFLICT_RAIL_INSET) == nil {
+            sp().set(sp().double(forKey: Self.KEY_CONFLICT_TOP_INSET) == 0
+                ? Self.CONFLICT_TOP_INSET_DEFAULT
+                : sp().double(forKey: Self.KEY_CONFLICT_TOP_INSET),
+                forKey: Self.KEY_CONFLICT_RAIL_INSET)
+        }
+        let v = sp().double(forKey: Self.KEY_CONFLICT_RAIL_INSET)
+        return v == 0 ? Self.CONFLICT_TOP_INSET_DEFAULT : v
+    }
+
+    func setConflictRailInset(_ value: Double) {
+        precondition(Self.CONFLICT_TOP_INSET_RANGE.contains(value))
+        sp().set(value, forKey: Self.KEY_CONFLICT_RAIL_INSET)
     }
 
     // ===== 冲突折角幅度(fold 样式专有) — 折痕直角边长,视觉/命中区同一真值 =====

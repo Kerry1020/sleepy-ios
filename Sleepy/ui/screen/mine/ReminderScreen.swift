@@ -74,7 +74,7 @@ struct ReminderScreen: View {
                 }
                 .padding()
             }
-            .presentationDetents([.height(400)])
+            .sheetDetents([.height(400)])
         }
     }
 

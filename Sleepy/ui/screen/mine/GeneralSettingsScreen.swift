@@ -20,6 +20,10 @@ struct GeneralSettingsScreen: View {
     @State private var showDate: Bool = AppPrefs.shared.isShowDate()
     @State private var visibleDays: Set<Int> = AppPrefs.shared.getVisibleDays()
     @State private var courseColorless: Bool = AppPrefs.shared.isCourseColorless()
+    @State private var conflictStyle: String = AppPrefs.shared.getConflictStyle()
+    @State private var conflictStackInset: Double = AppPrefs.shared.getConflictStackInset()
+    @State private var conflictRailInset: Double = AppPrefs.shared.getConflictRailInset()
+    @State private var conflictFoldSize: Double = AppPrefs.shared.getConflictFoldSize()
 
     private func toggleSection(_ key: String) {
         if expandedSections.contains(key) { expandedSections.remove(key) }
@@ -45,6 +49,7 @@ struct GeneralSettingsScreen: View {
                         visibleDaysCard
                         showDateCard
                         courseColorlessCard
+                        conflictStyleCard
                         holidayEntryCard
                     }
 
@@ -168,6 +173,59 @@ struct GeneralSettingsScreen: View {
         }
     }
 
+    // 冲突课程样式: 叠层 / 折角 / 竖轨(仅 App 内网格视图, 不涉及小组件, 无需 refreshWidgets)
+    // 拖杆条件显示: 折角幅度=仅 fold; 叠层偏移量=仅 stack; 右缘让宽=仅 rail(用户 2026-09-04 拆分)
+    private var conflictStyleCard: some View {
+        SettingsCard(title: L10n.format("settings_conflict_style"),
+                     expanded: expandedSections.contains("conflictStyle"),
+                     onToggle: { toggleSection("conflictStyle") }) {
+            DisplayModeOption(label: L10n.format("settings_conflict_stack"),
+                              subtitle: L10n.format("settings_conflict_stack_sub"),
+                              selected: conflictStyle == "stack") {
+                conflictStyle = "stack"
+                prefs.setConflictStyle("stack")
+            }
+            SubDivider()
+            DisplayModeOption(label: L10n.format("settings_conflict_fold"),
+                              subtitle: L10n.format("settings_conflict_fold_sub"),
+                              selected: conflictStyle == "fold") {
+                conflictStyle = "fold"
+                prefs.setConflictStyle("fold")
+            }
+            SubDivider()
+            DisplayModeOption(label: L10n.format("settings_conflict_rail"),
+                              subtitle: L10n.format("settings_conflict_rail_sub"),
+                              selected: conflictStyle == "rail") {
+                conflictStyle = "rail"
+                prefs.setConflictStyle("rail")
+            }
+            if conflictStyle == "fold" {
+                SubDivider()
+                ConflictSliderRow(label: L10n.format("settings_conflict_fold_size"),
+                                  value: $conflictFoldSize,
+                                  range: AppPrefs.CONFLICT_FOLD_SIZE_RANGE) {
+                    prefs.setConflictFoldSize(conflictFoldSize)
+                }
+            }
+            if conflictStyle == "stack" {
+                SubDivider()
+                ConflictSliderRow(label: L10n.format("settings_conflict_stack_inset"),
+                                  value: $conflictStackInset,
+                                  range: AppPrefs.CONFLICT_TOP_INSET_RANGE) {
+                    prefs.setConflictStackInset(conflictStackInset)
+                }
+            }
+            if conflictStyle == "rail" {
+                SubDivider()
+                ConflictSliderRow(label: L10n.format("settings_conflict_rail_inset"),
+                                  value: $conflictRailInset,
+                                  range: AppPrefs.CONFLICT_TOP_INSET_RANGE) {
+                    prefs.setConflictRailInset(conflictRailInset)
+                }
+            }
+        }
+    }
+
     // ← 节假日课程灰显: 点击进入二级页(Android General 页同款入口卡)
     private var holidayEntryCard: some View {
         Button(action: onOpenHoliday) {
@@ -193,6 +251,35 @@ struct GeneralSettingsScreen: View {
         }
         .buttonStyle(SleepyButtonStyle())
         .accessibilityIdentifier("settings_holiday_entry")
+    }
+}
+
+// 冲突拖杆行: 左侧量值标签(dp), 右侧 Slider — ← Android Slider 拖完落盘
+private struct ConflictSliderRow: View {
+    @Environment(\.localWakeUpColors) private var colors
+    let label: String
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+    let onFinished: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(label)
+                .font(.system(size: 16))
+                .foregroundColor(colors.onSurface)
+            HStack(spacing: 8) {
+                Text("\(Int(value.rounded()))dp")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(colors.primary)
+                    .frame(minWidth: 52, alignment: .leading)
+                Slider(value: $value, in: range) { _ in
+                    onFinished()
+                }
+                .tint(colors.primary)
+            }
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 4)
     }
 }
 

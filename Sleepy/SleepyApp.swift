@@ -144,9 +144,12 @@ struct AppRoot: View {
     @State private var jwImportRequested = false
 
     var body: some View {
-        NavigationStack {
+        // iOS 15 兼容(6s Plus 真机 = 15.8.8):此处仅作容器,无 NavigationLink 压栈,
+        // 旧 API 行为等价(NavigationStack 是 iOS16+ API)
+        NavigationView {
             mainContent
         }
+        .navigationViewStyle(.stack)
         // ← Activity.recreate(): 语言切换 → L10n.didChange → languageReload+1 → 全树重建
         .id(root.languageReload)
         .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))

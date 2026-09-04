@@ -156,7 +156,7 @@ struct AddCourseScreen: View {
             } onCancel: {
                 showColorPicker = false
             }
-            .presentationDetents([.height(420)])
+            .sheetDetents([.height(420)])
         }
         .alert(L10n.format("confirm_delete"), isPresented: $showDeleteConfirm) {
             Button(L10n.format("delete"), role: .destructive) {
@@ -180,8 +180,7 @@ struct AddCourseScreen: View {
                 FieldTextField(text: $courseName, label: L10n.format("course_name_required"))
                 FieldTextField(text: $teacher, label: L10n.format("course_teacher"))
                 FieldTextField(text: $room, label: L10n.format("course_room"))
-                TextField(L10n.format("course_note"), text: $note, axis: .vertical)
-                    .lineLimit(2...4)
+                MultilineFieldCompat(placeholder: L10n.format("course_note"), text: $note, minLines: 2, maxLines: 4)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
                     .background(colors.surfaceContainerLowest)

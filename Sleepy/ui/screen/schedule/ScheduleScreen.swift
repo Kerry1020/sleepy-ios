@@ -252,7 +252,7 @@ private struct ScheduleTopBar: View {
                     .frame(maxHeight: 340)
                 }
                 .padding(.vertical, 16)
-                .presentationDetents([.height(400)])
+                .sheetDetents([.height(400)])
             }
 
             WeekNavButton(icon: "chevron.right", onClick: onNextWeek)

@@ -57,7 +57,7 @@ struct DatePickerField: View {
                 }
                 .padding()
             }
-            .presentationDetents([.height(420)])
+            .sheetDetents([.height(420)])
         }
     }
 
@@ -138,7 +138,7 @@ struct TimePickerField: View {
                 }
                 .padding()
             }
-            .presentationDetents([.height(400)])
+            .sheetDetents([.height(400)])
         }
     }
 

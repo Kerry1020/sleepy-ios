@@ -173,8 +173,10 @@ struct ConflictClusterCard: View {
         let maxEnd = drawList.map { $0.course.startNode + (clampedSteps[$0.course.id] ?? 1) }.max()! - 1
         let clusterH = rowH * CGFloat(maxEnd - minStart + 1) - gapH
         let clusterYOffset = rowH * CGFloat(minStart - baseNode)
-        // v6: 顶卡收窄量 = 用户设置(A 偏移 d / C 右缘让宽共用),滑杆 4..20dp
-        let topInset = AppPrefs.shared.getConflictTopInset()
+        // v6: 顶卡收窄量 = 用户设置(用户 2026-09-04 拆分: STACK/RAIL 独立配置不共享),滑杆 4..20dp
+        let topInset = form == .rail
+            ? AppPrefs.shared.getConflictRailInset()
+            : AppPrefs.shared.getConflictStackInset()
         // v7.10.16o: 折角幅度 = 用户拖杆设置(8..28dp)
         let foldSize = AppPrefs.shared.getConflictFoldSize()
         // v7.8 图层归属: 图层序号 → 该层整层代表 id

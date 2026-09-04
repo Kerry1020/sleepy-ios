@@ -40,7 +40,6 @@ struct TodayWidgetProvider: TimelineProvider {
 // MARK: - View ← renderToday
 
 struct TodayWidgetEntryView: View {
-    @Environment(\.widgetRenderingMode) var renderingMode
     @Environment(\.widgetFamily) var widgetFamily
     let entry: TodayWidgetEntry
 

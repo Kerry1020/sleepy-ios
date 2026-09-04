@@ -77,8 +77,9 @@ struct CourseDetailSheet: View {
                 .padding(.vertical, 12)
                 .padding(.bottom, 12)
             }
-            .presentationDetents([.medium])
-            .presentationDragIndicator(.hidden)
+            .sheetDetents([.medium])
+            // iOS 15 无 drag indicator API,iOS 16+ 隐藏把手(iOS15 默认无把手,行为一致)
+            .modifier(HideDragIndicatorIfAvailable())
         }
     }
 

@@ -119,8 +119,7 @@ struct ImportSheet: View {
                 }
                 if textExpanded {
                     VStack(spacing: 8) {
-                        TextField(L10n.format("import_paste_hint"), text: $inputText, axis: .vertical)
-                            .lineLimit(4...8)
+                        MultilineFieldCompat(placeholder: L10n.format("import_paste_hint"), text: $inputText, minLines: 4, maxLines: 8)
                             .padding(12)
                             .frame(height: 160, alignment: .topLeading)
                             .background(colors.surfaceContainer)
@@ -265,7 +264,7 @@ struct ImportSheet: View {
                     preview = nil
                 }
             }
-            .presentationDetents([.large])
+            .sheetDetents([.large])
         }
         // 确认对话框(pendingMode 驱动; preview 已快照进 confirmedPreview)
         .sheet(isPresented: Binding(
@@ -299,7 +298,7 @@ struct ImportSheet: View {
                         onOpenEditTable(tid)
                     }
                 })
-                .presentationDetents([.large])
+                .sheetDetents([.large])
         }
         // 格式详情弹窗 ("支持格式"每行 ⓘ 点开)
         .sheet(item: $detailFormat) { fmt in
@@ -483,7 +482,7 @@ private struct FormatDetailDialog: View {
             .padding(20)
         }
         .background(colors.surface)
-        .presentationDetents([.large])
+        .sheetDetents([.large])
     }
 }
 

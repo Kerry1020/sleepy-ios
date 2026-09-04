@@ -129,7 +129,7 @@ struct HolidaySettingsScreen: View {
                     editing = nil
                 }
             )
-            .presentationDetents([.medium, .large])
+            .sheetDetents([.medium, .large])
         }
     }
 

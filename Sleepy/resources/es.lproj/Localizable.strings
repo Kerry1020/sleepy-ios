@@ -366,6 +366,17 @@
 "settings_widget_colorless_sub" = "Solo los cursos con fondo en los widgets usan un gris neutro; la vista semanal de texto no se ve afectada y los cursos con color personalizado no se ven afectados";
 "settings_course_colorless" = "Colores uniformes de cápsulas de cursos";
 "settings_course_colorless_sub" = "Solo las cápsulas de cursos en la app usan un gris neutro; los ajustes de widgets no se ven afectados y los cursos con color personalizado no se ven afectados";
+"settings_conflict_style" = "Estilo de clases en conflicto";
+"settings_conflict_stack" = "Apilado con desplazamiento";
+"settings_conflict_stack_sub" = "Las clases se apilan desplazadas y la inferior asoma por el borde";
+"settings_conflict_fold" = "Esquina doblada";
+"settings_conflict_fold_sub" = "Una esquina doblada en la tarjeta indica que hay más clases debajo";
+"settings_conflict_rail" = "Raíl lateral";
+"settings_conflict_rail_sub" = "Una barra de color a la derecha lista las clases con nombre vertical";
+"settings_conflict_stack_inset" = "Distancia de desfase";
+"settings_conflict_rail_inset" = "Margen derecho";
+"settings_conflict_fold_size" = "Tamaño de la esquina doblada";
+"settings_conflict_fold_size_sub" = "Tamaño de la marca doblada; ajusta el aspecto y su zona táctil";
 "settings_widget_separator" = "Separador vista semanal";
 "settings_widget_separator_sub" = "Mostrar un divisor entre los nombres de cursos en la vista semanal de texto";
 "edit_period_input" = "Entrada";

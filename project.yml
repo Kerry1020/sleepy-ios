@@ -3,16 +3,21 @@
 name: Sleepy
 options:
   bundleIdPrefix: com.lingion
+  # 6s Plus 真机 = iOS 15.8.8;16.0 装不上(2026-09 真机调试定版)
   deploymentTarget:
-    iOS: "16.0"
+    iOS: "15.6"
   createIntermediateGroups: true
   groupSortPosition: top
 
 settings:
   base:
     SWIFT_VERSION: "5.8"
-    # 模拟器测试需要 ad-hoc 签名;真机 archive 走 build-ipa.sh 的 CODE_SIGNING_ALLOWED=NO
-    CODE_SIGN_IDENTITY: "-"
+    # 真机调试走自动签名(Personal Team GU39QS224C);模拟器也兼容
+    # 无此设置 → "Ad Hoc code signing is not allowed with SDK 'iOS 16.4'"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: GU39QS224C
+    # Personal Team 免费证书,7 天过期,重连 Xcode 自动续
+    CODE_SIGN_IDENTITY: "Apple Development"
     # xcodegen 不默认注入这批标准设置 — 缺 PRODUCT_NAME 产物名变空(.app/.appex 冲突)
     PRODUCT_NAME: "$(TARGET_NAME)"
     PRODUCT_BUNDLE_IDENTIFIER: "$(PRODUCT_BUNDLE_IDENTIFIER)"
@@ -22,8 +27,12 @@ settings:
     Debug:
       ONLY_ACTIVE_ARCH: YES
       ENABLE_TESTABILITY: YES
+      # 真机装机只跑 Debug;Release(archive) 仍由 build-ipa.sh 走无签名管线
+      CODE_SIGN_STYLE: Automatic
     Release:
       ONLY_ACTIVE_ARCH: NO
+      CODE_SIGN_STYLE: Manual
+      CODE_SIGN_IDENTITY: "-"
 
 packages:
   GRDB:
@@ -79,8 +88,10 @@ targets:
         ITSAppUsesNonExemptEncryption: false
     entitlements:
       path: Sleepy/Sleepy.entitlements
-      properties:
-        com.apple.security.application-groups: [group.com.lingion.sleepy.ios]
+      # App Group 键已剥:免费 Personal Team 的 profile 装不下 group
+      # (门户 "not available"),带此键真机签名必失败。AppGroupResolver 回退沙箱。
+      # AltStore 侧载路径不受影响(重签时 AltStore 自己注入 group + ALTAppGroups)
+      properties: {}
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.lingion.sleepy.ios
@@ -114,8 +125,8 @@ targets:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     entitlements:
       path: SleepyWidget/SleepyWidget.entitlements
-      properties:
-        com.apple.security.application-groups: [group.com.lingion.sleepy.ios]
+      # 同主 app:剥 group(免费账号限制);AltStore 重签路径自会注入
+      properties: {}
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.lingion.sleepy.ios.widget
