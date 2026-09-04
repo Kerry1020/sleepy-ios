@@ -18,6 +18,8 @@ struct ScheduleScreen: View {
 
     @State private var viewMode: ViewMode = .full
     @State private var selectedCourse: CourseEntity? = nil
+    // v7.10.16: 无可撤回时 toast 提示(按钮不隐藏保持布局稳定)
+    @State private var showUndoNoneToast = false
 
     var body: some View {
         let state = viewModel.state
@@ -51,7 +53,13 @@ struct ScheduleScreen: View {
                         guard let start = state.currentTable?.startDate else { return }
                         viewModel.changeWeek(DateUtils.currentWeek(startDate: start))
                     },
-                    onSelectWeek: { week in viewModel.changeWeek(week) })
+                    onSelectWeek: { week in viewModel.changeWeek(week) },
+                    onUndo: {
+                        // v7.10.16: 任何课表数据改动可一键撤销一次
+                        if !viewModel.undoLastChange() {
+                            showUndoNoneToast = true
+                        }
+                    })
 
                 // Segmented Switcher
                 SegmentedSwitcher(
@@ -71,6 +79,25 @@ struct ScheduleScreen: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        // ← Android Toast schedule_undo_none
+        .overlay(alignment: .bottom) {
+            if showUndoNoneToast {
+                Text(L10n.format("schedule_undo_none"))
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(colors.onSurface)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(colors.surfaceContainerHigh)
+                    .cornerRadius(SleepyShapes.large)
+                    .padding(.bottom, 24)
+                    .transition(.opacity)
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                            withAnimation { showUndoNoneToast = false }
+                        }
+                    }
+            }
+        }
         // 详情 Bottom Sheet
         .sheet(item: $selectedCourse) { course in
             CourseDetailSheet(
@@ -182,6 +209,7 @@ private struct ScheduleTopBar: View {
     let onNextWeek: () -> Void
     let onJumpToActual: () -> Void
     let onSelectWeek: (Int) -> Void
+    var onUndo: () -> Void = {}
 
     @State private var menuOpen = false
 
@@ -257,6 +285,12 @@ private struct ScheduleTopBar: View {
             }
 
             WeekNavButton(icon: "chevron.right", onClick: onNextWeek)
+
+            Spacer(minLength: 0)
+
+            // v7.10.16: 右侧第一颗 = 撤回(任何课表数据改动可撤销一次;不隐藏保持布局稳定)
+            WeekNavButton(icon: "arrow.uturn.backward", onClick: onUndo)
+                .accessibilityIdentifier("undo_button")
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 16)

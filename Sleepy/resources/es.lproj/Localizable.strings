@@ -17,6 +17,8 @@
 "schedule_manual_first" = "Crear primer curso";
 "schedule_add_course" = "Añadir curso";
 "schedule_current_week" = "Semana %1$d";
+"schedule_undo" = "Deshacer";
+"schedule_undo_none" = "Nada que deshacer";
 "schedule_no_course_today" = "No hay clases hoy";
 "import_title" = "Importar horario";
 "manage_current_table" = "Horario actual";

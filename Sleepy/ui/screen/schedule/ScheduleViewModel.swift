@@ -104,6 +104,18 @@ final class ScheduleViewModel: ObservableObject {
         }
     }
 
+    /// v7.10.16 撤回最近一次数据改动(导入/加课/编辑/删课/删表/建表...)。
+    /// 返回 false = 没有可撤回的操作(调用方 toast 提示)。
+    @discardableResult
+    func undoLastChange() -> Bool {
+        let ok = (try? repo.restoreLastSnapshot()) ?? false
+        if ok {
+            manualSelectDone = false   // 恢复后选中态交回 default 表
+            onWidgetsNeedReload()
+        }
+        return ok
+    }
+
     /// Create a new empty table with auto-generated name. ← createEmptyTable
     /// - Parameter commitSelection: true=立刻切到新表; false=只插入不切(调用方回滚/后切)
     @discardableResult

@@ -17,6 +17,8 @@
 "schedule_manual_first" = "Create first course";
 "schedule_add_course" = "Add Course";
 "schedule_current_week" = "Week %1$d";
+"schedule_undo" = "Undo";
+"schedule_undo_none" = "Nothing to undo";
 "schedule_no_course_today" = "No classes today";
 "import_title" = "Import Schedule";
 "manage_current_table" = "Current Schedule";

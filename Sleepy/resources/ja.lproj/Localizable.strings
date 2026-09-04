@@ -17,6 +17,8 @@
 "schedule_manual_first" = "最初の授業を作成";
 "schedule_add_course" = "授業を追加";
 "schedule_current_week" = "第 %1$d 週";
+"schedule_undo" = "元に戻す";
+"schedule_undo_none" = "元に戻せる操作はありません";
 "schedule_no_course_today" = "今日は授業がありません";
 "import_title" = "時間割をインポート";
 "manage_current_table" = "現在の時間割";

@@ -17,6 +17,8 @@
 "schedule_manual_first" = "手動建立第一門課";
 "schedule_add_course" = "新增課程";
 "schedule_current_week" = "第 %1$d 週";
+"schedule_undo" = "撤回";
+"schedule_undo_none" = "沒有可撤回的操作";
 "schedule_no_course_today" = "今天沒有課";
 "import_title" = "匯入課表";
 "manage_current_table" = "目前課表";
