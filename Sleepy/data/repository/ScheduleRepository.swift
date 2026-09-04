@@ -21,6 +21,39 @@ final class ScheduleRepository {
         self.tableDao = db.timeTableDao
     }
 
+    // ========== Undo 快照(← captureForUndo) ==========
+
+    /// 公开写方法执行前调用 — 拍下改动前的全库状态。
+    /// 复合动作(如导入)入口先 UndoManager.shared.beginBatch(), 批内只保首个快照=动作前时点。
+    private func captureForUndo() throws {
+        UndoManager.shared.capture(
+            tables: try tableDao.getAll(),
+            courses: try courseDao.getAllCourses(),
+            defaultTableId: try tableDao.getDefault()?.id
+        )
+    }
+
+    /// 撤回最近一次改动: 事务内清两表→重插快照→恢复 default → 刷 widget/通知。false = 无可撤回
+    @discardableResult
+    func restoreLastSnapshot() throws -> Bool {
+        guard let snap = UndoManager.shared.poll() else { return false }
+        UndoManager.shared.restoring = true
+        defer { UndoManager.shared.restoring = false }
+        try db.dbQueue.write { db in
+            // 先插 tables 再插 courses — courses.tableId 有外键指向 time_tables.id,
+            // 顺序颠倒(先课程后课表)会触发外键约束闪退(← 安卓同款顺序注释)
+            try courseDao.deleteAllInDb(db)
+            try db.execute(sql: "DELETE FROM time_tables")
+            for t in snap.tables { var t = t; try t.insert(db, onConflict: .replace) }
+            for c in snap.courses { var c = c; try c.insert(db, onConflict: .replace) }
+            if let defId = snap.defaultTableId {
+                try db.execute(sql: "UPDATE time_tables SET isDefault = (id = ?)", arguments: [defId])
+            }
+        }
+        onDataChanged()
+        return true
+    }
+
     // ========== TimeTable ==========
 
     func getAllTables() throws -> [TimeTableEntity] { try tableDao.getAll() }
@@ -31,6 +64,7 @@ final class ScheduleRepository {
 
     @discardableResult
     func insertTable(_ table: TimeTableEntity) throws -> Int64 {
+        try captureForUndo()
         let id = try tableDao.insert(table)
         let count = try tableDao.count()
         if table.isDefault || count == 1 {
@@ -40,6 +74,7 @@ final class ScheduleRepository {
     }
 
     func updateTable(_ table: TimeTableEntity) throws {
+        try captureForUndo()
         try tableDao.update(table)
         onDataChanged()
     }
@@ -48,6 +83,7 @@ final class ScheduleRepository {
         // ★ 删除前先取该表全部课程 id:外键 CASCADE 级联删课程,
         //   删完后这些 id 已不在库里,当天的课前闹钟会残留到点继续响。
         //   因此必须在删除前捕获 id 列表,删除后对这些"孤儿 id"显式取消通知。
+        try captureForUndo()
         let orphanCourseIds = try courseDao.getByTable(id).map { $0.id }
         try tableDao.deleteById(id)
         if !orphanCourseIds.isEmpty {
@@ -75,6 +111,7 @@ final class ScheduleRepository {
 
     @discardableResult
     func insertCourse(_ course: CourseEntity) throws -> Int64 {
+        try captureForUndo()
         let id = try courseDao.insert(course)
         onDataChanged()
         return id
@@ -83,6 +120,7 @@ final class ScheduleRepository {
     @discardableResult
     func insertCourses(_ courses: [CourseEntity]) throws -> [Int64] {
         // 导入时以规范化课程名为身份;时间、教师、教室只属于课程的一个时段。
+        try captureForUndo()
         let withGroupIds = assignGroupIds(courses)
         let ids = try courseDao.insertAll(withGroupIds)
         onDataChanged()
@@ -90,6 +128,7 @@ final class ScheduleRepository {
     }
 
     func updateCourse(_ course: CourseEntity) throws {
+        try captureForUndo()
         try courseDao.update(course)
         onDataChanged()
     }
@@ -101,17 +140,20 @@ final class ScheduleRepository {
 
     /// 编辑课程组:原子地删除同 groupId 全部记录并插入新草稿(DAO 层事务)
     func updateCourseGroup(_ tableId: Int64, _ groupId: String, _ newCourses: [CourseEntity]) throws {
+        try captureForUndo()
         try courseDao.replaceGroup(tableId: tableId, groupId: groupId, newCourses: newCourses)
         onDataChanged()
     }
 
     func deleteCourse(_ id: Int64) throws {
+        try captureForUndo()
         try courseDao.deleteById(id)
         onDataChanged()
     }
 
     /// 删除同 groupId 全部记录
     func deleteCourseGroup(_ tableId: Int64, _ groupId: String) throws {
+        try captureForUndo()
         try courseDao.deleteByGroupId(tableId, groupId)
         onDataChanged()
     }
@@ -122,6 +164,7 @@ final class ScheduleRepository {
 
     /// 覆盖式导入(先删后插)
     func replaceCourses(_ tableId: Int64, _ courses: [CourseEntity]) throws {
+        try captureForUndo()
         let withGroupIds = assignGroupIds(courses)
         try courseDao.replaceAll(tableId: tableId, courses: withGroupIds)
         onDataChanged()

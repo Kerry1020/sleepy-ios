@@ -68,6 +68,16 @@ struct CourseDao {
         try db.read { try CourseEntity.fetchAll($0, sql: "SELECT * FROM courses WHERE tableId = ? ORDER BY day, startNode, startWeek", arguments: [tableId]) }
     }
 
+    /// 全库课程(撤销快照用 ← courseDao.getAll())
+    func getAllCourses() throws -> [CourseEntity] {
+        try db.read { try CourseEntity.fetchAll($0, sql: "SELECT * FROM courses") }
+    }
+
+    /// 全库删除(撤销恢复用 ← courseDao.deleteAll();调用方保证在事务内)
+    func deleteAllInDb(_ dbw: Database) throws {
+        try dbw.execute(sql: "DELETE FROM courses")
+    }
+
     // SELECT * FROM courses WHERE tableId = :tableId AND day = :day ORDER BY startNode
     // (observeByTableAndDay / getByTableAndDayOnce 共用)
     func getByTableAndDay(_ tableId: Int64, day: Int) throws -> [CourseEntity] {
