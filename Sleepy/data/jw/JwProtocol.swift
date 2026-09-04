@@ -33,6 +33,41 @@ enum JwProtocol {
     /// 金智 Wisedu jwapp 微应用平台(JSON API 直连,非 HTML 解析)。如:哈尔滨工程大学 jwgl.hrbeu.edu.cn
     static let TYPE_WISEDU = "wisedu"
 
+    /// 重庆大学自建统一门户 my.cqu.edu.cn(REST API + Bearer token,非 HTML 解析)。
+    /// WebView 登录统一身份认证后从 localStorage 取 cqu_edu_ACCESS_TOKEN,fetch 四个接口。
+    /// 外部佐证:时光课程表 cqu.js 适配器(茵符草)、321CQU/pymycqu。
+    static let TYPE_CQU = "cqu"
+
+    /// 合肥工业大学教务(金智 EAMS5, eams5-student 系列, jxglstu.hfut.edu.cn)。
+    /// 上游协议形态: Chiu-xaH/HFUT-Schedule (MIT) 全链路参考。
+    static let TYPE_EAMS5 = "eams5"
+
+    /// 东南大学教务(正方 URP 系, newxk.urp.seu.edu.cn, 用户粘 JSON)。
+    /// 字段集 {KCM,SKJS,JASMC,SKXQ,KSJC,JSJC,ZCMC,KCH,JXBQH}。
+    /// 上游协议形态: sakimidare/SEUTimetable (Apache-2.0) parseWeekRange 算法参考。
+    static let TYPE_SEU = "seu"
+
+    /// 浙江大学教务(正方新版 zf_new, zdbk.zju.edu.cn)。
+    /// 字段集 {xkkh, xqj, dsz, djj, skcd, kcb, xxq} — kcb 含 \n 分隔的课名/周次串/老师/教室。
+    /// 上游协议形态: Xecades/zju-ical-py (LGPL-2.1) 字段映射参考, kcb 解析代码自写。
+    static let TYPE_ZJU = "zju"
+
+    /// 中国科学技术大学教务(自研新版, jw.ustc.edu.cn)。
+    /// JSON 路径: x.studentTableVm.activities[]。
+    /// 上游协议形态: 1970633640/USTC-timetable-to-ics (无 license) — 算法参考。
+    static let TYPE_USTC = "ustc"
+
+    /// 四川大学教务(scu.edu.cn 自建门户, 强智框架但走 mobile JSON 接口)。
+    /// JSON 路径: x.dateList[0].selectCourseList[].timeAndPlaceList[]。
+    /// 单/双信息 upstream 协议丢失 → 本 parser 强制 type=0 (上游限制)。
+    /// 上游协议形态: Z-P-J/ScuTimetable (无 license) TimetableHelper.java — 算法自写。
+    static let TYPE_SCU = "scu"
+
+    /// 东北大学教务(jwxt.neu.edu.cn 强智新版 mobile JSON)。
+    /// JSON 路径: x.datas.arrangedList[]。单/双周 upstream 协议层丢失, 强制 type=0。
+    /// 上游协议形态: CreamPig233/neu_wisedu2wakeup (无 license) extract_schedule.js — 算法自写。
+    static let TYPE_NEU = "neu"
+
     /// 协议显示名(用于 UI 提示) ← displayName
     static func displayName(_ type: String?) -> String {
         switch type {
@@ -50,6 +85,20 @@ enum JwProtocol {
             return "北师珠"
         case TYPE_WISEDU:
             return "金智教务(直连)"
+        case TYPE_CQU:
+            return "重庆大学门户"
+        case TYPE_EAMS5:
+            return "合工大教务 (EAMS5)"
+        case TYPE_SEU:
+            return "东南大学"
+        case TYPE_ZJU:
+            return "浙江大学"
+        case TYPE_USTC:
+            return "中国科学技术大学"
+        case TYPE_SCU:
+            return "四川大学"
+        case TYPE_NEU:
+            return "东北大学"
         case TYPE_LOGIN:
             return "特殊登录(v1 暂不支持)"
         case TYPE_HELP:
@@ -72,6 +121,12 @@ enum JwProtocol {
             return "urp"
         case TYPE_WISEDU:
             return "wisedu"
+        case TYPE_CQU:
+            return "cqu"
+        case TYPE_EAMS5:
+            return "eams5"
+        case TYPE_SEU, TYPE_ZJU, TYPE_USTC, TYPE_SCU, TYPE_NEU:
+            return "other"
         default:
             return "other"
         }

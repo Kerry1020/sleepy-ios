@@ -123,6 +123,11 @@ struct JwWebViewLoginScreen: View {
             coordinator.evaluate(WiseduFetchJs.js)
             return
         }
+        // CQU(重庆大学门户): 同走 JS 桥 fetch 四个 REST API, Bearer token 取自 localStorage
+        if school.type == JwProtocol.TYPE_CQU {
+            coordinator.evaluate(CquFetchJs.js)
+            return
+        }
         // 同步 evaluateJavascript 拿 HTML(iframe/frame 合并)
         let js = """
         (function() {
@@ -404,6 +409,83 @@ enum WiseduFetchJs {
             xnxq:o.xnxq,
             periods:periods
           })});
+        })
+        .catch(function(e){
+          window.webkit.messageHandlers.__sleepyBridge.postMessage({json:JSON.stringify({ok:false, err:String(e)})});
+        });
+      } catch(err) {
+        window.webkit.messageHandlers.__sleepyBridge.postMessage({json:JSON.stringify({ok:false, err:String(err)})});
+      }
+    })();
+    """
+}
+
+// MARK: - CQU_FETCH_JS(← JwWebViewLoginScreen.kt CQU_FETCH_JS 原文移植, 桥回调改 WKScriptMessage postMessage)
+//
+// 重庆大学门户(my.cqu.edu.cn): localStorage 取 Bearer token → 串
+// session/info-detail + my-table-detail + time-pattern 三接口, 学号取自 .trigger-user-name
+// (复用 __sleepyBridge 回调通道, payload 同 wisedu {ok, data, periods})。
+// 已知: 2026-06 起统一身份认证需动态验证码双因素, WebView 人工登录不受影响。
+
+enum CquFetchJs {
+    static let js = """
+    (function(){
+      try {
+        if (location.hostname.indexOf('cqu.edu.cn') < 0) {
+          window.webkit.messageHandlers.__sleepyBridge.postMessage({json:JSON.stringify({ok:false, err:'请先登录并进入重庆大学门户后再点导入'})});
+          return;
+        }
+        var token = '';
+        try { token = (localStorage.getItem('cqu_edu_ACCESS_TOKEN') || '').replaceAll('"', ''); } catch(e) {}
+        if (!token) {
+          window.webkit.messageHandlers.__sleepyBridge.postMessage({json:JSON.stringify({ok:false, err:'未取到登录凭据，请先登录 my.cqu.edu.cn 再点导入'})});
+          return;
+        }
+        var studentId = '';
+        try {
+          var el = document.querySelector('.trigger-user-name');
+          var m = el ? (el.innerText || '').match(/\\[(.*?)\\]/) : null;
+          studentId = m ? m[1] : '';
+        } catch(e) {}
+        if (!studentId) {
+          window.webkit.messageHandlers.__sleepyBridge.postMessage({json:JSON.stringify({ok:false, err:'页面上未找到学号，请确认已登录门户首页'})});
+          return;
+        }
+        var auth = {credentials:'include', headers:{'Content-Type':'application/json', 'Authorization':'Bearer ' + token}};
+        fetch('/api/resourceapi/session/info-detail', auth)
+        .then(function(r){
+          if (!r.ok) throw new Error('获取学期信息失败 HTTP ' + r.status);
+          return r.json();
+        })
+        .then(function(session){
+          var termId = session.curSessionId;
+          if (!termId) throw new Error('学期信息里没有 curSessionId');
+          var body = Object.assign({}, auth, {method:'POST', body: JSON.stringify([studentId])});
+          return fetch('/api/timetable/class/timetable/student/my-table-detail?sessionId=' + encodeURIComponent(termId), body);
+        })
+        .then(function(r){
+          if (!r.ok) throw new Error('获取课表失败 HTTP ' + r.status + '（登录态可能过期，请刷新重登）');
+          return r.text();
+        })
+        .then(function(txt){
+          var periods = [];
+          return fetch('/api/workspace/time-pattern/session-time-pattern', auth)
+          .then(function(r){ return r.ok ? r.json() : null; })
+          .then(function(tp){
+            try {
+              var vos = (tp && tp.data && tp.data.classPeriodVOS) || [];
+              for (var i = 0; i < vos.length; i++) {
+                var v = vos[i];
+                periods.push({
+                  node: v.periodOrder || (i + 1),
+                  start: v.startTime || '',
+                  end: v.endTime || ''
+                });
+              }
+              periods.sort(function(a,b){ return a.node - b.node; });
+            } catch(e) { periods = []; }
+            window.webkit.messageHandlers.__sleepyBridge.postMessage({json:JSON.stringify({ok:true, data:txt, periods:periods})});
+          });
         })
         .catch(function(e){
           window.webkit.messageHandlers.__sleepyBridge.postMessage({json:JSON.stringify({ok:false, err:String(e)})});

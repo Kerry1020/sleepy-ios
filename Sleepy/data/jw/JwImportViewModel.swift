@@ -82,6 +82,13 @@ final class JwImportViewModel: ObservableObject {
         case JwProtocol.TYPE_URP: parser = JwUrpParser(html)
         case JwProtocol.TYPE_URP_NEW: parser = JwNewUrpParser(html)
         case JwProtocol.TYPE_WISEDU: parser = JwWiseduParser(html)
+        case JwProtocol.TYPE_CQU: parser = JwCquParser(html)
+        // 985 批次新协议(JSON 直解析, 非 HTML)
+        case JwProtocol.TYPE_SEU: parser = JwSeuParser(html)
+        case JwProtocol.TYPE_ZJU: parser = JwZjuParser(html)
+        case JwProtocol.TYPE_USTC: parser = JwUstcParser(html)
+        case JwProtocol.TYPE_SCU: parser = JwScuParser(html)
+        case JwProtocol.TYPE_NEU: parser = JwNeuParser(html)
         case JwProtocol.TYPE_ZF: parser = JwNewZfParser(html)
         case JwProtocol.TYPE_ZF_NEW: parser = JwNewZfParser(html)
         case JwProtocol.TYPE_ZF_1: parser = JwNewZfParser(html)
@@ -96,6 +103,12 @@ final class JwImportViewModel: ObservableObject {
     private static func tryAllParsers(_ html: String) -> [JwCourse] {
         let candidates: [JwParser] = [
             JwWiseduParser(html),
+            JwCquParser(html),
+            JwSeuParser(html),
+            JwZjuParser(html),
+            JwUstcParser(html),
+            JwScuParser(html),
+            JwNeuParser(html),
             JwNewUrpParser(html),
             JwNewZfParser(html),
             JwQzParser(html),
@@ -114,6 +127,10 @@ final class JwImportViewModel: ObservableObject {
     static func detectProtocolFromUrl(_ url: String) -> String? {
         let u = url.lowercased()
         if u.contains("jwapp/sys/") || u.contains("/jwapp/") { return JwProtocol.TYPE_WISEDU }
+        // ①b CQU — 重庆大学统一门户(host 锚点; 自建 REST, 非 jwapp)
+        if u.range(of: "^https?://my\\.cqu\\.edu\\.cn(/.*)?$", options: .regularExpression) != nil {
+            return JwProtocol.TYPE_CQU
+        }
         if u.contains("jwglxt") || u.contains("/xtgl/") { return JwProtocol.TYPE_ZF_NEW }
         if u.contains("/jwtottxuxsysb/") { return JwProtocol.TYPE_ZF_NEW }
         if u.contains("qz") || u.contains("strongdesk") { return JwProtocol.TYPE_QZ }

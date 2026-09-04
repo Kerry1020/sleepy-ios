@@ -337,14 +337,14 @@ final class JwImportViewModelLogicTests: XCTestCase {
     }
 
     func testSchoolsJsonLoadsAndParses() throws {
-        // ← parseSchoolsJson 走 app bundle 的 schools.json(146 校)
+        // ← parseSchoolsJson 走 app bundle 的 schools.json(159 校, 985 批次后与安卓终态对齐)
         let bundle = Bundle(for: JwImportViewModel.self) // @testable → 用 app 类型
         let url = Bundle.main.url(forResource: "schools", withExtension: "json")
             ?? bundle.url(forResource: "schools", withExtension: "json")
         let raw = try String(contentsOf: url!, encoding: .utf8)
         let text = raw
         let list = try schoolsFromJson(text)
-        XCTAssertEqual(146, list.count)
+        XCTAssertEqual(159, list.count)
         let first = list[0]
         XCTAssertFalse(first.name.isEmpty)
     }
