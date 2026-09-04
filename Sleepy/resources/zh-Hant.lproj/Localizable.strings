@@ -77,6 +77,8 @@
 "import_conflict_count" = "發現 %1$d 門衝突課程。建議匯入為新課表，或僅附加無衝突部分。";
 "import_conflict_more" = "還有 %1$d 條衝突未展開";
 "import_append_only" = "僅附加無衝突";
+"import_append_as_new" = "合併為新課表";
+"import_append_conflict" = "追加衝突課表";
 "import_as_new" = "匯入為新課表";
 "import_overwrite" = "⚠ 覆蓋目前（謹慎）";
 "import_confirm_title" = "匯入前確認";

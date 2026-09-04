@@ -13,6 +13,10 @@ enum ImportApplyMode {
     case replaceCurrent
     case importAsNew
     case appendNonConflict
+    /// 当前课表 + 导入数据合并, 创建新课表保存, 用户命名(v7.10.13)
+    case appendAsNew
+    /// 连冲突课一起追加进当前课表(红标: 会形成同格多层)(v7.10.13)
+    case appendAll
 }
 
 struct CourseConflict {
@@ -258,6 +262,30 @@ struct ImportSheet: View {
                 // ★ iOS 16 sheet 冲突修复: 先关预览 sheet 再开确认 sheet —
                 //   同一宿主上确认 sheet 会因预览未 dismiss 被丢弃。快照 preview
                 //   进 confirmedPreview 持有, 延迟到预览 dismiss 完成后再置模式。
+                // v7.10.13 追加模式: 追加到已存在的课表, 命名由目标课表自带, 不需要再问用户 —
+                // 直接走 applyImportPreview, 跳过 ImportConfirmDialog(← Android LaunchedEffect)。
+                if mode == .appendNonConflict || mode == .appendAll {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                        guard let p = preview else { return }
+                        isLoading = true
+                        _ = ImportSheet.applyImportPreview(
+                            preview: p, mode: mode,
+                            confirmedStartDate: p.parseResult.startDate.isEmpty
+                                ? (state.currentTable?.startDate ?? Self.todayISO())
+                                : p.parseResult.startDate,
+                            confirmedTableName: state.currentTable?.name ?? "",
+                            confirmedTimeJson: TimeTableUtils.mergeMostComplete(
+                                currentJson: state.currentTable?.timeJson ?? "",
+                                incomingJson: p.parseResult.timeJson,
+                                requiredNodeCount: p.parseResult.nodesPerDay),
+                            onImported: onImported) { msg in errorMsg = msg }
+                        preview = nil
+                        pendingMode = nil
+                        isLoading = false
+                        onDismiss()
+                    }
+                    return
+                }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
                     confirmedPreview = preview
                     pendingMode = mode
@@ -606,6 +634,24 @@ private struct ImportPreviewDialog: View {
                                 onApply(.importAsNew)
                             }
                         }
+                        HStack(spacing: 8) {
+                            // 追加冲突课表 — 危险动作(同格多层), errorContainer 色块底, 与覆盖按钮同款
+                            Button {
+                                onApply(.appendAll)
+                            } label: {
+                                Text(L10n.format("import_append_conflict"))
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(colors.onErrorContainer)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 40)
+                                    .background(colors.errorContainer)
+                                    .cornerRadius(SleepyShapes.medium)
+                            }
+                            .buttonStyle(SleepyButtonStyle())
+                            PrimaryDialogButton(L10n.format("import_append_as_new")) {
+                                onApply(.appendAsNew)
+                            }
+                        }
                         Button {
                             onApply(.replaceCurrent)
                         } label: {
@@ -913,6 +959,37 @@ extension ImportSheet {
                 return nil
             }
             var courses = cleanCourses
+            for i in courses.indices {
+                courses[i].id = 0
+                courses[i].tableId = preview.targetTableId
+            }
+            _ = try? repo.insertCourses(courses)
+            onImported()
+            return preview.targetTableId
+        case .appendAsNew:
+            // v7.10.13: 并集追加为新课表 — 老表全部课程 + 导入课程(闸门不拦), 用户命名
+            let base = try? repo.getTable(preview.targetTableId)
+            let existingNames = ((try? repo.getAllTables()) ?? []).map { $0.name }
+            var newTable = TimeTableEntity(
+                name: uniqueImportedTableName(confirmedTableName, existingNames),
+                startDate: confirmedStartDate,
+                maxWeek: base?.maxWeek ?? 20,
+                nodesPerDay: preview.parseResult.nodesPerDay > 0 ? preview.parseResult.nodesPerDay : base?.nodesPerDay ?? 12,
+                timeJson: confirmedTimeJson,
+                isDefault: false)
+            newTable.color = base?.color ?? "#FF6750A4"
+            let newTableId = (try? repo.insertTable(newTable)) ?? 0
+            var courses = preview.existingCourses + preview.parseResult.courses
+            for i in courses.indices {
+                courses[i].id = 0
+                courses[i].tableId = newTableId
+            }
+            _ = try? repo.insertCourses(courses)
+            onImported()
+            return newTableId
+        case .appendAll:
+            // v7.10.13: 连冲突课一起追加进当前课表(危险: 会形成同格多层)
+            var courses = preview.parseResult.courses
             for i in courses.indices {
                 courses[i].id = 0
                 courses[i].tableId = preview.targetTableId

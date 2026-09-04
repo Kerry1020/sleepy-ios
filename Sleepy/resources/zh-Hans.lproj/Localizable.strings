@@ -78,6 +78,8 @@
 "import_conflict_count" = "发现 %1$d 门冲突课程。建议导入为新课表，或仅追加无冲突部分。";
 "import_conflict_more" = "还有 %1$d 条冲突未展开";
 "import_append_only" = "仅追加无冲突";
+"import_append_as_new" = "追加为新课表";
+"import_append_conflict" = "追加冲突课表";
 "import_as_new" = "导入为新课表";
 "import_overwrite" = "⚠ 覆盖当前（谨慎）";
 "import_confirm_title" = "导入前确认";

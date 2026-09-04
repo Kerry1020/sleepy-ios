@@ -77,6 +77,8 @@
 "import_conflict_count" = "Se encontraron %1$d conflicto(s). Considera importar como nuevo horario o añadir solo cursos sin conflicto.";
 "import_conflict_more" = "%1$d conflicto(s) más…";
 "import_append_only" = "Añadir sin conflictos";
+"import_append_as_new" = "Fusionar en horario nuevo";
+"import_append_conflict" = "Añadir con conflictos";
 "import_as_new" = "Importar como nuevo horario";
 "import_overwrite" = "⚠ Sobrescribir actual (precaución)";
 "import_confirm_title" = "Confirmar antes de importar";

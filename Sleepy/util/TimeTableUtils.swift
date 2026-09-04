@@ -183,6 +183,38 @@ enum TimeTableUtils {
         return rows + [TimeSlotRow(node: nextNode, start: "", end: "")]
     }
 
+    /// v7.10.16k 无损合并 — "哪个大用哪个"(用户 2026-09-03):
+    /// 双方作息逐节合并, 结果 = max(两边节次数, requiredNodeCount), 任何一方不得把另一方压小。
+    /// 同一节次: 导入源非空时间优先(空串视为没声明), 否则原表, 都没有用 smart 默认。
+    /// 超出双方声明的节次(requiredNodeCount=导入课程实际到达的最大节)用 smart 默认铺底。
+    static func mergeMostComplete(currentJson: String, incomingJson: String, requiredNodeCount: Int = 0) -> String {
+        // 空串 = 没声明 — 不能进 parseTimeSlotRows(它会 catch 出 12 行 smart 伪声明,
+        // 反过来把有真实作息的一方当"缺省"盖掉)
+        var currentRows: [TimeSlotRow] = []
+        if !currentJson.isEmpty { currentRows = parseTimeSlotRows(currentJson) }
+        var incomingRows: [TimeSlotRow] = []
+        if !incomingJson.isEmpty { incomingRows = parseTimeSlotRows(incomingJson) }
+        let cur = Dictionary(currentRows.map { ($0.node, $0) }, uniquingKeysWith: { a, _ in a })
+        let inc = Dictionary(incomingRows.map { ($0.node, $0) }, uniquingKeysWith: { a, _ in a })
+        let declared = max(currentRows.map { $0.node }.max() ?? 0,
+                           incomingRows.map { $0.node }.max() ?? 0)
+        if declared == 0 && requiredNodeCount <= 0 { return DEFAULT_TIME_JSON }
+        let count = max(declared, requiredNodeCount, 1)
+        let rows = (1...count).map { node -> TimeSlotRow in
+            let i = inc[node]
+            let c = cur[node]
+            return TimeSlotRow(
+                node: node,
+                start: i.flatMap { $0.start.isEmpty ? nil : $0.start }
+                    ?? c.flatMap { $0.start.isEmpty ? nil : $0.start }
+                    ?? smartStartDefault(node),
+                end: i.flatMap { $0.end.isEmpty ? nil : $0.end }
+                    ?? c.flatMap { $0.end.isEmpty ? nil : $0.end }
+                    ?? smartEndDefault(node))
+        }
+        return buildTimeJsonFromRows(rows)
+    }
+
     private static func smartStartDefault(_ node: Int) -> String {
         switch node {
         case ...2: return "08:00"

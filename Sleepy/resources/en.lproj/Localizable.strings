@@ -77,6 +77,8 @@
 "import_conflict_count" = "Found %1$d conflict(s). Consider importing as new schedule or appending non-conflicting courses only.";
 "import_conflict_more" = "%1$d more conflict(s)…";
 "import_append_only" = "Append non-conflicting";
+"import_append_as_new" = "Merge into new schedule";
+"import_append_conflict" = "Append with conflicts";
 "import_as_new" = "Import as new schedule";
 "import_overwrite" = "⚠ Overwrite current (caution)";
 "import_confirm_title" = "Confirm Before Import";

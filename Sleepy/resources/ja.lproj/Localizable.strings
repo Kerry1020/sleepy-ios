@@ -77,6 +77,8 @@
 "import_conflict_count" = "%1$d 件の競合があります。新規時間割としてインポートするか、競合しない授業のみ追加することを推奨します。";
 "import_conflict_more" = "他 %1$d 件の競合…";
 "import_append_only" = "競合なしのみ追加";
+"import_append_as_new" = "新規時間割に統合";
+"import_append_conflict" = "衝突を含めて追加";
 "import_as_new" = "新規時間割として追加";
 "import_overwrite" = "⚠ 現在のものを上書き（注意）";
 "import_confirm_title" = "インポート前の確認";
