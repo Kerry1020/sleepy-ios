@@ -117,7 +117,9 @@ struct ScheduleScreen: View {
             CourseDetailSheet(
                 course: course,
                 timeString: course.nodeString(),
-                allCourses: state.courses,
+                // v7.10.16q: allCourses 必须与网格同周域(selectedWeek 过滤) —
+                // 周次不相交同行(如周1-4/周6-13)全量传会被当成同时存在 → 幽灵图层
+                allCourses: state.courses.filter { $0.inWeek(state.selectedWeek) },
                 onEdit: { c in
                     selectedCourse = nil
                     onEditCourse(c)

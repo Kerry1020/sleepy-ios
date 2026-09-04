@@ -64,7 +64,8 @@ struct TodayScreen: View {
             CourseDetailSheet(
                 course: course,
                 timeString: course.nodeString(),
-                allCourses: state.courses,
+                // v7.10.16q 同周域: 今日页 actualWeek 过滤后再聚簇, 周次不相交行不成幽灵图层
+                allCourses: state.courses.filter { $0.inWeek(actualWeek) },
                 onEdit: { c in
                     selectedCourse = nil
                     onEditCourse?(c)

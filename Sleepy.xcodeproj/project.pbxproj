@@ -101,6 +101,7 @@
 		783DA0C18585ABE2B0F38CE4 /* JwNewZfParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C1D8BD48F149CE16160CE84 /* JwNewZfParser.swift */; };
 		784FCA1EA5F582BC59BC844F /* TableSwitchUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19EB2EA5882A1102A65170A9 /* TableSwitchUITests.swift */; };
 		7886F9D30CF882DA17E5DD03 /* SettingsCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE15454AE12C13CA8A96C9D /* SettingsCards.swift */; };
+		78F8EFCEC7BFB8B1C167F0BA /* ConflictDetailWeekScopeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23A86C9A205FB6D008F11A52 /* ConflictDetailWeekScopeTests.swift */; };
 		793384D8A98170D9837B9858 /* ReminderPermissionUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D8DFDCCD1C8491943A7FD52 /* ReminderPermissionUITests.swift */; };
 		7B39EA18C8D7D03359DD1605 /* SleepyWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 64CFB5B5DD63AC209144EEDD /* SleepyWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		7CED8B22A59CED24C1EB08C8 /* ConflictLayoutEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4045004893D9AB9C079A3CF /* ConflictLayoutEngine.swift */; };
@@ -242,6 +243,7 @@
 		1F623ECECCA2E2A91223E72C /* SmartPeriodConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartPeriodConfig.swift; sourceTree = "<group>"; };
 		22F391D73202D6B93FFF6070 /* JwSchoolInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwSchoolInfo.swift; sourceTree = "<group>"; };
 		23473ACBFDC5C56F0CC30A1D /* LocaleAndL10nTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocaleAndL10nTests.swift; sourceTree = "<group>"; };
+		23A86C9A205FB6D008F11A52 /* ConflictDetailWeekScopeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConflictDetailWeekScopeTests.swift; sourceTree = "<group>"; };
 		24530B6DC99642CD638100EE /* ImportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportSheet.swift; sourceTree = "<group>"; };
 		290CA376AA06DF914D39E04B /* TimeSlotEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeSlotEditor.swift; sourceTree = "<group>"; };
 		3480ED82E92E5E453EA66874 /* JwProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwProtocol.swift; sourceTree = "<group>"; };
@@ -590,6 +592,7 @@
 		8AAD3F1069D6DE68878E0732 /* SleepyTests */ = {
 			isa = PBXGroup;
 			children = (
+				23A86C9A205FB6D008F11A52 /* ConflictDetailWeekScopeTests.swift */,
 				A41DA105DC235C6C99C97A0B /* ConflictLayoutEngineTests.swift */,
 				5F19B09B9CF4562AD9450D43 /* CourseColorUtilTests.swift */,
 				425CDED54ED7F74106731E8F /* CourseDaoChainTests.swift */,
@@ -1054,6 +1057,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				78F8EFCEC7BFB8B1C167F0BA /* ConflictDetailWeekScopeTests.swift in Sources */,
 				2911F2F82AF24F9DAC7F2CD5 /* ConflictLayoutEngineTests.swift in Sources */,
 				955AA3AAA68DB122F123785B /* CourseColorUtilTests.swift in Sources */,
 				2AB1C979346A5D643A0C2F16 /* CourseDaoChainTests.swift in Sources */,
