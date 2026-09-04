@@ -16,6 +16,8 @@
 "schedule_go_manage" = "管理へ移動";
 "schedule_manual_first" = "最初の授業を作成";
 "schedule_add_course" = "授業を追加";
+"share_sheet_title" = "時間割を共有";
+"schedule_share_table" = "時間割を共有";
 "schedule_current_week" = "第 %1$d 週";
 "schedule_undo" = "元に戻す";
 "schedule_switch_table" = "時間割の切り替え";

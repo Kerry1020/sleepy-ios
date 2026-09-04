@@ -16,6 +16,8 @@
 "schedule_go_manage" = "前往课表管理";
 "schedule_manual_first" = "手动创建第一门课";
 "schedule_add_course" = "添加课程";
+"share_sheet_title" = "分享课表";
+"schedule_share_table" = "分享课表";
 "schedule_current_week" = "第 %1$d 周";
 "schedule_undo" = "撤回";
 "schedule_switch_table" = "切换课表";

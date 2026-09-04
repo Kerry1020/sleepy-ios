@@ -16,6 +16,8 @@
 "schedule_go_manage" = "Ir a Gestionar";
 "schedule_manual_first" = "Crear primer curso";
 "schedule_add_course" = "Añadir curso";
+"share_sheet_title" = "Compartir horario";
+"schedule_share_table" = "Compartir horario";
 "schedule_current_week" = "Semana %1$d";
 "schedule_undo" = "Deshacer";
 "schedule_switch_table" = "Cambiar horario";

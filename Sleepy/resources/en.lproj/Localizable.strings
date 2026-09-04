@@ -16,6 +16,8 @@
 "schedule_go_manage" = "Go to Manage";
 "schedule_manual_first" = "Create first course";
 "schedule_add_course" = "Add Course";
+"share_sheet_title" = "Share Schedule";
+"schedule_share_table" = "Share schedule";
 "schedule_current_week" = "Week %1$d";
 "schedule_undo" = "Undo";
 "schedule_switch_table" = "Switch schedule";

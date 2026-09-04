@@ -22,6 +22,8 @@ struct ScheduleScreen: View {
     @State private var showUndoNoneToast = false
     // v7.10.14 顶栏 logo → 课表切换弹窗
     @State private var showTableSwitcher = false
+    // v7.10.7 顶栏分享 → 格式选择弹层
+    @State private var showShareSheet = false
 
     var body: some View {
         let state = viewModel.state
@@ -62,7 +64,10 @@ struct ScheduleScreen: View {
                             showUndoNoneToast = true
                         }
                     },
-                    onSwitchTable: { showTableSwitcher = true })
+                    onSwitchTable: { showTableSwitcher = true },
+                    onAddCourse: onManualAdd,
+                    onShare: { showShareSheet = true },
+                    hasUndoSnapshot: UndoManager.shared.hasSnapshot)
 
                 // Segmented Switcher
                 SegmentedSwitcher(
@@ -92,6 +97,13 @@ struct ScheduleScreen: View {
                     showTableSwitcher = false
                 },
                 onDismiss: { showTableSwitcher = false })
+        }
+        // v7.10.7 顶栏分享 → 格式选择弹层(JSON / 分享文本 / ICS)
+        .sheet(isPresented: $showShareSheet) {
+            if let table = state.currentTable {
+                ShareScheduleSheet(table: table, courses: state.courses,
+                                   onDismiss: { showShareSheet = false })
+            }
         }
         // ← Android Toast schedule_undo_none
         .overlay(alignment: .bottom) {
@@ -227,6 +239,10 @@ private struct ScheduleTopBar: View {
     let onSelectWeek: (Int) -> Void
     var onUndo: () -> Void = {}
     var onSwitchTable: () -> Void = {}
+    var onAddCourse: () -> Void = {}
+    var onShare: () -> Void = {}
+    /// v7.10.16g: 撤回按钮仅有可撤回快照时显示(UndoManager.hasSnapshot 订阅)
+    var hasUndoSnapshot: Bool = false
 
     @State private var menuOpen = false
 
@@ -235,11 +251,48 @@ private struct ScheduleTopBar: View {
         let isOnActual = currentWeek == actualWeek
         let semesterStatus = DateUtils.semesterStatus(startDate: startDate, maxWeek: maxWeek)
 
-        HStack {
-            // v7.10.14: 最左 logo — 点击弹课表切换弹窗
-            WeekNavButton(icon: "calendar", onClick: onSwitchTable)
-                .accessibilityIdentifier("switch_table")
+        // v7.10.12: 三件套改 ZStack 叠加实现屏幕正中 —
+        // 旧 Spacer 平衡是在"扣除两侧按钮后的剩余空间"里居中, 视觉偏移;
+        // ZStack 叠加让三件套对齐全宽正中, 两侧操作区绝对定位(← Android Box 叠加)。
+        ZStack {
+            // 翻页三件套(箭头+胶囊+箭头) — 箭头紧贴胶囊, 全宽正中
+            HStack(spacing: 8) {
+                pagerTriple   // 见下(week label sheet 挂在胶囊上)
+            }
+            .frame(maxWidth: .infinity)
 
+            // 最左操作区: logo(课表切换) + 撤回(仅有可撤回快照时显示)
+            HStack(spacing: 6) {
+                WeekNavButton(icon: "calendar", onClick: onSwitchTable)
+                    .accessibilityIdentifier("switch_table")
+                if hasUndoSnapshot {
+                    WeekNavButton(icon: "arrow.uturn.backward", onClick: onUndo)
+                        .accessibilityIdentifier("undo_button")
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            // 右侧操作区: 加课 + 分享 — 与翻页箭头同款圆形底
+            HStack(spacing: 6) {
+                WeekNavButton(icon: "plus", onClick: onAddCourse)
+                    .accessibilityIdentifier("topbar_add")
+                WeekNavButton(icon: "square.and.arrow.up", onClick: onShare)
+                    .accessibilityIdentifier("topbar_share")
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 6)
+        .background(colors.surface)
+    }
+
+    // 翻页三件套(箭头+胶囊+箭头); 胶囊点击 = 跳周菜单/一键跳回
+    private var pagerTriple: some View {
+        let actualWeek = startDate.isEmpty ? 1 : DateUtils.currentWeek(startDate: startDate)
+        let isOnActual = currentWeek == actualWeek
+        let semesterStatus = DateUtils.semesterStatus(startDate: startDate, maxWeek: maxWeek)
+        return HStack(spacing: 8) {
             WeekNavButton(icon: "chevron.left", onClick: onPrevWeek)
 
             // 第 N 周 标签 — 点击行为根据是否在当前实际周而不同
@@ -306,17 +359,7 @@ private struct ScheduleTopBar: View {
             }
 
             WeekNavButton(icon: "chevron.right", onClick: onNextWeek)
-
-            Spacer(minLength: 0)
-
-            // v7.10.16: 右侧第一颗 = 撤回(任何课表数据改动可撤销一次;不隐藏保持布局稳定)
-            WeekNavButton(icon: "arrow.uturn.backward", onClick: onUndo)
-                .accessibilityIdentifier("undo_button")
         }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
-        .background(colors.surface)
     }
 }
 
