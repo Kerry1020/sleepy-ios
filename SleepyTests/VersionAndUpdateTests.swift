@@ -193,13 +193,16 @@ final class LocaleHelperTests: XCTestCase {
 
     func testLocaleMapping() {
         // ← getLocale 的 5 分支 + default
-        XCTAssertEqual("zh", LocaleHelper.locale(for: "zh-CN").language.languageCode?.identifier)
-        XCTAssertEqual("Hans", LocaleHelper.locale(for: "zh-CN").language.script?.identifier)
-        XCTAssertEqual("zh", LocaleHelper.locale(for: "zh-TW").language.languageCode?.identifier)
-        XCTAssertEqual("Hant", LocaleHelper.locale(for: "zh-TW").language.script?.identifier)
-        XCTAssertEqual("en", LocaleHelper.locale(for: "en").identifier)
-        XCTAssertEqual("ja", LocaleHelper.locale(for: "ja").identifier)
-        XCTAssertEqual("es", LocaleHelper.locale(for: "es").identifier)
+        // iOS 15 兼容: language.languageCode 是 iOS16+ API,走 locale.languageCode
+        func lang(_ id: String) -> String? { LocaleHelper.locale(for: id).languageCode }
+        XCTAssertEqual("zh", lang("zh-CN"))
+        XCTAssertEqual("zh", lang("zh-TW"))
+        XCTAssertEqual("en", lang("en"))
+        XCTAssertEqual("ja", lang("ja"))
+        XCTAssertEqual("es", lang("es"))
+        // script 码走 Locale.scriptCode(老 API,iOS15 可用;language.languageCode 才是 16+)
+        XCTAssertEqual("Hans", Locale(identifier: "zh-Hans").scriptCode)
+        XCTAssertEqual("Hant", Locale(identifier: "zh-Hant").scriptCode)
     }
 
     func testLprojNames() {

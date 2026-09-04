@@ -288,9 +288,12 @@ struct JwWebView: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> WKWebView {
-        onCoordinatorCreated(context.coordinator)
         let wv = context.coordinator.makeWebView(
             url: URL(string: url) ?? URL(string: "https://www.baidu.com")!)
+        // ★ coordinator 回传必须脱离 view-update 事务: makeUIView 在渲染事务内,
+        //   同步写父视图 @State 会被 SwiftUI 丢弃 → capture() 永远拿到 nil,
+        //   真机点"导入本页"必弹 "WebView 未就绪"(2026-09-04 6sp 真机实测)
+        DispatchQueue.main.async { self.onCoordinatorCreated(context.coordinator) }
         return wv
     }
 
