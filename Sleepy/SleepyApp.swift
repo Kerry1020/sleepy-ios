@@ -145,11 +145,15 @@ struct AppRoot: View {
 
     var body: some View {
         // iOS 15 兼容(6s Plus 真机 = 15.8.8):此处仅作容器,无 NavigationLink 压栈,
-        // 旧 API 行为等价(NavigationStack 是 iOS16+ API)
+        // 旧 API 行为等价(NavigationStack 是 iOS16+ API)。
+        // ★ v7.10.17 6sp 空白修复: NavigationView stack 风格默认保留 nav-bar 高度
+        // (~88pt = 状态栏 ~20pt + 标题栏 ~44pt + 间隙)→ 课表顶栏上方 112pt 纯空白。
+        // 显式 navigationBarHidden 把那块预占区域整个压掉,顶栏贴状态栏下沿。
         NavigationView {
             mainContent
         }
         .navigationViewStyle(.stack)
+        .navigationBarHidden(true)
         // ← Activity.recreate(): 语言切换 → L10n.didChange → languageReload+1 → 全树重建
         .id(root.languageReload)
         .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
