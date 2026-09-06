@@ -142,3 +142,20 @@ struct SettingToggleRow: View {
         .padding(.horizontal, 4)
     }
 }
+
+// InfoCard — 通用信息卡(About/License 等用): 单色块 + 内边距 20, 由 content 提供正文。
+// ← AboutScreen.kt InfoCard; v7.10.18 提到 SettingsCards.swift 共享, LicenseScreen 也用。
+struct InfoCard<Content: View>: View {
+    @Environment(\.localWakeUpColors) private var colors
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            content()
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(colors.surfaceContainer)
+        .cornerRadius(SleepyShapes.large)
+    }
+}

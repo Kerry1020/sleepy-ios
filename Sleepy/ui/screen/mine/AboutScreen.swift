@@ -25,6 +25,8 @@ enum UpdateUiState: Equatable {
 struct AboutScreen: View {
     @Environment(\.localWakeUpColors) private var colors
     let onDismiss: () -> Void
+    // ★ v7.10.18 Track D: 长 License 卡拆二级页, AboutScreen 留入口行
+    var onOpenLicense: () -> Void = {}
 
     @State private var uiState: UpdateUiState = .idle
     @State private var downloadTask: Task<Void, Never>? = nil
@@ -168,17 +170,28 @@ struct AboutScreen: View {
                         }
                     }
 
-                    // License card
+                    // License 入口行(v1.0.46 用户令): 长卡拆独立二级页, 这里只留入口
                     InfoCard {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(L10n.format("about_license_title"))
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(colors.onSurface)
-                            Text(L10n.format("about_license_body"))
-                                .font(.system(size: 14))
-                                .foregroundColor(colors.onSurfaceVariant)
+                        Button(action: onOpenLicense) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "doc.text")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(colors.primary)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(L10n.format("about_license_title"))
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(colors.onSurface)
+                                    Text(L10n.format("about_license_detail"))
+                                        .font(.system(size: 12))
+                                        .foregroundColor(colors.onSurfaceVariant)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(colors.onSurfaceVariant)
+                            }
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .buttonStyle(SleepyButtonStyle())
                     }
 
                     Spacer().frame(height: 32)
@@ -406,18 +419,4 @@ private struct UpdateChangelogDialog: View {
     }
 }
 
-// ← InfoCard
-private struct InfoCard<Content: View>: View {
-    @Environment(\.localWakeUpColors) private var colors
-    @ViewBuilder let content: () -> Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            content()
-        }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(colors.surfaceContainer)
-        .cornerRadius(SleepyShapes.large)
-    }
-}
+// ← InfoCard 已迁移到 Sleepy/ui/component/SettingsCards.swift 共享
