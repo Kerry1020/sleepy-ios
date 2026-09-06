@@ -324,38 +324,32 @@ private struct ScheduleTopBar: View {
             .buttonStyle(SleepyButtonStyle())
             .accessibilityIdentifier("week_label")   // ← G5: 跳周菜单锚点
             .sheet(isPresented: $menuOpen) {
-                // 标签式选周(← Android FlowRow 280dp 弹层)
-                VStack(spacing: 12) {
+                // ★ v7.10.18 原生化: Picker(.wheel) 系统原生滚轮选择器
+                //   - iOS 15+ 自动获得系统震动反馈 + 高亮当前值
+                //   - 比自制 LazyVGrid 更短(33 行 → 20 行)+ 一致 iOS 体验
+                //   - sheetDetents .medium 自带下拉 dismiss,保持 iOS 16+ swipe 手势
+                VStack(spacing: 8) {
                     Text(L10n.format("schedule_jump_week"))
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(colors.onSurfaceVariant)
-                    ScrollView {
-                        // 弹层宽度自适应: 40dp 圆钮 x5 列装不下时按可用宽缩列距(窄屏 iPhone SE 可用)
-                        LazyVGrid(columns: Array(repeating: GridItem(.fixed(40), spacing: 8), count: 5),
-                                  spacing: 8) {
-                            ForEach(1...maxWeek, id: \.self) { w in
-                                let isCurrent = w == currentWeek
-                                Button {
-                                    onSelectWeek(w)
-                                    menuOpen = false
-                                } label: {
-                                    Text("\(w)")
-                                        .font(.system(size: 14, weight: isCurrent ? .bold : .regular))
-                                        .foregroundColor(isCurrent ? colors.onPrimary : colors.onSurface)
-                                        .frame(width: 40, height: 40)
-                                        .background(isCurrent ? colors.primary : colors.surfaceContainerHigh)
-                                        .clipShape(Circle())
-                                }
+                    Picker("", selection: Binding(
+                        get: { currentWeek },
+                        set: { newWeek in onSelectWeek(newWeek) }
+                    )) {
+                        ForEach(1...maxWeek, id: \.self) { w in
+                            Text("\(w)").tag(w)
                                 .accessibilityIdentifier("week_num_\(w)")
-                            }
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
                     }
-                    .frame(maxHeight: 340)
+                    .pickerStyle(.wheel)
+                    .frame(height: 200)
                 }
                 .padding(.vertical, 16)
-                .sheetDetents([.height(400)])
+                .sheetDetents([.medium])
+                // 选中即关(iOS 16+ 用户改值后也能手动 ✕)
+                .onChange(of: currentWeek) { _ in
+                    if menuOpen { menuOpen = false }
+                }
             }
 
             WeekNavButton(icon: "chevron.right", onClick: onNextWeek)
