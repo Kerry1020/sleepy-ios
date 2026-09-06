@@ -66,7 +66,7 @@ final class AppRootViewModel: ObservableObject {
     //   子屏独立呈现,iOS 16+ 自动获得 swipe-to-dismiss,iOS 15 仍有系统 ✕ 按钮。
     //   GeneralSettingsScreen 内嵌 NavigationView 容纳 HolidaySettings 嵌套跳转。
     enum OverlayScreen: String, Identifiable {
-        case addCourse, allTables, editTable, theme, general, export, reminder, about
+        case addCourse, allTables, editTable, theme, general, export, reminder, about, license
         // holiday 由 GeneralSettings 内部 sheet 呈现,不再出现在根 enum
         var id: String { rawValue }
     }
@@ -220,49 +220,30 @@ struct AppRoot: View {
     @ViewBuilder
     private var mainContent: some View {
         // ★ v7.10.18 原生化重构:
-        //   8 个独立 overlay 子页 → .fullScreenCover(item:) / .sheet(item:)
+        //   9 个独立 overlay 子页 → .fullScreenCover(item:) / .sheet(item:)
         //   - iOS 16+: 享有系统 swipe-to-dismiss / pull-down dismiss(原生手势)
         //   - iOS 15 (6sp 真机): 系统 ✕ 按钮 + 下拉 dismiss(无 edge swipe,但仍是原生)
         //   - holiday 子页由 GeneralSettings 内部 NavigationView 承载,不再列根
         //   - .sheet(item:) 用 OverlayScreen: Identifiable + rawValue 区分 item
         //   - 不再有 if/else if 条件树 → 渲染条件回到 tabs 即可
-        tabs
-            // 课程编辑: 占用空间大 + 有键盘 + 表单 → fullScreenCover
-            .fullScreenCover(item: Binding(
-                get: { (root.overlayScreen == .addCourse || root.editingCourse != nil) ? .addCourse : nil },
-                set: { newVal in
-                    if newVal == nil {
-                        root.overlayScreen = nil
-                        root.editingCourse = nil
-                    }
-                }
-            )) { _ in
-                AddCourseScreen(
-                    viewModel: root.scheduleViewModel,
-                    onDismiss: { root.overlayScreen = nil; root.editingCourse = nil },
-                    onSaved: {
-                        root.overlayScreen = nil
-                        root.editingCourse = nil
-                        root.currentTab = .schedule
-                    },
-                    editingCourse: root.editingCourse)
-                .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
-                .preferredColorScheme(isDark ? .dark : .light)
-            }
-            // 编辑现有课表: 大量 UI + 键盘 → fullScreenCover
-            .fullScreenCover(item: Binding(
-                get: { root.overlayScreen == .editTable ? .editTable : nil },
-                set: { newVal in
-                    if newVal == nil {
-                        root.handleBack()
-                    }
-                }
-            )) { _ in
-                EditTableScreen(
-                    viewModel: root.scheduleViewModel,
-                    tableId: root.editTableId,
+        // ★ v7.10.18 type-check v3: 9 个独立 PresentXxx ViewModifier, 每个子树
+        //   独立类型推导, 避免 9 个 modifier 链触发 SwiftUI "unable to type-check"。
+        tabs.background(
+            Group {
+                EmptyView().modifier(PresentAddCourse(
+                    isDark: isDark, themeKey: themeKey,
+                    overlayScreen: root.overlayScreen,
+                    editingCourse: root.editingCourse,
+                    scheduleViewModel: root.scheduleViewModel,
+                    onDismissAdd: { root.overlayScreen = nil; root.editingCourse = nil },
+                    onSavedAdd: { root.overlayScreen = nil; root.editingCourse = nil; root.currentTab = .schedule }))
+                EmptyView().modifier(PresentEditTable(
+                    isDark: isDark, themeKey: themeKey,
+                    overlayScreen: root.overlayScreen,
+                    editTableId: root.editTableId,
                     pendingNewTableId: root.pendingNewTableId,
-                    onDismiss: { root.handleBack() },
+                    scheduleViewModel: root.scheduleViewModel,
+                    onBack: { root.handleBack() },
                     onDiscardPending: {
                         let discardId = root.pendingNewTableId
                         let fallback = root.previousDefaultTableId
@@ -274,88 +255,57 @@ struct AppRoot: View {
                         root.overlayScreen = nil
                         root.editTableId = nil
                     },
-                    onSaved: {
+                    onSavedTable: {
                         root.overlayScreen = nil
                         root.editTableId = nil
                         root.pendingNewTableId = nil
                         root.previousDefaultTableId = nil
                     },
-                    onDeleted: {
-                        root.overlayScreen = nil
-                        root.editTableId = nil
-                        root.currentTab = .schedule
-                    })
-                .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
-                .preferredColorScheme(isDark ? .dark : .light)
-            }
-            // 全部课表列表: 列表 + 列表项内可点击 → fullScreenCover
-            .fullScreenCover(item: Binding(
-                get: { root.overlayScreen == .allTables ? .allTables : nil },
-                set: { newVal in if newVal == nil { root.overlayScreen = nil } }
-            )) { _ in
-                AllTablesScreen(
-                    viewModel: root.scheduleViewModel,
-                    onDismiss: { root.overlayScreen = nil },
+                    onDeletedTable: { root.overlayScreen = nil; root.editTableId = nil; root.currentTab = .schedule }))
+                EmptyView().modifier(PresentAllTables(
+                    isDark: isDark, themeKey: themeKey,
+                    overlayScreen: root.overlayScreen,
+                    scheduleViewModel: root.scheduleViewModel,
+                    onDismissOverlay: { root.overlayScreen = nil },
                     onCreateNewTable: { root.createNewTableThenEdit() },
                     onOpenEditTable: { tableId in
                         root.editTableId = tableId
                         root.pendingNewTableId = nil
                         root.overlayScreen = .editTable
-                    })
-                .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
-                .preferredColorScheme(isDark ? .dark : .light)
-            }
-            // 主题: 列表 → sheet (中高度)
-            .sheet(item: Binding(
-                get: { root.overlayScreen == .theme ? .theme : nil },
-                set: { newVal in if newVal == nil { root.overlayScreen = nil } }
-            )) { _ in
-                AppearanceScreen(
-                    onDismiss: { root.overlayScreen = nil },
+                    }))
+                EmptyView().modifier(PresentGeneral(
+                    isDark: isDark, themeKey: themeKey,
+                    overlayScreen: root.overlayScreen,
+                    onDismissOverlay: { root.overlayScreen = nil }))
+                EmptyView().modifier(PresentTheme(
+                    isDark: isDark, themeKey: themeKey,
+                    overlayScreen: root.overlayScreen,
                     themeMode: themeMode,
+                    onDismissOverlay: { root.overlayScreen = nil },
                     onThemeModeChange: { mode in
                         themeMode = mode
                         themeKey = AppPrefs.shared.getThemeKey()
-                    })
-                .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
-                .preferredColorScheme(isDark ? .dark : .light)
+                    }))
+                EmptyView().modifier(PresentExport(
+                    isDark: isDark, themeKey: themeKey,
+                    overlayScreen: root.overlayScreen,
+                    scheduleViewModel: root.scheduleViewModel,
+                    onDismissOverlay: { root.overlayScreen = nil }))
+                EmptyView().modifier(PresentReminder(
+                    isDark: isDark, themeKey: themeKey,
+                    overlayScreen: root.overlayScreen,
+                    onDismissOverlay: { root.overlayScreen = nil }))
+                EmptyView().modifier(PresentAbout(
+                    isDark: isDark, themeKey: themeKey,
+                    overlayScreen: root.overlayScreen,
+                    onDismissOverlay: { root.overlayScreen = nil },
+                    onOpenLicense: { root.overlayScreen = .license }))
+                EmptyView().modifier(PresentLicense(
+                    isDark: isDark, themeKey: themeKey,
+                    overlayScreen: root.overlayScreen,
+                    onDismissOverlay: { root.overlayScreen = nil }))
             }
-            // 通用设置: 含嵌套跳节假日,内嵌 NavigationView → fullScreenCover
-            .fullScreenCover(item: Binding(
-                get: { root.overlayScreen == .general ? .general : nil },
-                set: { newVal in if newVal == nil { root.overlayScreen = nil } }
-            )) { _ in
-                GeneralSettingsScreen(onDismiss: { root.overlayScreen = nil })
-                .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
-                .preferredColorScheme(isDark ? .dark : .light)
-            }
-            // 导出: 文件列表 + 操作 → fullScreenCover
-            .fullScreenCover(item: Binding(
-                get: { root.overlayScreen == .export ? .export : nil },
-                set: { newVal in if newVal == nil { root.overlayScreen = nil } }
-            )) { _ in
-                ExportScreen(viewModel: root.scheduleViewModel, onDismiss: { root.overlayScreen = nil })
-                .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
-                .preferredColorScheme(isDark ? .dark : .light)
-            }
-            // 提醒设置: 中等设置页 → fullScreenCover
-            .fullScreenCover(item: Binding(
-                get: { root.overlayScreen == .reminder ? .reminder : nil },
-                set: { newVal in if newVal == nil { root.overlayScreen = nil } }
-            )) { _ in
-                ReminderScreen(onDismiss: { root.overlayScreen = nil })
-                .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
-                .preferredColorScheme(isDark ? .dark : .light)
-            }
-            // 关于: 滚动内容 → fullScreenCover
-            .fullScreenCover(item: Binding(
-                get: { root.overlayScreen == .about ? .about : nil },
-                set: { newVal in if newVal == nil { root.overlayScreen = nil } }
-            )) { _ in
-                AboutScreen(onDismiss: { root.overlayScreen = nil })
-                .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
-                .preferredColorScheme(isDark ? .dark : .light)
-            }
+        )
     }
 
     // ← Scaffold + PillNavigationBar + 4 Tab
@@ -442,6 +392,201 @@ struct AppRoot: View {
             }
         default:
             break
+        }
+    }
+}
+
+// ★ v7.10.18 type-check v3: 9 个独立 PresentXxx ViewModifier, 每个只挂 1 个
+//   presentation (.fullScreenCover 或 .sheet), 由 Group { EmptyView().modifier(...) }
+//   在 mainContent 里链式挂载。每个 modifier 子树类型推导独立预算, 避免
+//   "unable to type-check this expression in reasonable time"。
+//   闭包走构造注入, AppRoot 显式传 root 派生值。
+
+private struct PresentAddCourse: ViewModifier {
+    let isDark: Bool
+    let themeKey: String
+    let overlayScreen: AppRootViewModel.OverlayScreen?
+    let editingCourse: CourseEntity?
+    let scheduleViewModel: ScheduleViewModel
+    let onDismissAdd: () -> Void
+    let onSavedAdd: () -> Void
+    func body(content: Content) -> some View {
+        content.fullScreenCover(item: Binding<AppRootViewModel.OverlayScreen?>(
+            get: { (overlayScreen == .addCourse || editingCourse != nil) ? .addCourse : nil },
+            set: { newVal in if newVal == nil { onDismissAdd() } }
+        )) { _ in
+            AddCourseScreen(
+                viewModel: scheduleViewModel,
+                onDismiss: onDismissAdd,
+                onSaved: onSavedAdd,
+                editingCourse: editingCourse)
+            .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
+            .preferredColorScheme(isDark ? .dark : .light)
+        }
+    }
+}
+
+private struct PresentEditTable: ViewModifier {
+    let isDark: Bool
+    let themeKey: String
+    let overlayScreen: AppRootViewModel.OverlayScreen?
+    let editTableId: Int64?
+    let pendingNewTableId: Int64?
+    let scheduleViewModel: ScheduleViewModel
+    let onBack: () -> Void
+    let onDiscardPending: () -> Void
+    let onSavedTable: () -> Void
+    let onDeletedTable: () -> Void
+    func body(content: Content) -> some View {
+        content.fullScreenCover(item: Binding<AppRootViewModel.OverlayScreen?>(
+            get: { overlayScreen == .editTable ? .editTable : nil },
+            set: { newVal in if newVal == nil { onBack() } }
+        )) { _ in
+            EditTableScreen(
+                viewModel: scheduleViewModel,
+                tableId: editTableId,
+                pendingNewTableId: pendingNewTableId,
+                onDismiss: onBack,
+                onDiscardPending: onDiscardPending,
+                onSaved: onSavedTable,
+                onDeleted: onDeletedTable)
+            .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
+            .preferredColorScheme(isDark ? .dark : .light)
+        }
+    }
+}
+
+private struct PresentAllTables: ViewModifier {
+    let isDark: Bool
+    let themeKey: String
+    let overlayScreen: AppRootViewModel.OverlayScreen?
+    let scheduleViewModel: ScheduleViewModel
+    let onDismissOverlay: () -> Void
+    let onCreateNewTable: () -> Void
+    let onOpenEditTable: (Int64) -> Void
+    func body(content: Content) -> some View {
+        content.fullScreenCover(item: Binding<AppRootViewModel.OverlayScreen?>(
+            get: { overlayScreen == .allTables ? .allTables : nil },
+            set: { newVal in if newVal == nil { onDismissOverlay() } }
+        )) { _ in
+            AllTablesScreen(
+                viewModel: scheduleViewModel,
+                onDismiss: onDismissOverlay,
+                onCreateNewTable: onCreateNewTable,
+                onOpenEditTable: onOpenEditTable)
+            .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
+            .preferredColorScheme(isDark ? .dark : .light)
+        }
+    }
+}
+
+private struct PresentGeneral: ViewModifier {
+    let isDark: Bool
+    let themeKey: String
+    let overlayScreen: AppRootViewModel.OverlayScreen?
+    let onDismissOverlay: () -> Void
+    func body(content: Content) -> some View {
+        content.fullScreenCover(item: Binding<AppRootViewModel.OverlayScreen?>(
+            get: { overlayScreen == .general ? .general : nil },
+            set: { newVal in if newVal == nil { onDismissOverlay() } }
+        )) { _ in
+            GeneralSettingsScreen(onDismiss: onDismissOverlay)
+                .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
+                .preferredColorScheme(isDark ? .dark : .light)
+        }
+    }
+}
+
+private struct PresentTheme: ViewModifier {
+    let isDark: Bool
+    let themeKey: String
+    let overlayScreen: AppRootViewModel.OverlayScreen?
+    let themeMode: String
+    let onDismissOverlay: () -> Void
+    let onThemeModeChange: (String) -> Void
+    func body(content: Content) -> some View {
+        content.sheet(item: Binding<AppRootViewModel.OverlayScreen?>(
+            get: { overlayScreen == .theme ? .theme : nil },
+            set: { newVal in if newVal == nil { onDismissOverlay() } }
+        )) { _ in
+            AppearanceScreen(
+                onDismiss: onDismissOverlay,
+                themeMode: themeMode,
+                onThemeModeChange: onThemeModeChange)
+            .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
+            .preferredColorScheme(isDark ? .dark : .light)
+        }
+    }
+}
+
+private struct PresentExport: ViewModifier {
+    let isDark: Bool
+    let themeKey: String
+    let overlayScreen: AppRootViewModel.OverlayScreen?
+    let scheduleViewModel: ScheduleViewModel
+    let onDismissOverlay: () -> Void
+    func body(content: Content) -> some View {
+        content.fullScreenCover(item: Binding<AppRootViewModel.OverlayScreen?>(
+            get: { overlayScreen == .export ? .export : nil },
+            set: { newVal in if newVal == nil { onDismissOverlay() } }
+        )) { _ in
+            ExportScreen(viewModel: scheduleViewModel, onDismiss: onDismissOverlay)
+                .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
+                .preferredColorScheme(isDark ? .dark : .light)
+        }
+    }
+}
+
+private struct PresentReminder: ViewModifier {
+    let isDark: Bool
+    let themeKey: String
+    let overlayScreen: AppRootViewModel.OverlayScreen?
+    let onDismissOverlay: () -> Void
+    func body(content: Content) -> some View {
+        content.fullScreenCover(item: Binding<AppRootViewModel.OverlayScreen?>(
+            get: { overlayScreen == .reminder ? .reminder : nil },
+            set: { newVal in if newVal == nil { onDismissOverlay() } }
+        )) { _ in
+            ReminderScreen(onDismiss: onDismissOverlay)
+                .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
+                .preferredColorScheme(isDark ? .dark : .light)
+        }
+    }
+}
+
+private struct PresentAbout: ViewModifier {
+    let isDark: Bool
+    let themeKey: String
+    let overlayScreen: AppRootViewModel.OverlayScreen?
+    let onDismissOverlay: () -> Void
+    let onOpenLicense: () -> Void
+    func body(content: Content) -> some View {
+        content.fullScreenCover(item: Binding<AppRootViewModel.OverlayScreen?>(
+            get: { overlayScreen == .about ? .about : nil },
+            set: { newVal in if newVal == nil { onDismissOverlay() } }
+        )) { _ in
+            AboutScreen(
+                onDismiss: onDismissOverlay,
+                onOpenLicense: onOpenLicense)
+            .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
+            .preferredColorScheme(isDark ? .dark : .light)
+        }
+    }
+}
+
+private struct PresentLicense: ViewModifier {
+    let isDark: Bool
+    let themeKey: String
+    let overlayScreen: AppRootViewModel.OverlayScreen?
+    let onDismissOverlay: () -> Void
+    func body(content: Content) -> some View {
+        content.fullScreenCover(item: Binding<AppRootViewModel.OverlayScreen?>(
+            get: { overlayScreen == .license ? .license : nil },
+            set: { newVal in if newVal == nil { onDismissOverlay() } }
+        )) { _ in
+            LicenseScreen(onDismiss: onDismissOverlay)
+                .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
+                .preferredColorScheme(isDark ? .dark : .light)
         }
     }
 }
