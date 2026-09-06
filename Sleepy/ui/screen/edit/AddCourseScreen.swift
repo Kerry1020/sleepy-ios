@@ -26,7 +26,7 @@ struct ValidationIssue {
 struct AddCourseScreen: View {
     @Environment(\.localWakeUpColors) private var colors
     @ObservedObject var viewModel: ScheduleViewModel
-    let onBack: () -> Void
+    let onDismiss: () -> Void
     let onSaved: () -> Void
     var editingCourse: CourseEntity? = nil
 
@@ -53,7 +53,7 @@ struct AddCourseScreen: View {
 
         VStack(spacing: 0) {
             SettingsTopBar(title: L10n.format(editingCourse != nil ? "edit_course" : "create_course"),
-                           onBack: onBack)
+                           onBack: onDismiss)
             ScrollView {
                 VStack(spacing: 14) {
                     Spacer().frame(height: 2)
@@ -150,13 +150,13 @@ struct AddCourseScreen: View {
         .background(colors.background)
         .onAppear { loadIfNeeded(state: state) }
         .sheet(isPresented: $showColorPicker) {
-            ColorPickerDialog(initialHex: courseColor) { hex in
+            // ★ v7.10.18 原生化: UIColorPickerViewController (iOS 14+)
+            //   系统原生色盘 + 吸管 + 最近色历史 + 色板管理
+            //   自制 HSV (~188 行) 完全删除
+            NativeColorPicker(initialHex: courseColor) { hex in
                 courseColor = hex
                 showColorPicker = false
-            } onCancel: {
-                showColorPicker = false
             }
-            .sheetDetents([.height(420)])
         }
         .alert(L10n.format("confirm_delete"), isPresented: $showDeleteConfirm) {
             Button(L10n.format("delete"), role: .destructive) {
@@ -720,192 +720,3 @@ private struct CustomColorDot: View {
     }
 }
 
-// ← ColorPickerDialog(HSV: SV 面板 + 色相条)
-private struct ColorPickerDialog: View {
-    @Environment(\.localWakeUpColors) private var colors
-    let initialHex: String
-    let onConfirm: (String) -> Void
-    let onCancel: () -> Void
-
-    @State private var hue: Double = 269
-    @State private var saturation: Double = 0.71
-    @State private var value: Double = 0.64
-    @State private var loaded = false
-
-    var body: some View {
-        VStack(spacing: 12) {
-            Text(L10n.format("course_color"))
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(colors.onSurface)
-
-            SVPanel(hue: $hue, saturation: $saturation, value: $value)
-                .frame(height: 200)
-                .cornerRadius(SleepyShapes.large)
-
-            HueSlider(hue: $hue)
-                .frame(height: 36)
-                .cornerRadius(SleepyShapes.large)
-
-            // 预览 + Hex
-            HStack(spacing: 12) {
-                Circle()
-                    .fill(currentUIColor)
-                    .frame(width: 40, height: 40)
-                Text(currentHex)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(colors.onSurfaceVariant)
-                Spacer()
-                Button(L10n.format("ok")) { onConfirm(currentHex) }
-                    .foregroundColor(colors.primary)
-                Button(L10n.format("cancel"), action: onCancel)
-                    .foregroundColor(colors.onSurfaceVariant)
-            }
-        }
-        .padding(20)
-        .background(colors.surface)
-        .onAppear {
-            guard !loaded else { return }
-            loaded = true
-            // 解析初始 HSV(Android colorToHSV 等价)
-            let argb = initialHex.isEmpty ? 0xFF6750A4 : (CourseColorUtil.parseColor(initialHex) ?? 0xFF6750A4)
-            let r = Double((argb >> 16) & 0xFF) / 255
-            let g = Double((argb >> 8) & 0xFF) / 255
-            let b = Double(argb & 0xFF) / 255
-            let hsv = rgbToHsv(r: r, g: g, b: b)
-            hue = hsv.0 * 360
-            saturation = hsv.1
-            value = hsv.2
-        }
-    }
-
-    private var currentUIColor: Color {
-        let rgb = hsvToRgb(h: hue / 360, s: saturation, v: value)
-        return Color(red: rgb.0, green: rgb.1, blue: rgb.2)
-    }
-
-    private var currentHex: String {
-        let rgb = hsvToRgb(h: hue / 360, s: saturation, v: value)
-        let r = Int(round(rgb.0 * 255)), g = Int(round(rgb.1 * 255)), b = Int(round(rgb.2 * 255))
-        return String(format: "#FF%02X%02X%02X", r, g, b)
-    }
-
-    private func rgbToHsv(r: Double, g: Double, b: Double) -> (Double, Double, Double) {
-        let mx = max(r, g, b), mn = min(r, g, b)
-        let delta = mx - mn
-        var h: Double = 0
-        if delta != 0 {
-            if mx == r { h = ((g - b) / delta).truncatingRemainder(dividingBy: 6) }
-            else if mx == g { h = (b - r) / delta + 2 }
-            else { h = (r - g) / delta + 4 }
-            h *= 60
-            if h < 0 { h += 360 }
-        }
-        return (h / 360, mx == 0 ? 0 : delta / mx, mx)
-    }
-
-    private func hsvToRgb(h: Double, s: Double, v: Double) -> (Double, Double, Double) {
-        let i = Int(h * 6)
-        let f = h * 6 - Double(i)
-        let p = v * (1 - s)
-        let q = v * (1 - f * s)
-        let t = v * (1 - (1 - f) * s)
-        switch i % 6 {
-        case 0: return (v, t, p)
-        case 1: return (q, v, p)
-        case 2: return (p, v, t)
-        case 3: return (p, q, v)
-        case 4: return (t, p, v)
-        default: return (v, p, q)
-        }
-    }
-}
-
-// ← SVPanel: 横=饱和度, 纵=明度(上明下暗)
-private struct SVPanel: View {
-    @Binding var hue: Double
-    @Binding var saturation: Double
-    @Binding var value: Double
-
-    var body: some View {
-        GeometryReader { geo in
-            ZStack {
-                // 纯色相底
-                Rectangle().fill(pureHueColor)
-                // 白色横向渐变(左白→右透明)
-                LinearGradient(colors: [.white, .white.opacity(0)], startPoint: .leading, endPoint: .trailing)
-                // 黑色纵向渐变(上透明→下黑)
-                LinearGradient(colors: [.black.opacity(0), .black], startPoint: .top, endPoint: .bottom)
-                // 指示器
-                Circle()
-                    .fill(.white)
-                    .frame(width: 20, height: 20)
-                    .overlay(Circle().strokeBorder(.black.opacity(0.3), lineWidth: 2))
-                    .position(x: saturation * geo.size.width,
-                              y: (1 - value) * geo.size.height)
-            }
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { g in
-                        saturation = min(max(g.location.x / geo.size.width, 0), 1)
-                        value = min(max(1 - g.location.y / geo.size.height, 0), 1)
-                    }
-            )
-        }
-    }
-
-    private var pureHueColor: Color {
-        let h = hue / 360
-        let i = Int(h * 6)
-        let f = h * 6 - Double(i)
-        let q = 1 - f
-        switch i % 6 {
-        case 0: return Color(red: 1, green: f, blue: 0)
-        case 1: return Color(red: q, green: 1, blue: 0)
-        case 2: return Color(red: 0, green: 1, blue: f)
-        case 3: return Color(red: 0, green: q, blue: 1)
-        case 4: return Color(red: f, green: 0, blue: 1)
-        default: return Color(red: 1, green: 0, blue: q)
-        }
-    }
-}
-
-// ← HueSlider: 360° 彩虹条
-private struct HueSlider: View {
-    @Binding var hue: Double
-
-    var body: some View {
-        GeometryReader { geo in
-            ZStack {
-                LinearGradient(colors: (0...6).map { rainbowHue(Double($0) / 6) },
-                               startPoint: .leading, endPoint: .trailing)
-                Circle()
-                    .fill(.white)
-                    .frame(width: 20, height: 20)
-                    .overlay(Circle().fill(rainbowHue(hue / 360)).frame(width: 16, height: 16))
-                    .position(x: (hue / 360) * geo.size.width, y: geo.size.height / 2)
-            }
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { g in
-                        hue = min(max(g.location.x / geo.size.width, 0), 1) * 360
-                    }
-            )
-        }
-    }
-
-    private func rainbowHue(_ h: Double) -> Color {
-        let i = Int(h * 6)
-        let f = h * 6 - Double(i)
-        let q = 1 - f
-        switch i % 6 {
-        case 0: return Color(red: 1, green: f, blue: 0)
-        case 1: return Color(red: q, green: 1, blue: 0)
-        case 2: return Color(red: 0, green: 1, blue: f)
-        case 3: return Color(red: 0, green: q, blue: 1)
-        case 4: return Color(red: f, green: 0, blue: 1)
-        default: return Color(red: 1, green: 0, blue: q)
-        }
-    }
-}
