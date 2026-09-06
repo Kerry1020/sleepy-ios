@@ -532,3 +532,9 @@
 "holiday_custom_badge" = "自定义";
 "holiday_add_entry" = "添加自定义日期";
 "settings_holiday_style_sub" = "选择灰显课程的样子";
+"about_license_detail" = "开源许可与致谢";
+"license_page_title" = "开源许可与致谢";
+"license_gpl_section" = "许可证";
+"license_gpl_body" = "Sleepy 是一款开源的智能课表应用,源代码基于 GNU General Public License v3.0 协议发布。任何人都可以自由使用、修改和分发本软件。欢迎通过 GitHub 参与贡献。";
+"license_attribution_section" = "教务适配致谢";
+"license_attribution_note" = "本应用部分教务导入适配参考了以下开源项目的公开实现,在此一并致谢。";

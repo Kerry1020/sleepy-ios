@@ -531,3 +531,9 @@
 "holiday_custom_badge" = "Personalizado";
 "holiday_add_entry" = "Añadir fechas personalizadas";
 "settings_holiday_style_sub" = "Elige el aspecto de los cursos atenuados";
+"about_license_detail" = "Licencia y agradecimientos";
+"license_page_title" = "Licencia y agradecimientos";
+"license_gpl_section" = "Licencia";
+"license_gpl_body" = "Sleepy es una aplicación de horario escolar inteligente de código abierto. El código fuente se publica bajo la licencia GNU General Public License v3.0. Cualquiera puede usar, modificar y distribuir este software libremente. Las contribuciones a través de GitHub son bienvenidas.";
+"license_attribution_section" = "Agradecimientos de adaptaciones académicas";
+"license_attribution_note" = "Partes de los adaptadores de importación de sistemas académicos hacen referencia a implementaciones públicas de los siguientes proyectos de código abierto, con agradecimiento a todos.";

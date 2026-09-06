@@ -531,3 +531,9 @@
 "holiday_custom_badge" = "カスタム";
 "holiday_add_entry" = "カスタム日付を追加";
 "settings_holiday_style_sub" = "グレー表示した授業の見た目を選択";
+"about_license_detail" = "ライセンスと謝辞";
+"license_page_title" = "ライセンスと謝辞";
+"license_gpl_section" = "ライセンス";
+"license_gpl_body" = "Sleepy はオープンソースのスマート時間割アプリです。ソースコードは GNU General Public License v3.0 の下で公開されています。誰でも自由に使用、改変、配布できます。GitHub での貢献を歓迎します。";
+"license_attribution_section" = "教务システムアダプタの謝辞";
+"license_attribution_note" = "一部の教务システム取り込みアダプタは、以下のオープンソースプロジェクトの公開実装を参考にしています。皆様に感謝申し上げます。";
