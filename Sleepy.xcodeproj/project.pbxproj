@@ -151,6 +151,7 @@
 		CD777F7A41318DA863A267CD /* ImportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24530B6DC99642CD638100EE /* ImportSheet.swift */; };
 		CF4775FD01AE97CE9C594347 /* WidgetDataLoaders.swift in Sources */ = {isa = PBXBuildFile; fileRef = B445492F562DDC2A16B5171D /* WidgetDataLoaders.swift */; };
 		D1561E237C27584E025A0131 /* HolidaySettingsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = B61DF977A54A43384CB5C986 /* HolidaySettingsScreen.swift */; };
+		5171DAC8288B45C5AE1C28B8 /* LicenseScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC463EE04C5C422DBB274020 /* LicenseScreen.swift */; };
 		D1DAE4F6D52A83D515D91744 /* AppearanceScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 779E427676157A13B322A5B5 /* AppearanceScreen.swift */; };
 		D289B54F535EFF1753F5AD4C /* SleepyPlaceholderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E82A553EBD1D0C8456D3011 /* SleepyPlaceholderTests.swift */; };
 		D2E92422ED2FA5E9F9645DE3 /* AppPrefs.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB174180E779B7796964E378 /* AppPrefs.swift */; };
@@ -160,6 +161,7 @@
 		D911A052D7EDDB447BFE63DC /* JwUrpParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 461D4FA2DB17915ACF3D0063 /* JwUrpParser.swift */; };
 		DAEEAB71152DD2BF2651A9E5 /* VersionUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0892BA3B202EE76234C0CC9 /* VersionUtils.swift */; };
 		DC5CE34D036E0C2093928DEE /* ConflictCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B31ED92C2240B798F37A4F8A /* ConflictCard.swift */; };
+		F11899226A074B39BC61B234 /* NativeColorPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F5E606AF4B41D983A1E33D /* NativeColorPicker.swift */; };
 		DEBE30D3C794C197EDF3464E /* TimeTableUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74EB72448743A4CF5CF466C5 /* TimeTableUtils.swift */; };
 		DF3C38B397BF68B63560316F /* CourseDao.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D3AA9F8B115E2B804EBDA31 /* CourseDao.swift */; };
 		DFFBB81BEE798AFA2850BF99 /* resources in Resources */ = {isa = PBXBuildFile; fileRef = F84E511E00AFD8247D4D4B07 /* resources */; };
@@ -334,10 +336,12 @@
 		B18164021426E1BE78DB3F46 /* SleepyUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepyUITests.swift; sourceTree = "<group>"; };
 		B26C1FC7457815C7A78F9026 /* DateTimePickers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateTimePickers.swift; sourceTree = "<group>"; };
 		B31ED92C2240B798F37A4F8A /* ConflictCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConflictCard.swift; sourceTree = "<group>"; };
+		A5F5E606AF4B41D983A1E33D /* NativeColorPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeColorPicker.swift; sourceTree = "<group>"; };
 		B413E30FAD9261068960FC5F /* JwImportViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwImportViewModel.swift; sourceTree = "<group>"; };
 		B41AA3A6188D5A6651648F24 /* ExportFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportFlowUITests.swift; sourceTree = "<group>"; };
 		B445492F562DDC2A16B5171D /* WidgetDataLoaders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetDataLoaders.swift; sourceTree = "<group>"; };
 		B61DF977A54A43384CB5C986 /* HolidaySettingsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidaySettingsScreen.swift; sourceTree = "<group>"; };
+		AC463EE04C5C422DBB274020 /* LicenseScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseScreen.swift; sourceTree = "<group>"; };
 		B676529801720CE8A47480B3 /* ScheduleViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleViewModel.swift; sourceTree = "<group>"; };
 		B9C22DE3433DD8BF4069C158 /* SleepyUITests.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SleepyUITests.entitlements; sourceTree = "<group>"; };
 		BCC4B67228CB7512A7890C3D /* ThemeAndPinyinTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeAndPinyinTests.swift; sourceTree = "<group>"; };
@@ -455,6 +459,7 @@
 			isa = PBXGroup;
 			children = (
 				B31ED92C2240B798F37A4F8A /* ConflictCard.swift */,
+				A5F5E606AF4B41D983A1E33D /* NativeColorPicker.swift */,
 				6B9605A27EE773F13A53F202 /* CourseDetailSheet.swift */,
 				1335D448B44CCFBFCDA813D3 /* CourseTableView.swift */,
 				B26C1FC7457815C7A78F9026 /* DateTimePickers.swift */,
@@ -682,6 +687,7 @@
 				9275738703FAD36D408DAA49 /* ExportScreen.swift */,
 				DA6CEF27A9C39504E09D3487 /* GeneralSettingsScreen.swift */,
 				B61DF977A54A43384CB5C986 /* HolidaySettingsScreen.swift */,
+				AC463EE04C5C422DBB274020 /* LicenseScreen.swift */,
 				05A3D362C9894D69BFFCEC3F /* MineScreen.swift */,
 				7D8DF7E3509AC5B4147E75C8 /* ReminderScreen.swift */,
 			);
@@ -915,6 +921,7 @@
 				D850C9512A65FE07DDC9556F /* AppPrefs.swift in Sources */,
 				D1DAE4F6D52A83D515D91744 /* AppearanceScreen.swift in Sources */,
 				DC5CE34D036E0C2093928DEE /* ConflictCard.swift in Sources */,
+				F11899226A074B39BC61B234 /* NativeColorPicker.swift in Sources */,
 				7CED8B22A59CED24C1EB08C8 /* ConflictLayoutEngine.swift in Sources */,
 				B7B7B9E50F2427797E4F6752 /* CourseColorUtil.swift in Sources */,
 				9C3967DF73C2215296271E04 /* CourseDao.swift in Sources */,
@@ -928,6 +935,7 @@
 				A573D8081A5FC8074012C42A /* GeneralSettingsScreen.swift in Sources */,
 				BD8246AD64E1E8441C3550BC /* HolidayManager.swift in Sources */,
 				D1561E237C27584E025A0131 /* HolidaySettingsScreen.swift in Sources */,
+				5171DAC8288B45C5AE1C28B8 /* LicenseScreen.swift in Sources */,
 				CD777F7A41318DA863A267CD /* ImportSheet.swift in Sources */,
 				A7E770E7D1250EBC905B0B8E /* JwCourse.swift in Sources */,
 				50E91661C108662A9B7122F7 /* JwCquParser.swift in Sources */,
