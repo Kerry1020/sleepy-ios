@@ -57,7 +57,7 @@ func groupByLetter(_ schools: [JwSchoolInfo]) -> [SchoolSection] {
 struct SchoolSelectScreen: View {
     @Environment(\.localWakeUpColors) private var colors
     let onSchoolSelected: (JwSchoolInfo) -> Void
-    let onBack: () -> Void
+    let onDismiss: () -> Void
 
     @StateObject private var viewModel = JwImportViewModel()
     @State private var query = ""
@@ -85,7 +85,7 @@ struct SchoolSelectScreen: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SettingsTopBar(title: L10n.format("select_school"), onBack: onBack)
+            SettingsTopBar(title: L10n.format("select_school"), onBack: onDismiss)
 
             // 搜索框
             TextField(L10n.format("search_school_url"), text: $query)

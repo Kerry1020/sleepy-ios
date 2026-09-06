@@ -18,7 +18,7 @@ struct JwWebViewLoginScreen: View {
     @Environment(\.localWakeUpColors) private var colors
     let school: JwSchoolInfo
     let onHtmlCaptured: (String, JwSchoolInfo, [(Int, String, String)]) -> Void
-    let onBack: () -> Void
+    let onDismiss: () -> Void
 
     @State private var progress: Double = 0
     @State private var webViewCoordinator: WebViewCoordinator? = nil
@@ -28,7 +28,7 @@ struct JwWebViewLoginScreen: View {
         VStack(spacing: 0) {
             // TopBar(校名 + 协议名)
             HStack {
-                Button(action: onBack) {
+                Button(action: onDismiss) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 20, weight: .medium))
                         .foregroundColor(colors.onBackground)

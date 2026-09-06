@@ -8,17 +8,17 @@ import Combine
 
 struct AppearanceScreen: View {
     @Environment(\.localWakeUpColors) private var colors
-    let onBack: () -> Void
+    let onDismiss: () -> Void
     var themeMode: String = AppPrefs.THEME_MODE_SYSTEM
     var onThemeModeChange: (String) -> Void = { _ in }
 
     @State private var currentKey: String
     private let prefs = AppPrefs.shared
 
-    init(onBack: @escaping () -> Void,
+    init(onDismiss: @escaping () -> Void,
          themeMode: String = AppPrefs.THEME_MODE_SYSTEM,
          onThemeModeChange: @escaping (String) -> Void = { _ in }) {
-        self.onBack = onBack
+        self.onDismiss = onDismiss
         self.themeMode = themeMode
         self.onThemeModeChange = onThemeModeChange
         _currentKey = State(initialValue: AppPrefs.shared.getThemeKey())
@@ -26,7 +26,7 @@ struct AppearanceScreen: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SettingsTopBar(title: L10n.format("mine_appearance"), onBack: onBack)
+            SettingsTopBar(title: L10n.format("mine_appearance"), onBack: onDismiss)
             ScrollView {
                 VStack(spacing: 12) {
                     // ── 分组① 主题色彩 ──

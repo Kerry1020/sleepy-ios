@@ -62,7 +62,14 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 @MainActor
 final class AppRootViewModel: ObservableObject {
     enum Tab: Hashable { case schedule, today, manage, mine }
-    enum OverlayScreen: String { case addCourse, allTables, editTable, theme, general, holiday, export, reminder, about }
+    // ★ v7.10.18 原生化: OverlayScreen 用于 presentation(.sheet/.fullScreenCover item:)
+    //   子屏独立呈现,iOS 16+ 自动获得 swipe-to-dismiss,iOS 15 仍有系统 ✕ 按钮。
+    //   GeneralSettingsScreen 内嵌 NavigationView 容纳 HolidaySettings 嵌套跳转。
+    enum OverlayScreen: String, Identifiable {
+        case addCourse, allTables, editTable, theme, general, export, reminder, about
+        // holiday 由 GeneralSettings 内部 sheet 呈现,不再出现在根 enum
+        var id: String { rawValue }
+    }
 
     @Published var currentTab: Tab = .schedule
     @Published var overlayScreen: OverlayScreen? = nil
@@ -212,74 +219,143 @@ struct AppRoot: View {
 
     @ViewBuilder
     private var mainContent: some View {
-        // overlay 屏(← if overlayScreen == ... return 模式)
-        if root.overlayScreen == .addCourse || root.editingCourse != nil {
-            AddCourseScreen(
-                viewModel: root.scheduleViewModel,
-                onBack: { root.overlayScreen = nil; root.editingCourse = nil },
-                onSaved: { root.overlayScreen = nil; root.editingCourse = nil; root.currentTab = .schedule },
-                editingCourse: root.editingCourse)
-        } else if root.overlayScreen == .allTables {
-            AllTablesScreen(
-                viewModel: root.scheduleViewModel,
-                onBack: { root.overlayScreen = nil },
-                onCreateNewTable: { root.createNewTableThenEdit() },
-                onOpenEditTable: { tableId in
-                    root.editTableId = tableId
-                    root.pendingNewTableId = nil
-                    root.overlayScreen = .editTable
-                })
-        } else if root.overlayScreen == .editTable {
-            EditTableScreen(
-                viewModel: root.scheduleViewModel,
-                tableId: root.editTableId,
-                pendingNewTableId: root.pendingNewTableId,
-                onBack: { root.handleBack() },
-                onDiscardPending: {
-                    let discardId = root.pendingNewTableId
-                    let fallback = root.previousDefaultTableId
-                    root.pendingNewTableId = nil
-                    root.previousDefaultTableId = nil
-                    if let discardId = discardId {
-                        root.scheduleViewModel.discardNewTable(discardId, fallbackId: fallback)
+        // ★ v7.10.18 原生化重构:
+        //   8 个独立 overlay 子页 → .fullScreenCover(item:) / .sheet(item:)
+        //   - iOS 16+: 享有系统 swipe-to-dismiss / pull-down dismiss(原生手势)
+        //   - iOS 15 (6sp 真机): 系统 ✕ 按钮 + 下拉 dismiss(无 edge swipe,但仍是原生)
+        //   - holiday 子页由 GeneralSettings 内部 NavigationView 承载,不再列根
+        //   - .sheet(item:) 用 OverlayScreen: Identifiable + rawValue 区分 item
+        //   - 不再有 if/else if 条件树 → 渲染条件回到 tabs 即可
+        tabs
+            // 课程编辑: 占用空间大 + 有键盘 + 表单 → fullScreenCover
+            .fullScreenCover(item: Binding(
+                get: { (root.overlayScreen == .addCourse || root.editingCourse != nil) ? .addCourse : nil },
+                set: { newVal in
+                    if newVal == nil {
+                        root.overlayScreen = nil
+                        root.editingCourse = nil
                     }
-                    root.overlayScreen = nil
-                    root.editTableId = nil
-                },
-                onSaved: {
-                    root.overlayScreen = nil
-                    root.editTableId = nil
-                    root.pendingNewTableId = nil
-                    root.previousDefaultTableId = nil
-                },
-                onDeleted: {
-                    root.overlayScreen = nil
-                    root.editTableId = nil
-                    root.currentTab = .schedule
-                })
-        } else if root.overlayScreen == .theme {
-            AppearanceScreen(
-                onBack: { root.overlayScreen = nil },
-                themeMode: themeMode,
-                onThemeModeChange: { mode in
-                    themeMode = mode
-                    themeKey = AppPrefs.shared.getThemeKey()
-                })
-        } else if root.overlayScreen == .general {
-            GeneralSettingsScreen(onBack: { root.overlayScreen = nil },
-                                  onOpenHoliday: { root.overlayScreen = .holiday })
-        } else if root.overlayScreen == .holiday {
-            // ← MainActivity: onBack = overlayScreen = null (回主界面, 非 General)
-            HolidaySettingsScreen(onBack: { root.overlayScreen = nil })
-        } else if root.overlayScreen == .export {
-            ExportScreen(viewModel: root.scheduleViewModel, onBack: { root.overlayScreen = nil })
-        } else if root.overlayScreen == .reminder {
-            ReminderScreen(onBack: { root.overlayScreen = nil })
-        } else if root.overlayScreen == .about {
-            AboutScreen(onBack: { root.overlayScreen = nil })
-        } else {
-            tabs
-        }
+                }
+            )) { _ in
+                AddCourseScreen(
+                    viewModel: root.scheduleViewModel,
+                    onDismiss: { root.overlayScreen = nil; root.editingCourse = nil },
+                    onSaved: {
+                        root.overlayScreen = nil
+                        root.editingCourse = nil
+                        root.currentTab = .schedule
+                    },
+                    editingCourse: root.editingCourse)
+                .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
+                .preferredColorScheme(isDark ? .dark : .light)
+            }
+            // 编辑现有课表: 大量 UI + 键盘 → fullScreenCover
+            .fullScreenCover(item: Binding(
+                get: { root.overlayScreen == .editTable ? .editTable : nil },
+                set: { newVal in
+                    if newVal == nil {
+                        root.handleBack()
+                    }
+                }
+            )) { _ in
+                EditTableScreen(
+                    viewModel: root.scheduleViewModel,
+                    tableId: root.editTableId,
+                    pendingNewTableId: root.pendingNewTableId,
+                    onDismiss: { root.handleBack() },
+                    onDiscardPending: {
+                        let discardId = root.pendingNewTableId
+                        let fallback = root.previousDefaultTableId
+                        root.pendingNewTableId = nil
+                        root.previousDefaultTableId = nil
+                        if let discardId = discardId {
+                            root.scheduleViewModel.discardNewTable(discardId, fallbackId: fallback)
+                        }
+                        root.overlayScreen = nil
+                        root.editTableId = nil
+                    },
+                    onSaved: {
+                        root.overlayScreen = nil
+                        root.editTableId = nil
+                        root.pendingNewTableId = nil
+                        root.previousDefaultTableId = nil
+                    },
+                    onDeleted: {
+                        root.overlayScreen = nil
+                        root.editTableId = nil
+                        root.currentTab = .schedule
+                    })
+                .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
+                .preferredColorScheme(isDark ? .dark : .light)
+            }
+            // 全部课表列表: 列表 + 列表项内可点击 → fullScreenCover
+            .fullScreenCover(item: Binding(
+                get: { root.overlayScreen == .allTables ? .allTables : nil },
+                set: { newVal in if newVal == nil { root.overlayScreen = nil } }
+            )) { _ in
+                AllTablesScreen(
+                    viewModel: root.scheduleViewModel,
+                    onDismiss: { root.overlayScreen = nil },
+                    onCreateNewTable: { root.createNewTableThenEdit() },
+                    onOpenEditTable: { tableId in
+                        root.editTableId = tableId
+                        root.pendingNewTableId = nil
+                        root.overlayScreen = .editTable
+                    })
+                .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
+                .preferredColorScheme(isDark ? .dark : .light)
+            }
+            // 主题: 列表 → sheet (中高度)
+            .sheet(item: Binding(
+                get: { root.overlayScreen == .theme ? .theme : nil },
+                set: { newVal in if newVal == nil { root.overlayScreen = nil } }
+            )) { _ in
+                AppearanceScreen(
+                    onDismiss: { root.overlayScreen = nil },
+                    themeMode: themeMode,
+                    onThemeModeChange: { mode in
+                        themeMode = mode
+                        themeKey = AppPrefs.shared.getThemeKey()
+                    })
+                .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
+                .preferredColorScheme(isDark ? .dark : .light)
+            }
+            // 通用设置: 含嵌套跳节假日,内嵌 NavigationView → fullScreenCover
+            .fullScreenCover(item: Binding(
+                get: { root.overlayScreen == .general ? .general : nil },
+                set: { newVal in if newVal == nil { root.overlayScreen = nil } }
+            )) { _ in
+                GeneralSettingsScreen(onDismiss: { root.overlayScreen = nil })
+                .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
+                .preferredColorScheme(isDark ? .dark : .light)
+            }
+            // 导出: 文件列表 + 操作 → fullScreenCover
+            .fullScreenCover(item: Binding(
+                get: { root.overlayScreen == .export ? .export : nil },
+                set: { newVal in if newVal == nil { root.overlayScreen = nil } }
+            )) { _ in
+                ExportScreen(viewModel: root.scheduleViewModel, onDismiss: { root.overlayScreen = nil })
+                .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
+                .preferredColorScheme(isDark ? .dark : .light)
+            }
+            // 提醒设置: 中等设置页 → fullScreenCover
+            .fullScreenCover(item: Binding(
+                get: { root.overlayScreen == .reminder ? .reminder : nil },
+                set: { newVal in if newVal == nil { root.overlayScreen = nil } }
+            )) { _ in
+                ReminderScreen(onDismiss: { root.overlayScreen = nil })
+                .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
+                .preferredColorScheme(isDark ? .dark : .light)
+            }
+            // 关于: 滚动内容 → fullScreenCover
+            .fullScreenCover(item: Binding(
+                get: { root.overlayScreen == .about ? .about : nil },
+                set: { newVal in if newVal == nil { root.overlayScreen = nil } }
+            )) { _ in
+                AboutScreen(onDismiss: { root.overlayScreen = nil })
+                .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
+                .preferredColorScheme(isDark ? .dark : .light)
+            }
     }
 
     // ← Scaffold + PillNavigationBar + 4 Tab

@@ -89,7 +89,7 @@ struct JwImportFlow: View {
                 }
                 selectedSchool = school
                 stage = .webViewLogin
-            }, onBack: onFinish)
+            }, onDismiss: onFinish)
         } else if stage == .webViewLogin {
             if let school = selectedSchool {
                 JwWebViewLoginScreen(school: school, onHtmlCaptured: onHtmlCaptured) {

@@ -9,8 +9,9 @@ import WidgetKit
 
 struct GeneralSettingsScreen: View {
     @Environment(\.localWakeUpColors) private var colors
-    let onBack: () -> Void
-    var onOpenHoliday: () -> Void = {}
+    // ★ v7.10.18 原生化: onBack → onDismiss(由 fullScreenCover / sheet 关闭)
+    //   holiday 子页由本屏内 NavigationView + NavigationLink 承载, 不再走 AppRoot enum
+    let onDismiss: () -> Void
 
     private let prefs = AppPrefs.shared
 
@@ -24,6 +25,9 @@ struct GeneralSettingsScreen: View {
     @State private var conflictStackInset: Double = AppPrefs.shared.getConflictStackInset()
     @State private var conflictRailInset: Double = AppPrefs.shared.getConflictRailInset()
     @State private var conflictFoldSize: Double = AppPrefs.shared.getConflictFoldSize()
+    // ★ v7.10.18: HolidaySettings 在本屏内 sheet 弹出,无需走 root enum
+    @State private var holidaySettingsItem: HolidaySettingsItem? = nil
+    private struct HolidaySettingsItem: Identifiable { let id = UUID() }
 
     private func toggleSection(_ key: String) {
         if expandedSections.contains(key) { expandedSections.remove(key) }
@@ -36,38 +40,47 @@ struct GeneralSettingsScreen: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            SettingsTopBar(title: L10n.format("mine_general"), onBack: onBack)
-            ScrollView {
-                VStack(spacing: 16) {
-                    // ── 分组① 课程显示(11 子视图超 ViewBuilder 上限, 拆 Group) ──
-                    Group {
-                        SectionHeader(title: L10n.format("appearance_section_display"))
+        // ★ v7.10.18 原生化: NavigationView 内嵌 + NavigationLink 跳 HolidaySettings
+        //   - iOS 16+: NavigationLink 推入栈,免费 swipe-back 手势
+        //   - iOS 15: NavigationView stack 风格 + NavigationLink 正常工作,带原生 back 按钮
+        //   - 6sp 空白: NavigationView 在此内嵌(非 root),子屏 navbar 是合法 UX 预期
+        NavigationView {
+                VStack(spacing: 0) {
+                    SettingsTopBar(title: L10n.format("mine_general"), onBack: onDismiss)
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            // ── 分组① 课程显示(11 子视图超 ViewBuilder 上限, 拆 Group) ──
+                            Group {
+                                SectionHeader(title: L10n.format("appearance_section_display"))
 
-                        displayModeCard
-                        gridSubInfoCard
-                        visibleDaysCard
-                        showDateCard
-                        courseColorlessCard
-                        conflictStyleCard
-                        holidayEntryCard
+                                displayModeCard
+                                gridSubInfoCard
+                                visibleDaysCard
+                                showDateCard
+                                courseColorlessCard
+                                conflictStyleCard
+                                holidayEntryCard
+                            }
+
+                            MajorDivider()
+
+                            // ── 分组② 小组件 ──
+                            WidgetSection(expandedSections: $expandedSections,
+                                          refreshWidgets: refreshWidgets)
+
+                            MajorDivider()
+
+                            // ── 分组③ 语言 ──
+                            LanguageSection()
+                        }
+                        .padding(16)
                     }
-
-                    MajorDivider()
-
-                    // ── 分组② 小组件 ──
-                    WidgetSection(expandedSections: $expandedSections,
-                                  refreshWidgets: refreshWidgets)
-
-                    MajorDivider()
-
-                    // ── 分组③ 语言 ──
-                    LanguageSection()
                 }
-                .padding(16)
-            }
+                .background(colors.background)
+                .navigationBarTitleDisplayMode(.inline)
+                .navigationBarHidden(true)
         }
-        .background(colors.background)
+        .navigationViewStyle(.stack)
     }
 
     // 课程时间显示: 节次 / 时间
@@ -228,7 +241,7 @@ struct GeneralSettingsScreen: View {
 
     // ← 节假日课程灰显: 点击进入二级页(Android General 页同款入口卡)
     private var holidayEntryCard: some View {
-        Button(action: onOpenHoliday) {
+        Button { holidaySettingsItem = HolidaySettingsItem() } label: {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(L10n.format("settings_holiday_title"))
@@ -251,6 +264,9 @@ struct GeneralSettingsScreen: View {
         }
         .buttonStyle(SleepyButtonStyle())
         .accessibilityIdentifier("settings_holiday_entry")
+        .sheet(item: $holidaySettingsItem) { _ in
+            HolidaySettingsScreen(onDismiss: { holidaySettingsItem = nil })
+        }
     }
 }
 

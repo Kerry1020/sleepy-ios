@@ -9,7 +9,7 @@ struct EditTableScreen: View {
     @ObservedObject var viewModel: ScheduleViewModel
     var tableId: Int64? = nil
     var pendingNewTableId: Int64? = nil
-    let onBack: () -> Void
+    let onDismiss: () -> Void
     var onDiscardPending: () -> Void
     let onSaved: () -> Void
     let onDeleted: () -> Void
@@ -17,15 +17,15 @@ struct EditTableScreen: View {
     init(viewModel: ScheduleViewModel,
          tableId: Int64? = nil,
          pendingNewTableId: Int64? = nil,
-         onBack: @escaping () -> Void,
+         onDismiss: @escaping () -> Void,
          onDiscardPending: (() -> Void)? = nil,
          onSaved: @escaping () -> Void,
          onDeleted: @escaping () -> Void) {
         self.viewModel = viewModel
         self.tableId = tableId
         self.pendingNewTableId = pendingNewTableId
-        self.onBack = onBack
-        self.onDiscardPending = onDiscardPending ?? onBack
+        self.onDismiss = onDismiss
+        self.onDiscardPending = onDiscardPending ?? onDismiss
         self.onSaved = onSaved
         self.onDeleted = onDeleted
     }
@@ -180,7 +180,7 @@ struct EditTableScreen: View {
     }
 
     private func handleBack() {
-        if pendingNewTableId != nil { onDiscardPending() } else { onBack() }
+        if pendingNewTableId != nil { onDiscardPending() } else { onDismiss() }
     }
 
     // ← remember(table.id) 状态初始化(表切换时重载)

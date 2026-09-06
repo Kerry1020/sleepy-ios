@@ -24,7 +24,7 @@ private let MAX_YEAR = 2049
 
 struct HolidaySettingsScreen: View {
     @Environment(\.localWakeUpColors) private var colors
-    let onBack: () -> Void
+    let onDismiss: () -> Void
 
     private let prefs = AppPrefs.shared
 
@@ -97,7 +97,7 @@ struct HolidaySettingsScreen: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SettingsTopBar(title: L10n.format("holiday_page_title"), onBack: onBack)
+            SettingsTopBar(title: L10n.format("holiday_page_title"), onBack: onDismiss)
             ScrollView {
                 VStack(spacing: 16) {
                     yearSwitcher

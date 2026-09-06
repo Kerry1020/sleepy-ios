@@ -7,14 +7,14 @@ struct AllTablesScreen: View {
     @Environment(\.localWakeUpColors) private var colors
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: ScheduleViewModel
-    let onBack: () -> Void
+    let onDismiss: () -> Void
     let onCreateNewTable: () -> Void
     let onOpenEditTable: (Int64) -> Void
 
     var body: some View {
         let state = viewModel.state
         VStack(spacing: 0) {
-            SettingsTopBar(title: L10n.format("all_tables"), onBack: onBack)
+            SettingsTopBar(title: L10n.format("all_tables"), onBack: onDismiss)
             ScrollView {
                 VStack(spacing: 12) {
                     Spacer().frame(height: 4)
@@ -80,7 +80,7 @@ struct AllTablesScreen: View {
                             .onTapGesture {
                                 if !isCurrent {
                                     viewModel.selectTable(table.id)
-                                    onBack()
+                                    onDismiss()
                                 }
                             }
                     }

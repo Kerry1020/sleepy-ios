@@ -9,7 +9,7 @@ import UserNotifications
 
 struct ReminderScreen: View {
     @Environment(\.localWakeUpColors) private var colors
-    let onBack: () -> Void
+    let onDismiss: () -> Void
 
     private let prefs = AppPrefs.shared
 
@@ -26,7 +26,7 @@ struct ReminderScreen: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SettingsTopBar(title: L10n.format("reminder_title"), onBack: onBack)
+            SettingsTopBar(title: L10n.format("reminder_title"), onBack: onDismiss)
             ScrollView {
                 VStack(spacing: 16) {
                     // Master toggle card

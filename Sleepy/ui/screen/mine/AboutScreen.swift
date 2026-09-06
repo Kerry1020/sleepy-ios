@@ -24,7 +24,7 @@ enum UpdateUiState: Equatable {
 
 struct AboutScreen: View {
     @Environment(\.localWakeUpColors) private var colors
-    let onBack: () -> Void
+    let onDismiss: () -> Void
 
     @State private var uiState: UpdateUiState = .idle
     @State private var downloadTask: Task<Void, Never>? = nil
@@ -33,7 +33,7 @@ struct AboutScreen: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SettingsTopBar(title: L10n.format("about_title"), onBack: onBack)
+            SettingsTopBar(title: L10n.format("about_title"), onBack: onDismiss)
             ScrollView {
                 VStack(spacing: 12) {
                     Spacer().frame(height: 24)

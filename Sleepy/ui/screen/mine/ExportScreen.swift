@@ -9,7 +9,7 @@ import UIKit
 struct ExportScreen: View {
     @Environment(\.localWakeUpColors) private var colors
     @ObservedObject var viewModel: ScheduleViewModel
-    let onBack: () -> Void
+    let onDismiss: () -> Void
 
     @State private var shareSheet: ShareItem? = nil
     @State private var snackMessage: String? = nil
@@ -20,7 +20,7 @@ struct ExportScreen: View {
         let courses = state.courses
 
         VStack(spacing: 0) {
-            SettingsTopBar(title: L10n.format("export_title"), onBack: onBack)
+            SettingsTopBar(title: L10n.format("export_title"), onBack: onDismiss)
             if let table = table {
                 ScrollView {
                     VStack(spacing: 12) {
