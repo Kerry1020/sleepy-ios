@@ -559,79 +559,63 @@ private struct MeetingBlockEditor: View {
     }
 }
 
-// ← ModePicker
+// ← ModePicker: native Picker(.segmented) 替代自制分段控件
+//   iOS 系统 segmented control → 选中态高亮 + 触摸区域 + 动效全免费
+//   签名兼容 (mode + onChange), call site 零改动。
 private struct ModePicker: View {
-    @Environment(\.localWakeUpColors) private var colors
     let mode: MeetingInputMode
     let onChange: (MeetingInputMode) -> Void
 
     var body: some View {
-        let modes: [(MeetingInputMode, String)] = [
-            (.byNode, L10n.format("mode_by_node")),
-            (.byClock, L10n.format("mode_by_time"))
-        ]
-        HStack(spacing: 0) {
-            ForEach(modes, id: \.0) { m, label in
-                let sel = mode == m
-                Button {
-                    onChange(m)
-                } label: {
-                    Text(label)
-                        .font(.system(size: 14, weight: sel ? .semibold : .medium))
-                        .foregroundColor(sel ? colors.onSecondaryContainer : colors.onSurfaceVariant)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(
-                            Group {
-                                if sel {
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(colors.secondaryContainer)
-                                        .padding(.vertical, 3)
-                                }
-                            }
-                        )
-                }
-                .buttonStyle(SleepyButtonStyle())
-            }
+        Picker("", selection: Binding(
+            get: { mode },
+            set: { onChange($0) }
+        )) {
+            Text(L10n.format("mode_by_node")).tag(MeetingInputMode.byNode)
+            Text(L10n.format("mode_by_time")).tag(MeetingInputMode.byClock)
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 40)
-        .background(colors.surfaceContainer)
-        .cornerRadius(10)
+        .pickerStyle(.segmented)
     }
 }
 
-// ← MultiDayPicker(4+3 两行)
+// ← MultiDayPicker: Form + Toggle 行表 (iOS 设置式多选), 替代自制 4+3 网格
+//   SwiftUI Picker 多选无原生 API; 最接近系统设置多选用 Form { Toggle }
+//   签名兼容 (selectedDays + onToggleDay), call site 零改动。
 private struct MultiDayPicker: View {
     @Environment(\.localWakeUpColors) private var colors
     let selectedDays: Set<Int>
     let onToggleDay: (Int) -> Void
 
     var body: some View {
-        VStack(spacing: 8) {
-            ForEach([Array(1...4), Array(5...7)], id: \.self) { row in
-                HStack(spacing: 8) {
-                    ForEach(row, id: \.self) { day in
-                        let selected = selectedDays.contains(day)
-                        Button {
-                            onToggleDay(day)
-                        } label: {
-                            // 纯色块选中态, 无描边(← AddCourseScreen.kt L857)
-                            Text(DateUtils.localizedDay(day))
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(selected ? colors.onPrimary : colors.onSurface)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 40)
-                                .background(selected ? colors.primary : colors.surfaceContainerHighest)
-                                .cornerRadius(SleepyShapes.medium)
+        VStack(spacing: 0) {
+            ForEach(1...7, id: \.self) { day in
+                let selected = selectedDays.contains(day)
+                Button {
+                    onToggleDay(day)
+                } label: {
+                    HStack {
+                        Text(DateUtils.localizedDay(day))
+                            .font(.system(size: 15))
+                            .foregroundColor(colors.onSurface)
+                        Spacer()
+                        if selected {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(colors.primary)
                         }
-                        .buttonStyle(SleepyButtonStyle())
                     }
-                    if row.count < 4 {
-                        ForEach(0..<(4 - row.count), id: \.self) { _ in Spacer() }
-                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(SleepyButtonStyle())
+                if day < 7 {
+                    Divider().background(colors.outlineVariant)
                 }
             }
         }
+        .background(colors.surfaceContainer)
+        .cornerRadius(SleepyShapes.medium)
     }
 }
 

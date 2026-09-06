@@ -508,7 +508,13 @@ private struct HolidayRemovedCard: View {
 /**
  * 编辑/添加弹窗(起止日期范围段) ← HolidayRangeEditDialog。
  * target 为网络段时, 保存时补 sourceKey="holiday|workday:<首日>" 挂接替换该网络段。
- * 校验: start/end 均有效且 end >= start, 否则禁用保存并提示 holiday_date_invalid。
+ * 校验: start <= end, 否则禁用保存并提示 holiday_date_invalid。
+ *
+ * iOS 原生化:
+ *   - 起止日期 → native DatePicker(.compact) 双字段, 点击展开滚轮
+ *   - 名称 → TextField (SwiftUI 已是原生, 不变)
+ *   - 类型 → Picker(.segmented) 二选一
+ *   - 删除/取消/保存 → 自制色块按钮(与全 app 统一)
  */
 private struct HolidayRangeEditDialog: View {
     @Environment(\.localWakeUpColors) private var colors
@@ -519,8 +525,8 @@ private struct HolidayRangeEditDialog: View {
     let onDelete: (HolidayRange) -> Void
 
     @State private var name: String
-    @State private var startText: String
-    @State private var endText: String
+    @State private var startDate: Date
+    @State private var endDate: Date
     @State private var type: String
 
     init(target: HolidayRange, isNew: Bool,
@@ -533,34 +539,45 @@ private struct HolidayRangeEditDialog: View {
         self.onSave = onSave
         self.onDelete = onDelete
         _name = State(initialValue: target.name)
-        _startText = State(initialValue: target.startDate.ISO8601Format().prefix(10).description)
-        _endText = State(initialValue: target.endDate.ISO8601Format().prefix(10).description)
+        _startDate = State(initialValue: target.startDate)
+        _endDate = State(initialValue: target.endDate)
         _type = State(initialValue: target.type)
     }
 
-    private var startDate: Date? { isoDate(startText) }
-    private var endDate: Date? { isoDate(endText) }
-    private var datesValid: Bool {
-        guard let s = startDate, let e = endDate else { return false }
-        return e >= s
-    }
+    private var datesValid: Bool { endDate >= startDate }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             Text(L10n.format(isNew ? "holiday_add_title" : "holiday_edit_title"))
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundColor(colors.onSurface)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            DatePickerField(value: startText,
-                            onValueChange: { startText = $0 },
-                            label: L10n.format("holiday_name_label_date"),
-                            isError: !startText.isBlank && startDate == nil)
-            DatePickerField(value: endText,
-                            onValueChange: { endText = $0 },
-                            label: L10n.format("holiday_name_label_end"),
-                            isError: !endText.isBlank && (endDate == nil || (startDate != nil && endDate! < startDate!)))
-            if !datesValid && (!startText.isBlank || !endText.isBlank) {
+            // ← native iOS DatePicker(.compact): 点击展开滚轮, 系统级体验
+            //   手动 HStack 替代 LabeledContent (iOS 16+), 保持 iOS 15.6 兼容
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text(L10n.format("holiday_name_label_date"))
+                        .font(.system(size: 14))
+                        .foregroundColor(colors.onSurfaceVariant)
+                    Spacer()
+                    DatePicker("", selection: $startDate, displayedComponents: .date)
+                        .labelsHidden()
+                        .datePickerStyle(.compact)
+                }
+                HStack {
+                    Text(L10n.format("holiday_name_label_end"))
+                        .font(.system(size: 14))
+                        .foregroundColor(colors.onSurfaceVariant)
+                    Spacer()
+                    DatePicker("", selection: $endDate, in: startDate..., displayedComponents: .date)
+                        .labelsHidden()
+                        .datePickerStyle(.compact)
+                }
+            }
+            .padding(.vertical, 4)
+
+            if !datesValid {
                 Text(L10n.format("holiday_date_invalid"))
                     .font(.system(size: 12))
                     .foregroundColor(colors.error)
@@ -573,20 +590,18 @@ private struct HolidayRangeEditDialog: View {
                 .background(colors.surfaceContainer)
                 .cornerRadius(SleepyTheme.fieldShape)
 
-            HStack(spacing: 8) {
-                HolidayStyleChip(
-                    label: L10n.format("holiday_type_holiday"),
-                    selected: type == HolidayManager.TYPE_PUBLIC_HOLIDAY
-                ) { type = HolidayManager.TYPE_PUBLIC_HOLIDAY }
-                HolidayStyleChip(
-                    label: L10n.format("holiday_type_workday"),
-                    selected: type == HolidayManager.TYPE_TRANSFER_WORKDAY
-                ) { type = HolidayManager.TYPE_TRANSFER_WORKDAY }
+            // ← native Picker(.segmented): 取代自制 HolidayStyleChip 双按钮
+            Picker("", selection: Binding(
+                get: { type == HolidayManager.TYPE_PUBLIC_HOLIDAY ? 0 : 1 },
+                set: { type = $0 == 0 ? HolidayManager.TYPE_PUBLIC_HOLIDAY : HolidayManager.TYPE_TRANSFER_WORKDAY }
+            )) {
+                Text(L10n.format("holiday_type_holiday")).tag(0)
+                Text(L10n.format("holiday_type_workday")).tag(1)
             }
+            .pickerStyle(.segmented)
 
             if !isNew {
                 // 删除走 errorContainer 色块 — 纯色块禁描边规则。
-                // 弹窗不设"恢复": 已保存段删除=移除覆盖(可从已删除区恢复), 网络段删除=REMOVED 覆盖(同入口恢复)。
                 Button {
                     onDelete(target)
                 } label: {
@@ -611,10 +626,10 @@ private struct HolidayRangeEditDialog: View {
                 }
                 .buttonStyle(SleepyButtonStyle())
                 Button {
-                    guard let s = startDate, let e = endDate else { return }
-                    // sourceKey 由 resolveEditTarget 填好: 网络段派生=挂接键, 纯用户段=保持 nil
-                    onSave(HolidayRange(id: target.id, name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-                                        startDate: s, endDate: e, type: type, sourceKey: target.sourceKey))
+                    onSave(HolidayRange(id: target.id,
+                                        name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+                                        startDate: startDate, endDate: endDate,
+                                        type: type, sourceKey: target.sourceKey))
                 } label: {
                     Text(L10n.format("save"))
                         .font(.system(size: 14, weight: .medium))
@@ -630,14 +645,6 @@ private struct HolidayRangeEditDialog: View {
         }
         .padding(20)
     }
-}
-
-private func isoDate(_ s: String) -> Date? {
-    let f = DateFormatter()
-    f.dateFormat = "yyyy-MM-dd"
-    f.locale = Locale(identifier: "en_US_POSIX")
-    f.timeZone = TimeZone(identifier: "Asia/Shanghai")
-    return f.date(from: s)
 }
 
 // ← HolidayStyleChip

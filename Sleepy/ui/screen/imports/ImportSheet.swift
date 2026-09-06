@@ -419,6 +419,7 @@ private struct FormatRow: View {
 }
 
 // ← FormatDetailDialog(格式详情弹窗: 什么时候用 + 识别要求 + 示例; 纯文本独有 AI Prompt)
+//   iOS 原生化: List + Section 替代裸 VStack — 自动 inset/grouped 视觉, 系统原生分隔线
 private struct FormatDetailDialog: View {
     @Environment(\.localWakeUpColors) private var colors
     @Environment(\.dismiss) private var dismiss
@@ -426,95 +427,96 @@ private struct FormatDetailDialog: View {
     @State private var copiedPrompt = false
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(format.whenText)
-                    .font(.system(size: 14))
-                    .foregroundColor(colors.onSurfaceVariant)
-
-                Text(L10n.format("format_help_spec"))
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(colors.onSurface)
-                ForEach(format.specItems, id: \.self) { item in
-                    HStack(alignment: .top, spacing: 8) {
-                        Text("•")
-                            .font(.system(size: 12))
-                            .foregroundColor(colors.primary)
-                            .padding(.top, 2)
-                        Text(item)
-                            .font(.system(size: 12))
-                            .foregroundColor(colors.onSurfaceVariant)
+        NavigationView {
+            List {
+                Section {
+                    Text(format.whenText)
+                        .font(.system(size: 14))
+                        .foregroundColor(colors.onSurfaceVariant)
+                        .listRowBackground(colors.surfaceContainer)
+                }
+                Section(L10n.format("format_help_spec")) {
+                    ForEach(format.specItems, id: \.self) { item in
+                        HStack(alignment: .top, spacing: 8) {
+                            Text("•")
+                                .font(.system(size: 12))
+                                .foregroundColor(colors.primary)
+                                .padding(.top, 2)
+                            Text(item)
+                                .font(.system(size: 13))
+                                .foregroundColor(colors.onSurface)
+                        }
+                        .listRowBackground(colors.surfaceContainer)
                     }
                 }
-
-                Text(L10n.format("format_help_example"))
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(colors.onSurface)
-                    .padding(.top, 4)
-                Text(format.exampleText
-                        .replacingOccurrences(of: "\\n", with: "\n")
-                        .replacingOccurrences(of: "\\t", with: "\t"))
-                    .font(.system(size: 12, design: .monospaced))
-                    .foregroundColor(colors.onSurface)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(12)
-                    .background(colors.surfaceContainer)
-                    .cornerRadius(SleepyShapes.medium)
-
-                // 纯文本独有: AI 截图转换 Prompt (可复制)
+                Section(L10n.format("format_help_example")) {
+                    Text(format.exampleText
+                            .replacingOccurrences(of: "\\n", with: "\n")
+                            .replacingOccurrences(of: "\\t", with: "\t"))
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundColor(colors.onSurface)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .listRowBackground(colors.surfaceContainer)
+                }
                 if format == .plain {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(L10n.format("ai_prompt_title"))
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(colors.onPrimaryContainer)
-                        Text(L10n.format("ai_prompt_hint"))
-                            .font(.system(size: 12))
-                            .foregroundColor(colors.onPrimaryContainer)
-                        Text(L10n.format("ai_prompt_text")
-                                .replacingOccurrences(of: "\\n", with: "\n")
-                                .replacingOccurrences(of: "\\t", with: "\t"))
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundColor(colors.onPrimaryContainer)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(10)
-                            .background(colors.surfaceContainer)
-                            .cornerRadius(SleepyShapes.medium)
-                        Button {
-                            UIPasteboard.general.string = L10n.format("ai_prompt_text")
-                                .replacingOccurrences(of: "\\n", with: "\n")
-                                .replacingOccurrences(of: "\\t", with: "\t")
-                            copiedPrompt = true
-                        } label: {
-                            // ★ 描线→色块(2026-08-25 统一指令): 复制按钮 surface 色块
-                            HStack(spacing: 6) {
-                                Image(systemName: "doc.on.doc")
-                                    .font(.system(size: 14))
-                                Text(copiedPrompt ? L10n.format("copied") : L10n.format("copy_prompt"))
-                                    .font(.system(size: 14))
+                    Section {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(L10n.format("ai_prompt_title"))
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(colors.onPrimaryContainer)
+                            Text(L10n.format("ai_prompt_hint"))
+                                .font(.system(size: 12))
+                                .foregroundColor(colors.onPrimaryContainer)
+                            Text(L10n.format("ai_prompt_text")
+                                    .replacingOccurrences(of: "\\n", with: "\n")
+                                    .replacingOccurrences(of: "\\t", with: "\t"))
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundColor(colors.onPrimaryContainer)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(10)
+                                .background(colors.surfaceContainer)
+                                .cornerRadius(SleepyShapes.medium)
+                            Button {
+                                UIPasteboard.general.string = L10n.format("ai_prompt_text")
+                                    .replacingOccurrences(of: "\\n", with: "\n")
+                                    .replacingOccurrences(of: "\\t", with: "\t")
+                                copiedPrompt = true
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "doc.on.doc")
+                                        .font(.system(size: 14))
+                                    Text(copiedPrompt ? L10n.format("copied") : L10n.format("copy_prompt"))
+                                        .font(.system(size: 14))
+                                }
+                                .foregroundColor(colors.onPrimaryContainer)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 48)
+                                .background(colors.primaryContainer)
+                                .cornerRadius(SleepyShapes.large)
                             }
-                            .foregroundColor(colors.onPrimaryContainer)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 48)
-                            .background(colors.primaryContainer)
-                            .cornerRadius(SleepyShapes.large)
+                            .buttonStyle(SleepyButtonStyle())
                         }
-                        .buttonStyle(SleepyButtonStyle())
+                        .listRowBackground(colors.primaryContainer)
                     }
-                    .padding(14)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(colors.primaryContainer)
-                    .cornerRadius(SleepyShapes.large)
-                    .padding(.top, 4)
                 }
             }
-            .padding(20)
+            .listStyle(.insetGrouped)
+            .background(colors.surface)
+            .navigationTitle(L10n.format("format_detail_content_desc"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(L10n.format("cancel")) { dismiss() }
+                        .foregroundColor(colors.primary)
+                }
+            }
         }
-        .background(colors.surface)
-        .sheetDetents([.large])
     }
 }
 
 // ← ImportPreviewDialog
+//   iOS 原生化: NavigationView + List(.insetGrouped) 替代裸 ScrollView → 系统原生导航栏 +
+//   系统原生分隔线 + 系统原生 inset 分组, 安全区适配自动处理。底部按钮组保留纯色块(危险动作风格统一)
 private struct ImportPreviewDialog: View {
     @Environment(\.localWakeUpColors) private var colors
     let preview: ImportPreview
@@ -522,111 +524,110 @@ private struct ImportPreviewDialog: View {
     let onApply: (ImportApplyMode) -> Void
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(L10n.format("import_preview_title"))
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundColor(colors.onSurface)
-                        .accessibilityIdentifier("import_preview_title")
-                    if preview.targetTableId == 0 {
-                        Text(L10n.format("import_new_table_hint"))
-                            .font(.system(size: 12))
-                            .foregroundColor(colors.primary)
-                    } else {
-                        Text(L10n.format("import_target_table", preview.targetTableName))
-                            .font(.system(size: 12))
-                            .foregroundColor(colors.onSurfaceVariant)
-                    }
-                }
-
-                HStack(spacing: 8) {
-                    PreviewMetricCard(label: L10n.format("import_courses"),
-                                      value: "\(preview.incomingCount)",
-                                      bg: colors.primaryContainer, fg: colors.onPrimaryContainer)
-                    if preview.targetTableId != 0 {
-                        PreviewMetricCard(label: L10n.format("import_conflicts"),
-                                          value: "\(preview.conflictCount)",
-                                          bg: preview.conflictCount > 0 ? colors.errorContainer : colors.secondaryContainer,
-                                          fg: preview.conflictCount > 0 ? colors.onErrorContainer : colors.onSecondaryContainer)
-                        PreviewMetricCard(label: L10n.format("import_appendable"),
-                                          value: "\(preview.cleanCount)",
-                                          bg: colors.tertiaryContainer, fg: colors.onTertiaryContainer)
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    PreviewInfoRow(label: L10n.format("import_table_name"), value: preview.parseResult.tableName)
-                    PreviewInfoRow(label: L10n.format("import_start_date"), value: preview.parseResult.startDate)
-                    if preview.targetTableId != 0 {
-                        PreviewInfoRow(label: L10n.format("import_suggestion"),
-                                       value: preview.conflictCount == 0
-                                           ? L10n.format("import_no_conflict")
-                                           : L10n.format("import_conflict_count", preview.conflictCount))
-                    }
-                }
-                .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(colors.surfaceContainer)
-                .cornerRadius(SleepyShapes.large)
-
-                if !preview.conflicts.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(L10n.format("import_conflicts"))
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(colors.onSurface)
-                        ForEach(preview.conflicts.prefix(3)) { conflict in
-                            Text("• \(conflict.incoming.courseName) ↔ \(conflict.existing.courseName)（\(DateUtils.localizedDay(conflict.incoming.day)) \(conflict.incoming.nodeString(isShort: true))）")
-                                .font(.system(size: 12))
-                                .foregroundColor(colors.onSurfaceVariant)
+        NavigationView {
+            ZStack(alignment: .bottom) {
+                List {
+                    Section {
+                        VStack(alignment: .leading, spacing: 6) {
+                            if preview.targetTableId == 0 {
+                                Text(L10n.format("import_new_table_hint"))
+                                    .font(.system(size: 13))
+                                    .foregroundColor(colors.primary)
+                            } else {
+                                Text(L10n.format("import_target_table", preview.targetTableName))
+                                    .font(.system(size: 13))
+                                    .foregroundColor(colors.onSurfaceVariant)
+                            }
                         }
-                        if preview.conflicts.count > 3 {
-                            Text(L10n.format("import_conflict_more", preview.conflicts.count - 3))
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(colors.onSurfaceVariant)
-                        }
+                        .listRowBackground(colors.surfaceContainer)
                     }
-                    .padding(14)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(colors.surfaceContainer)
-                    .cornerRadius(SleepyShapes.large)
-                }
 
-                // 防呆: 输入里有行没解析成功 → 明确告诉用户哪些行被跳过, 不静默丢
-                if !preview.parseResult.droppedLines.isEmpty {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(L10n.format("import_dropped_title", preview.parseResult.droppedLines.count))
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(colors.onErrorContainer)
-                        Text(L10n.format("import_dropped_hint"))
-                            .font(.system(size: 12))
-                            .foregroundColor(colors.onErrorContainer)
-                        ForEach(preview.parseResult.droppedLines.prefix(3), id: \.self) { line in
-                            Text("• \(line)")
-                                .font(.system(size: 12, design: .monospaced))
-                                .foregroundColor(colors.onErrorContainer)
-                        }
-                        if preview.parseResult.droppedLines.count > 3 {
-                            Text(L10n.format("import_conflict_more", preview.parseResult.droppedLines.count - 3))
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(colors.onErrorContainer)
-                        }
-                    }
-                    .padding(14)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(colors.errorContainer)
-                    .cornerRadius(SleepyShapes.large)
-                }
-
-                // 按钮组
-                VStack(spacing: 8) {
-                    if preview.targetTableId == 0 {
-                        // 没有任何课表时只允许"作为新课表导入"
-                        PrimaryDialogButton(L10n.format("import_as_new")) {
-                            onApply(.importAsNew)
-                        }
-                    } else {
+                    Section {
                         HStack(spacing: 8) {
+                            PreviewMetricCard(label: L10n.format("import_courses"),
+                                              value: "\(preview.incomingCount)",
+                                              bg: colors.primaryContainer, fg: colors.onPrimaryContainer)
+                            if preview.targetTableId != 0 {
+                                PreviewMetricCard(label: L10n.format("import_conflicts"),
+                                                  value: "\(preview.conflictCount)",
+                                                  bg: preview.conflictCount > 0 ? colors.errorContainer : colors.secondaryContainer,
+                                                  fg: preview.conflictCount > 0 ? colors.onErrorContainer : colors.onSecondaryContainer)
+                                PreviewMetricCard(label: L10n.format("import_appendable"),
+                                                  value: "\(preview.cleanCount)",
+                                                  bg: colors.tertiaryContainer, fg: colors.onTertiaryContainer)
+                            }
+                        }
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                    }
+
+                    Section {
+                        PreviewInfoRow(label: L10n.format("import_table_name"), value: preview.parseResult.tableName)
+                            .listRowBackground(colors.surfaceContainer)
+                        PreviewInfoRow(label: L10n.format("import_start_date"), value: preview.parseResult.startDate)
+                            .listRowBackground(colors.surfaceContainer)
+                        if preview.targetTableId != 0 {
+                            PreviewInfoRow(label: L10n.format("import_suggestion"),
+                                           value: preview.conflictCount == 0
+                                               ? L10n.format("import_no_conflict")
+                                               : L10n.format("import_conflict_count", preview.conflictCount))
+                                .listRowBackground(colors.surfaceContainer)
+                        }
+                    }
+
+                    if !preview.conflicts.isEmpty {
+                        Section(L10n.format("import_conflicts")) {
+                            ForEach(preview.conflicts.prefix(5)) { conflict in
+                                Text("• \(conflict.incoming.courseName) ↔ \(conflict.existing.courseName)（\(DateUtils.localizedDay(conflict.incoming.day)) \(conflict.incoming.nodeString(isShort: true))）")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(colors.onSurfaceVariant)
+                                    .listRowBackground(colors.surfaceContainer)
+                            }
+                            if preview.conflicts.count > 5 {
+                                Text(L10n.format("import_conflict_more", preview.conflicts.count - 5))
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(colors.onSurfaceVariant)
+                                    .listRowBackground(colors.surfaceContainer)
+                            }
+                        }
+                    }
+
+                    if !preview.parseResult.droppedLines.isEmpty {
+                        Section {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(L10n.format("import_dropped_title", preview.parseResult.droppedLines.count))
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(colors.onErrorContainer)
+                                Text(L10n.format("import_dropped_hint"))
+                                    .font(.system(size: 12))
+                                    .foregroundColor(colors.onErrorContainer)
+                                ForEach(preview.parseResult.droppedLines.prefix(3), id: \.self) { line in
+                                    Text("• \(line)")
+                                        .font(.system(size: 12, design: .monospaced))
+                                        .foregroundColor(colors.onErrorContainer)
+                                }
+                            }
+                            .listRowBackground(colors.errorContainer)
+                        }
+                    }
+
+                    // 留出底部按钮区空间
+                    Section {
+                        Color.clear.frame(height: 100)
+                            .listRowBackground(Color.clear)
+                    }
+                }
+                .listStyle(.insetGrouped)
+                .background(colors.surface)
+
+                // 底部按钮组 - 浮动在 List 之上, 保留纯色块风格统一
+                VStack(spacing: 8) {
+                    HStack(spacing: 8) {
+                        if preview.targetTableId == 0 {
+                            PrimaryDialogButton(L10n.format("import_as_new")) {
+                                onApply(.importAsNew)
+                            }
+                        } else {
                             PrimaryDialogButton(L10n.format("import_append_only")) {
                                 onApply(.appendNonConflict)
                             }
@@ -634,8 +635,9 @@ private struct ImportPreviewDialog: View {
                                 onApply(.importAsNew)
                             }
                         }
+                    }
+                    if preview.targetTableId != 0 {
                         HStack(spacing: 8) {
-                            // 追加冲突课表 — 危险动作(同格多层), errorContainer 色块底, 与覆盖按钮同款
                             Button {
                                 onApply(.appendAll)
                             } label: {
@@ -655,8 +657,6 @@ private struct ImportPreviewDialog: View {
                         Button {
                             onApply(.replaceCurrent)
                         } label: {
-                            // ★ 描线→色块(2026-08-25 统一指令): 覆盖课表为危险动作,
-                            //   errorContainer 色块底 + onErrorContainer 文字
                             Text(L10n.format("import_overwrite"))
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(colors.onErrorContainer)
@@ -669,16 +669,34 @@ private struct ImportPreviewDialog: View {
                     }
                     Button(action: onDismiss) {
                         Text(L10n.format("cancel"))
-                            .font(.system(size: 14))
-                            .foregroundColor(colors.onSurfaceVariant)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(colors.onSurface)
                             .frame(maxWidth: .infinity)
+                            .frame(height: 44)
+                            .background(colors.surfaceContainer)
+                            .cornerRadius(SleepyShapes.medium)
                     }
                     .buttonStyle(SleepyButtonStyle())
                 }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 8)
+                .background(
+                    LinearGradient(colors: [colors.surface.opacity(0), colors.surface],
+                                   startPoint: .top, endPoint: .bottom)
+                    .ignoresSafeArea(edges: .bottom)
+                )
             }
-            .padding(20)
+            .navigationTitle(L10n.format("import_preview_title"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(L10n.format("cancel")) { onDismiss() }
+                        .foregroundColor(colors.primary)
+                }
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("import_preview_title")
         }
-        .background(colors.surface)
     }
 }
 
