@@ -89,6 +89,7 @@
 		6DBAC0D88FECC7F3CD92F43C /* CourseDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B9605A27EE773F13A53F202 /* CourseDetailSheet.swift */; };
 		6E05CDFBB3E25A4B6BB095C9 /* WidgetCourseCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ACF85CE927A56FE05B7CABB /* WidgetCourseCard.swift */; };
 		7054254AAA9E487D63CFDE55 /* ScheduleFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7607CC5E3679C603264B6E73 /* ScheduleFlowUITests.swift */; };
+		CB41F8307B8A4ABAB9B6EFD8 /* SwipeBackGestureUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DEF36A84DF54C3DAE9F9824 /* SwipeBackGestureUITests.swift */; };
 		708B015DABC17CBB868D1D6E /* PinyinMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 690DF83E91E199DFE66F9756 /* PinyinMatcher.swift */; };
 		71A63D49A1A964C911C5F47A /* JwWiseduParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 467B034A9889202CEA76931B /* JwWiseduParser.swift */; };
 		71CF8D75E142FF4C91354E7B /* WebViewNavigationPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAA351FA5E1B5313277092F1 /* WebViewNavigationPolicyTests.swift */; };
@@ -138,6 +139,9 @@
 		B7B7B9E50F2427797E4F6752 /* CourseColorUtil.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F8589E7A5EA8C34355C1FFF /* CourseColorUtil.swift */; };
 		BA2743A24ED00F9986AB65E3 /* TimeTableUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74EB72448743A4CF5CF466C5 /* TimeTableUtils.swift */; };
 		BA5D6AE2D8A400A25159A6DE /* CourseColorUtil.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F8589E7A5EA8C34355C1FFF /* CourseColorUtil.swift */; };
+		A3B91182B7EB496097CECE8B /* ConflictDetailReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88781FDFE26A4846B2057B43 /* ConflictDetailReporter.swift */; };
+		BC7132EBACC1414A812A1D8C /* MarkdownBlocks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88DDB8E77BD343F2A72AC03F /* MarkdownBlocks.swift */; };
+		C96AD70656E048CF80CA2B52 /* FeedbackComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A594933458F14F8089C9288C /* FeedbackComposer.swift */; };
 		BD8246AD64E1E8441C3550BC /* HolidayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C280149FF5701E57DD8E3418 /* HolidayManager.swift */; };
 		C0F89FA03A1F3657F20F3602 /* SmartPeriodEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B3E1AC29BB571E46B9B7476 /* SmartPeriodEditor.swift */; };
 		C21BE4CC99F37CFB5B661001 /* JwNewUrpParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3858841858390C66EB60926 /* JwNewUrpParser.swift */; };
@@ -284,6 +288,9 @@
 		5C1D8BD48F149CE16160CE84 /* JwNewZfParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwNewZfParser.swift; sourceTree = "<group>"; };
 		5F19B09B9CF4562AD9450D43 /* CourseColorUtilTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseColorUtilTests.swift; sourceTree = "<group>"; };
 		5F8589E7A5EA8C34355C1FFF /* CourseColorUtil.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseColorUtil.swift; sourceTree = "<group>"; };
+		88781FDFE26A4846B2057B43 /* ConflictDetailReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConflictDetailReporter.swift; sourceTree = "<group>"; };
+		88DDB8E77BD343F2A72AC03F /* MarkdownBlocks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownBlocks.swift; sourceTree = "<group>"; };
+		A594933458F14F8089C9288C /* FeedbackComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackComposer.swift; sourceTree = "<group>"; };
 		5FE23E8A9E4FEBC54F0F90DF /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		60056452C13B6C1D48E232C7 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		64BF7FAB38EE44A780C793BD /* CourseEditorUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseEditorUITests.swift; sourceTree = "<group>"; };
@@ -298,6 +305,7 @@
 		6E5DE7210118C9EC520F007E /* TimeTableDao.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeTableDao.swift; sourceTree = "<group>"; };
 		74EB72448743A4CF5CF466C5 /* TimeTableUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeTableUtils.swift; sourceTree = "<group>"; };
 		7607CC5E3679C603264B6E73 /* ScheduleFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleFlowUITests.swift; sourceTree = "<group>"; };
+		7DEF36A84DF54C3DAE9F9824 /* SwipeBackGestureUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeBackGestureUITests.swift; sourceTree = "<group>"; };
 		76EC0EF9B72C669E4A56B91E /* WeekGridWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekGridWidgetView.swift; sourceTree = "<group>"; };
 		779E427676157A13B322A5B5 /* AppearanceScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceScreen.swift; sourceTree = "<group>"; };
 		7B3E1AC29BB571E46B9B7476 /* SmartPeriodEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartPeriodEditor.swift; sourceTree = "<group>"; };
@@ -408,12 +416,15 @@
 			children = (
 				A3F73FAB76399721B954DF20 /* AppGroupResolver.swift */,
 				DB174180E779B7796964E378 /* AppPrefs.swift */,
+				88781FDFE26A4846B2057B43 /* ConflictDetailReporter.swift */,
 				D4045004893D9AB9C079A3CF /* ConflictLayoutEngine.swift */,
 				5F8589E7A5EA8C34355C1FFF /* CourseColorUtil.swift */,
 				A1D79D23433FE386230D5AB1 /* DateUtils.swift */,
+				A594933458F14F8089C9288C /* FeedbackComposer.swift */,
 				C280149FF5701E57DD8E3418 /* HolidayManager.swift */,
 				60056452C13B6C1D48E232C7 /* L10n.swift */,
 				83F0807AB00ED93A168AD2C6 /* LocaleHelper.swift */,
+				88DDB8E77BD343F2A72AC03F /* MarkdownBlocks.swift */,
 				690DF83E91E199DFE66F9756 /* PinyinMatcher.swift */,
 				7CA7389DF46C926458122F39 /* SleepyUITestSeeder.swift */,
 				74EB72448743A4CF5CF466C5 /* TimeTableUtils.swift */,
@@ -718,6 +729,7 @@
 				AD3F0EE026CF01741657A7AD /* MineSettingsUITests.swift */,
 				9D8DFDCCD1C8491943A7FD52 /* ReminderPermissionUITests.swift */,
 				7607CC5E3679C603264B6E73 /* ScheduleFlowUITests.swift */,
+				7DEF36A84DF54C3DAE9F9824 /* SwipeBackGestureUITests.swift */,
 				C9499DA6423AC6165B96C599 /* SchoolSelectUITests.swift */,
 				B9C22DE3433DD8BF4069C158 /* SleepyUITests.entitlements */,
 				B18164021426E1BE78DB3F46 /* SleepyUITests.swift */,
@@ -922,6 +934,9 @@
 				D1DAE4F6D52A83D515D91744 /* AppearanceScreen.swift in Sources */,
 				DC5CE34D036E0C2093928DEE /* ConflictCard.swift in Sources */,
 				F11899226A074B39BC61B234 /* NativeColorPicker.swift in Sources */,
+				A3B91182B7EB496097CECE8B /* ConflictDetailReporter.swift in Sources */,
+				BC7132EBACC1414A812A1D8C /* MarkdownBlocks.swift in Sources */,
+				C96AD70656E048CF80CA2B52 /* FeedbackComposer.swift in Sources */,
 				7CED8B22A59CED24C1EB08C8 /* ConflictLayoutEngine.swift in Sources */,
 				B7B7B9E50F2427797E4F6752 /* CourseColorUtil.swift in Sources */,
 				9C3967DF73C2215296271E04 /* CourseDao.swift in Sources */,
@@ -1013,6 +1028,7 @@
 				5A08679A20DB96F3A56D5DBB /* MineSettingsUITests.swift in Sources */,
 				793384D8A98170D9837B9858 /* ReminderPermissionUITests.swift in Sources */,
 				7054254AAA9E487D63CFDE55 /* ScheduleFlowUITests.swift in Sources */,
+				CB41F8307B8A4ABAB9B6EFD8 /* SwipeBackGestureUITests.swift in Sources */,
 				FE8B31B87F74A275C27FF9F6 /* SchoolSelectUITests.swift in Sources */,
 				35AED6976FAE210F6E93C694 /* SleepyUITests.swift in Sources */,
 				2796FEB743582031203286AD /* TableEditUITests.swift in Sources */,

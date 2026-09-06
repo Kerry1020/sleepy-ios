@@ -228,16 +228,15 @@ struct AppRoot: View {
         //   - 不再有 if/else if 条件树 → 渲染条件回到 tabs 即可
         // ★ v7.10.18 type-check v3: 9 个独立 PresentXxx ViewModifier, 每个子树
         //   独立类型推导, 避免 9 个 modifier 链触发 SwiftUI "unable to type-check"。
-        tabs.background(
-            Group {
-                EmptyView().modifier(PresentAddCourse(
+        tabs
+            .modifier(PresentAddCourse(
                     isDark: isDark, themeKey: themeKey,
                     overlayScreen: root.overlayScreen,
                     editingCourse: root.editingCourse,
                     scheduleViewModel: root.scheduleViewModel,
                     onDismissAdd: { root.overlayScreen = nil; root.editingCourse = nil },
                     onSavedAdd: { root.overlayScreen = nil; root.editingCourse = nil; root.currentTab = .schedule }))
-                EmptyView().modifier(PresentEditTable(
+            .modifier(PresentEditTable(
                     isDark: isDark, themeKey: themeKey,
                     overlayScreen: root.overlayScreen,
                     editTableId: root.editTableId,
@@ -262,7 +261,7 @@ struct AppRoot: View {
                         root.previousDefaultTableId = nil
                     },
                     onDeletedTable: { root.overlayScreen = nil; root.editTableId = nil; root.currentTab = .schedule }))
-                EmptyView().modifier(PresentAllTables(
+            .modifier(PresentAllTables(
                     isDark: isDark, themeKey: themeKey,
                     overlayScreen: root.overlayScreen,
                     scheduleViewModel: root.scheduleViewModel,
@@ -273,11 +272,11 @@ struct AppRoot: View {
                         root.pendingNewTableId = nil
                         root.overlayScreen = .editTable
                     }))
-                EmptyView().modifier(PresentGeneral(
+            .modifier(PresentGeneral(
                     isDark: isDark, themeKey: themeKey,
                     overlayScreen: root.overlayScreen,
                     onDismissOverlay: { root.overlayScreen = nil }))
-                EmptyView().modifier(PresentTheme(
+            .modifier(PresentTheme(
                     isDark: isDark, themeKey: themeKey,
                     overlayScreen: root.overlayScreen,
                     themeMode: themeMode,
@@ -286,26 +285,24 @@ struct AppRoot: View {
                         themeMode = mode
                         themeKey = AppPrefs.shared.getThemeKey()
                     }))
-                EmptyView().modifier(PresentExport(
+            .modifier(PresentExport(
                     isDark: isDark, themeKey: themeKey,
                     overlayScreen: root.overlayScreen,
                     scheduleViewModel: root.scheduleViewModel,
                     onDismissOverlay: { root.overlayScreen = nil }))
-                EmptyView().modifier(PresentReminder(
+            .modifier(PresentReminder(
                     isDark: isDark, themeKey: themeKey,
                     overlayScreen: root.overlayScreen,
                     onDismissOverlay: { root.overlayScreen = nil }))
-                EmptyView().modifier(PresentAbout(
+            .modifier(PresentAbout(
                     isDark: isDark, themeKey: themeKey,
                     overlayScreen: root.overlayScreen,
                     onDismissOverlay: { root.overlayScreen = nil },
                     onOpenLicense: { root.overlayScreen = .license }))
-                EmptyView().modifier(PresentLicense(
+            .modifier(PresentLicense(
                     isDark: isDark, themeKey: themeKey,
                     overlayScreen: root.overlayScreen,
                     onDismissOverlay: { root.overlayScreen = nil }))
-            }
-        )
     }
 
     // ← Scaffold + PillNavigationBar + 4 Tab
