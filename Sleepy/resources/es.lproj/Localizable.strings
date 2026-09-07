@@ -487,6 +487,7 @@
 "format_html_spec_1" = "La página debe contener una tabla cuya cabecera mencione la columna curso";
 "format_html_spec_2" = "Los nombres de columnas son como en CSV: curso, día, periodo, semanas obligatorios; profesor, aula, tipo, nota opcionales";
 "format_html_spec_3" = "Las cuadrículas lunes-domingo no se analizan; hace falta una tabla larga de \"un curso por fila\"";
+"format_html_spec_4" = "Si el navegador añade un encabezado o pie que no es de tabla, córtalo antes para no contaminar el reconocimiento";
 "format_plain_spec_0" = "Orden fijo de columnas: curso, profesor, aula, día, periodo, semanas, tipo (última opcional, por defecto semanal)";
 "format_plain_spec_1" = "Separa las columnas con tabulación, espacios o coma ancha";
 "format_plain_spec_2" = "El día debe ser un número 1-7 (1=lunes); \"lunes\" no se reconoce";
