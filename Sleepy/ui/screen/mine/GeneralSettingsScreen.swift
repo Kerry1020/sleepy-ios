@@ -25,6 +25,8 @@ struct GeneralSettingsScreen: View {
     @State private var conflictStackInset: Double = AppPrefs.shared.getConflictStackInset()
     @State private var conflictRailInset: Double = AppPrefs.shared.getConflictRailInset()
     @State private var conflictFoldSize: Double = AppPrefs.shared.getConflictFoldSize()
+    @State private var highRefresh: Bool = AppPrefs.shared.isHighRefreshEnabled()
+    @State private var navDocked: Bool = AppPrefs.shared.isNavDocked()
     // ★ v7.10.18: HolidaySettings 在本屏内 sheet 弹出,无需走 root enum
     @State private var holidaySettingsItem: HolidaySettingsItem? = nil
     private struct HolidaySettingsItem: Identifiable { let id = UUID() }
@@ -64,13 +66,25 @@ struct GeneralSettingsScreen: View {
 
                             MajorDivider()
 
-                            // ── 分组② 小组件 ──
+                            // ── 分组② 画面(高刷率 + 底栏样式) — ← Android v1.0.45 edec776/b0f8280 ──
+                            DisplaySection(
+                                highRefresh: $highRefresh,
+                                navDocked: $navDocked,
+                                onNavDockChange: { on in
+                                    navDocked = on
+                                    prefs.setNavDocked(on)
+                                    // 单源真值:AppRoot 监听 prefs 后即刻重渲底栏
+                                })
+
+                            MajorDivider()
+
+                            // ── 分组③ 小组件 ──
                             WidgetSection(expandedSections: $expandedSections,
                                           refreshWidgets: refreshWidgets)
 
                             MajorDivider()
 
-                            // ── 分组③ 语言 ──
+                            // ── 分组④ 语言 ──
                             LanguageSection()
                         }
                         .padding(16)
@@ -428,6 +442,56 @@ private struct LanguageSection: View {
                     .buttonStyle(SleepyButtonStyle())
                     if code != languages.last!.0 { SubDivider() }
                 }
+            }
+            .padding(16)
+            .background(colors.surfaceContainer)
+            .cornerRadius(SleepyShapes.large)
+        }
+    }
+}
+
+// ── 分组② 画面: 高刷新率 + 底栏样式 ──
+private struct DisplaySection: View {
+    @Environment(\.localWakeUpColors) private var colors
+    @Binding var highRefresh: Bool
+    @Binding var navDocked: Bool
+    let onNavDockChange: (Bool) -> Void
+
+    var body: some View {
+        VStack(spacing: 16) {
+            SectionHeader(title: L10n.format("settings_section_display"))
+            VStack(spacing: 0) {
+                SettingToggleRow(
+                    label: L10n.format("settings_high_refresh"),
+                    subtitle: "",
+                    checked: highRefresh
+                ) { enabled in
+                    highRefresh = enabled
+                    AppPrefs.shared.setHighRefreshEnabled(enabled)
+                    Task { @MainActor in
+                        _ = HighRefreshRate.apply(enabled: enabled)
+                    }
+                }
+                .accessibilityIdentifier("settings_high_refresh")
+
+                SubDivider()
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L10n.format("settings_nav_style"))
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(colors.onSurface)
+                    Picker("", selection: Binding(
+                        get: { navDocked },
+                        set: { onNavDockChange($0) }
+                    )) {
+                        Text(L10n.format("settings_nav_style_docked")).tag(true)
+                        Text(L10n.format("settings_nav_style_floating")).tag(false)
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityIdentifier("settings_nav_style")
+                }
+                .padding(.vertical, 10)
+                .padding(.horizontal, 4)
             }
             .padding(16)
             .background(colors.surfaceContainer)
