@@ -271,6 +271,11 @@
 "appearance_section_theme" = "Colores del tema";
 "appearance_section_display" = "Visualización de cursos";
 "appearance_section_widget" = "Widget";
+"settings_section_display" = "Pantalla";
+"settings_high_refresh" = "Alta frecuencia de actualización";
+"settings_nav_style" = "Estilo de la barra de navegación";
+"settings_nav_style_docked" = "Acoplada";
+"settings_nav_style_floating" = "Flotante";
 "about_update_latest" = "Ya tienes la última versión v%1$@";
 "update_found_title" = "Nueva versión v%1$@ disponible";
 "update_download" = "Descargar";

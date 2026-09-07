@@ -271,6 +271,11 @@
 "appearance_section_theme" = "テーマカラー";
 "appearance_section_display" = "授業の表示";
 "appearance_section_widget" = "ウィジェット";
+"settings_section_display" = "画面";
+"settings_high_refresh" = "高リフレッシュレート";
+"settings_nav_style" = "ナビバーのスタイル";
+"settings_nav_style_docked" = "下部に固定";
+"settings_nav_style_floating" = "フローティング";
 "about_update_latest" = "最新バージョン v%1$@ です";
 "update_found_title" = "新しいバージョン v%1$@ があります";
 "update_download" = "ダウンロード";

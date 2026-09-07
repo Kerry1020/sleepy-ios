@@ -32,15 +32,21 @@ import UIKit
 struct PillNavigationBar: View {
     @Environment(\.localWakeUpColors) private var colors
     let items: [PillNavItemData]
+    /// 底栏样式: .docked(贴底 默认) 或 .floating(悬浮玻璃胶囊)
+    /// ← Android v1.0.45 b0f8280/ff66ddd;状态由 AppRoot 持有下传与设置页同源。
+    var dockStyle: DockStyle = .docked
+
+    enum DockStyle { case docked, floating }
 
     var body: some View {
-        PillNavigationBarAnim(items: items, colors: colors)
+        PillNavigationBarAnim(items: items, colors: colors, dockStyle: dockStyle)
     }
 }
 
 private struct PillNavigationBarAnim: View {
     let items: [PillNavItemData]
     let colors: WakeUpColorScheme
+    let dockStyle: PillNavigationBar.DockStyle
 
     // bar 局部坐标系下,每个 tab 的 pill center + label left
     @State private var pillCentersBar: [Int: CGFloat] = [:]
@@ -57,6 +63,11 @@ private struct PillNavigationBarAnim: View {
     private let barHeight: CGFloat = 76
     private let thumbYOffset: CGFloat = 12   // 顶栏 12pt + thumb 32pt + 底栏 32pt = 76pt 上下对称
 
+    // 悬浮形态专属尺寸(← Android b0f8280/351436d 56dp 胶囊 + 16dp 左右边距 + 28dp 圆角 + 12dp 底距)
+    private let floatingSideMargin: CGFloat = 16
+    private let floatingCornerRadius: CGFloat = 28
+    private let floatingBottomPadding: CGFloat = 12
+
     /// 单一真值:每次 body 现算。外部 onClick → items[*].selected 翻转 → 立即反映。
     private var selectedIndex: Int {
         items.firstIndex(where: { $0.selected }) ?? 0
@@ -64,6 +75,48 @@ private struct PillNavigationBarAnim: View {
 
     var body: some View {
         let selected = selectedIndex
+        let isFloating = dockStyle == .floating
+
+        // 形态选择: 悬浮 → 外层 HStack 撑侧边距 + 玻璃胶囊 surfaceContainer 高圆角;
+        //            贴底 → 全宽表面 + SleepyShapes.large 圆角。
+        return Group {
+            if isFloating {
+                HStack(spacing: 0) {
+                    barBody(selected: selected)
+                        .background(
+                            colors.surfaceContainer
+                                .opacity(0.92)   // 玻璃质感:半透明上层,靠 surfaceContainer 实际色
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: floatingCornerRadius))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: floatingCornerRadius)
+                                .stroke(colors.outlineVariant.opacity(0.4),
+                                        lineWidth: 0.5)
+                        )
+                        .shadow(color: colors.onBackground.opacity(0.12),
+                                radius: 8, x: 0, y: 2)
+                }
+                .padding(.horizontal, floatingSideMargin)
+                .padding(.bottom, floatingBottomPadding)
+            } else {
+                barBody(selected: selected)
+                    .background(colors.surfaceContainer.ignoresSafeArea(edges: .bottom))
+            }
+        }
+        // 收集 pill 中心 + label 左缘(bar 局部)
+        .onPreferenceChange(PillGeomKey.self) { value in
+            pillCentersBar = value.centers
+            labelLeftsBar = value.labelLefts
+        }
+        // thumb 弹簧跟随 selectedIndex
+        .onChange(of: selected) { _ in animateThumbToSelected() }
+        .onChange(of: pillCentersBar) { _ in animateThumbToSelected() }
+        .onAppear { animateThumbToSelected() }
+    }
+
+    /// 共享的底栏内部结构(ZStack + 4 tab)。外层 barBody 复用贴底/悬浮两态。
+    @ViewBuilder
+    private func barBody(selected: Int) -> some View {
         ZStack(alignment: .topLeading) {
             // thumb 色块(顶层 ZStack,bar 局部坐标)
             RoundedRectangle(cornerRadius: SleepyShapes.large)
@@ -85,19 +138,6 @@ private struct PillNavigationBarAnim: View {
         }
         .frame(maxWidth: .infinity)
         .frame(height: barHeight)
-        .background(
-            colors.surfaceContainer
-                .ignoresSafeArea(edges: .bottom)
-        )
-        // 收集 pill 中心 + label 左缘(bar 局部)
-        .onPreferenceChange(PillGeomKey.self) { value in
-            pillCentersBar = value.centers
-            labelLeftsBar = value.labelLefts
-        }
-        // thumb 弹簧跟随 selectedIndex
-        .onChange(of: selected) { _ in animateThumbToSelected() }
-        .onChange(of: pillCentersBar) { _ in animateThumbToSelected() }
-        .onAppear { animateThumbToSelected() }
     }
 
     private func animateThumbToSelected() {

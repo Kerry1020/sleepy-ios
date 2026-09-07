@@ -54,6 +54,11 @@ class AppDelegate: NSObject, UIApplicationDelegate {
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         // ← onCreate: 首启刷新小组件(WidgetUpdater.notifyDataChanged)
         WidgetCenter.shared.reloadAllTimelines()
+        // ★ v1.0.45 高刷新率: 启动时按用户偏好(默认开)钉 CALayer.preferredFramesPerSecond
+        //   ← Android edec776 onCreate / attachBaseContext 同位;无 ProMotion 屏自然维持设备上限
+        Task { @MainActor in
+            _ = HighRefreshRate.apply(enabled: AppPrefs.shared.isHighRefreshEnabled())
+        }
         return true
     }
 }
@@ -82,8 +87,12 @@ final class AppRootViewModel: ObservableObject {
     @Published var deepLinkCourse: CourseEntity? = nil
     // 语言切换重建 token(← Activity.recreate): L10n.didChange → 递增 → AppRoot 全树重建
     @Published var languageReload = 0
+    // ★ v1.0.45 底栏 dock 样式(默认 .docked = 贴底;悬浮形态由 PillNavigationBar.dockStyle 渲染)
+    //   ← Android v1.0.45 b0f8280;状态由 AppPrefs 持有, 监听 .didChange 自动反向同步
+    @Published var navDocked: Bool = AppPrefs.shared.isNavDocked()
 
     private var langObserver: NSObjectProtocol?
+    private var prefsObserver: NSObjectProtocol?
 
     let scheduleViewModel: ScheduleViewModel
 
@@ -96,10 +105,21 @@ final class AppRootViewModel: ObservableObject {
         ) { [weak self] _ in
             self?.languageReload += 1
         }
+        // ★ v1.0.45: 用户在设置页改 nav dock 偏好 → AppPrefs 写盘 → UserDefaults 发 .didChange →
+        //   这里刷新 navDocked → PillNavigationBar 下一帧切 dockStyle 重建。
+        //   高刷新率开关不需要反向同步(开关自身直接调 HighRefreshRate.apply, 不经 root)。
+        prefsObserver = NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification, object: UserDefaults.standard, queue: .main
+        ) { [weak self] _ in
+            guard let self = self else { return }
+            let docked = AppPrefs.shared.isNavDocked()
+            if self.navDocked != docked { self.navDocked = docked }
+        }
     }
 
     deinit {
         if let langObserver { NotificationCenter.default.removeObserver(langObserver) }
+        if let prefsObserver { NotificationCenter.default.removeObserver(prefsObserver) }
     }
 
     // ← BackHandler: overlay 返回(pendingNewTable 丢弃链)
@@ -365,7 +385,7 @@ struct AppRoot: View {
                                 selected: root.currentTab == .manage) { root.currentTab = .manage },
                 PillNavItemData(id: "mine", icon: "person", label: L10n.format("tab_mine"),
                                 selected: root.currentTab == .mine) { root.currentTab = .mine },
-            ])
+            ], dockStyle: root.navDocked ? .docked : .floating)
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
     }

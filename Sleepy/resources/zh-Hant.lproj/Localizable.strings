@@ -271,6 +271,11 @@
 "appearance_section_theme" = "主題色彩";
 "appearance_section_display" = "課程顯示";
 "appearance_section_widget" = "小工具";
+"settings_section_display" = "畫面";
+"settings_high_refresh" = "高刷新率";
+"settings_nav_style" = "底欄樣式";
+"settings_nav_style_docked" = "貼底";
+"settings_nav_style_floating" = "懸浮";
 "about_update_latest" = "目前已是最新版本 v%1$@";
 "update_found_title" = "發現新版本 v%1$@";
 "update_download" = "下載";

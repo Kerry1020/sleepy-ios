@@ -224,6 +224,11 @@
 "settings_conflict_fold_size_sub" = "折角符号的大小，拖动同步调整视觉与点按区域";
 "settings_widget_separator" = "周视图分隔线";
 "settings_widget_separator_sub" = "纯文字周视图中课程名之间是否显示分隔线";
+"settings_section_display" = "画面";
+"settings_high_refresh" = "高刷新率";
+"settings_nav_style" = "底栏样式";
+"settings_nav_style_docked" = "贴底";
+"settings_nav_style_floating" = "悬浮";
 "theme_system" = "跟随系统";
 "theme_system_desc" = "Material You 动态取色（Android 12+）";
 "view_full" = "周视图";

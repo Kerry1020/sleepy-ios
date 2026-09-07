@@ -45,6 +45,9 @@ final class AppPrefs {
     static let THEME_MODE_LIGHT = "light"
     static let THEME_MODE_DARK = "dark"
     static let THEME_MODE_SYSTEM = "system"
+    // ★ v1.0.45 画面分组: 高刷率(默认开 ← Android edec776), 底栏样式(默认贴底 ← Android b0f8280)
+    static let KEY_HIGH_REFRESH = "high_refresh_rate" // bool default true
+    static let KEY_NAV_DOCK = "nav_dock"              // bool default true (true=贴底, false=悬浮)
 
     /// 主题色 key 的进程内 Flow — ← themeKeyFlow(callbackFlow+distinctUntilChanged)
     /// 订阅即收当前值,变更推送新值,去重。
@@ -86,6 +89,26 @@ final class AppPrefs {
     func setThemeMode(_ mode: String) {
         precondition(mode == Self.THEME_MODE_LIGHT || mode == Self.THEME_MODE_DARK || mode == Self.THEME_MODE_SYSTEM)
         sp().set(mode, forKey: Self.KEY_THEME_MODE)
+    }
+
+    // ===== 画面 =====
+
+    /// 高刷新率开关 — 默认开启;无 ProMotion 屏时系统自然维持设备上限。
+    func isHighRefreshEnabled() -> Bool {
+        sp().object(forKey: Self.KEY_HIGH_REFRESH) as? Bool ?? true
+    }
+
+    func setHighRefreshEnabled(_ enabled: Bool) {
+        sp().set(enabled, forKey: Self.KEY_HIGH_REFRESH)
+    }
+
+    /// 底栏样式 — true=贴底(默认), false=悬浮。
+    func isNavDocked() -> Bool {
+        sp().object(forKey: Self.KEY_NAV_DOCK) as? Bool ?? true
+    }
+
+    func setNavDocked(_ docked: Bool) {
+        sp().set(docked, forKey: Self.KEY_NAV_DOCK)
     }
 
     // ===== 主题色 =====

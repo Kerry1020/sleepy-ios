@@ -272,6 +272,11 @@
 "appearance_section_theme" = "Theme colors";
 "appearance_section_display" = "Course display";
 "appearance_section_widget" = "Widget";
+"settings_section_display" = "Display";
+"settings_high_refresh" = "High Refresh Rate";
+"settings_nav_style" = "Navigation Bar Style";
+"settings_nav_style_docked" = "Docked";
+"settings_nav_style_floating" = "Floating";
 "about_update_latest" = "You\\'re on the latest version v%1$@";
 "update_found_title" = "New version v%1$@ available";
 "update_download" = "Download";
