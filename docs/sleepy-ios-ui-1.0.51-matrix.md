@@ -6,7 +6,7 @@ Status values: `pending` means source comparison is still required; `in-progress
 
 | Priority | iOS surface | iOS source | Android 1.0.51 source | Current status | Alignment focus |
 |---|---|---|---|---|---|
-| P0 | Root navigation / dock | `Sleepy/SleepyApp.swift`, `ui/component/PillNavigationBar.swift` | `MainActivity.kt`, `ui/component/PillNavigationBar.kt` | in-progress | selected state timing, docked/floating geometry, background continuity, bottom inset |
+| P0 | Root navigation / dock | `Sleepy/SleepyApp.swift`, `ui/component/PillNavigationBar.swift` | `MainActivity.kt`, `ui/component/PillNavigationBar.kt` | verified | selected state timing, docked/floating geometry, background continuity, bottom inset |
 | P0 | Schedule | `ui/screen/schedule/ScheduleScreen.swift`, `ScheduleViewModel.swift` | `ui/screen/schedule/ScheduleScreen.kt`, `ScheduleViewModel.kt` | verified | toolbar, week display, grid, empty/loading states, conflict layout |
 | P0 | Today | `ui/screen/today/TodayScreen.swift` | `ui/screen/today/TodayScreen.kt` | in-progress | course cards, conflict presentation, date/week controls, detail sheet |
 | P0 | Mine | `ui/screen/mine/MineScreen.swift` | `ui/screen/mine/MineScreen.kt` | in-progress | page title typography aligned; section hierarchy, row controls, icons, navigation destinations remain |
