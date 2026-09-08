@@ -16,16 +16,16 @@ struct WeekGridWidgetEntry: TimelineEntry {
 struct WeekGridWidgetProvider: TimelineProvider {
     func placeholder(in context: Context) -> WeekGridWidgetEntry {
         WidgetArchiveLog.append(kind: "WeekGridWidgetV19", family: context.family.description, result: "success")
-        return WeekGridWidgetEntry(date: Date(), data: WeekGridWidgetLoader.loadWeekData())
+        return WeekGridWidgetEntry(date: Date(), data: WeekGridWidgetLoader.loadWeekData(kind: "WeekGridWidgetV19"))
     }
 
     func getSnapshot(in context: Context, completion: @escaping (WeekGridWidgetEntry) -> Void) {
         WidgetArchiveLog.append(kind: "WeekGridWidgetV19", family: context.family.description, result: "success")
-        completion(WeekGridWidgetEntry(date: Date(), data: WeekGridWidgetLoader.loadWeekData()))
+        completion(WeekGridWidgetEntry(date: Date(), data: WeekGridWidgetLoader.loadWeekData(kind: "WeekGridWidgetV19")))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<WeekGridWidgetEntry>) -> Void) {
-        let entry = WeekGridWidgetEntry(date: Date(), data: WeekGridWidgetLoader.loadWeekData())
+        let entry = WeekGridWidgetEntry(date: Date(), data: WeekGridWidgetLoader.loadWeekData(kind: "WeekGridWidgetV19"))
         let refresh = Date().addingTimeInterval(6 * 3600)
         WidgetArchiveLog.append(kind: "WeekGridWidgetV19", family: context.family.description, result: "success")
         completion(Timeline(entries: [entry], policy: .after(refresh)))

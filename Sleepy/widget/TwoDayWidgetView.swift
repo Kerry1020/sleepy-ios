@@ -13,16 +13,16 @@ struct TwoDayWidgetEntry: TimelineEntry {
 struct TwoDayWidgetProvider: TimelineProvider {
     func placeholder(in context: Context) -> TwoDayWidgetEntry {
         WidgetArchiveLog.append(kind: "TwoDayWidgetRV", family: context.family.description, result: "success")
-        return TwoDayWidgetEntry(date: Date(), data: TwoDayWidgetLoader.loadDataSync())
+        return TwoDayWidgetEntry(date: Date(), data: TwoDayWidgetLoader.loadDataSync(kind: "TwoDayWidgetRV"))
     }
 
     func getSnapshot(in context: Context, completion: @escaping (TwoDayWidgetEntry) -> Void) {
         WidgetArchiveLog.append(kind: "TwoDayWidgetRV", family: context.family.description, result: "success")
-        completion(TwoDayWidgetEntry(date: Date(), data: TwoDayWidgetLoader.loadDataSync()))
+        completion(TwoDayWidgetEntry(date: Date(), data: TwoDayWidgetLoader.loadDataSync(kind: "TwoDayWidgetRV")))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<TwoDayWidgetEntry>) -> Void) {
-        let entry = TwoDayWidgetEntry(date: Date(), data: TwoDayWidgetLoader.loadDataSync())
+        let entry = TwoDayWidgetEntry(date: Date(), data: TwoDayWidgetLoader.loadDataSync(kind: "TwoDayWidgetRV"))
         // 次日 00:05 刷新(今天/明天窗口滚动)
         let cal = DateUtils.isoCalendar
         let tomorrow = cal.date(byAdding: .day, value: 1, to: Date()) ?? Date().addingTimeInterval(3600)

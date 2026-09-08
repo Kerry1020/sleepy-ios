@@ -16,17 +16,17 @@ struct TodayWidgetEntry: TimelineEntry {
 struct TodayWidgetProvider: TimelineProvider {
     func placeholder(in context: Context) -> TodayWidgetEntry {
         WidgetArchiveLog.append(kind: "TodayWidgetRV", family: context.family.description, result: "success")
-        return TodayWidgetEntry(date: Date(), data: TodayWidgetLoader.loadDataSync())
+        return TodayWidgetEntry(date: Date(), data: TodayWidgetLoader.loadDataSync(kind: "TodayWidgetRV"))
     }
 
     func getSnapshot(in context: Context, completion: @escaping (TodayWidgetEntry) -> Void) {
         WidgetArchiveLog.append(kind: "TodayWidgetRV", family: context.family.description, result: "success")
-        completion(TodayWidgetEntry(date: Date(), data: TodayWidgetLoader.loadDataSync()))
+        completion(TodayWidgetEntry(date: Date(), data: TodayWidgetLoader.loadDataSync(kind: "TodayWidgetRV")))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<TodayWidgetEntry>) -> Void) {
         // 次日 00:05 刷新(日期变化 + 课表数据变化都覆盖 — 后者由 App 端 WidgetCenter.reloadAllTimelines 触发)
-        let data = TodayWidgetLoader.loadDataSync()
+        let data = TodayWidgetLoader.loadDataSync(kind: "TodayWidgetRV")
         let entry = TodayWidgetEntry(date: Date(), data: data)
         var cal = DateUtils.isoCalendar
         cal.timeZone = .current

@@ -16,12 +16,23 @@ enum WidgetLoader {
     static func makeRepo() -> ScheduleRepository? {
         ScheduleRepository(AppDatabase.getShared())
     }
+
+    // ← WidgetEditViewModel.reload / WidgetManagementViewModel.reload 的取表序列:
+    //   先查 per-widget 绑定(表仍存在),否则 WidgetTableResolver.resolveCurrentTable。
+    //   kind 传 nil = 走全局默认(无绑定语义)。
+    static func tableFor(kind: String?, repo: ScheduleRepository) -> TimeTableEntity? {
+        if let kind = kind,
+           let bound = WidgetBindingStore.resolveBoundTable(kind, repo: repo) {
+            return bound
+        }
+        return WidgetTableResolver.resolveCurrentTable(repo)
+    }
 }
 
 // MARK: - Today ← TodayWidgetReceiver.loadDataSync
 
 enum TodayWidgetLoader {
-    static func loadDataSync() -> WidgetData {
+    static func loadDataSync(kind: String? = nil) -> WidgetData {
         let today = Date()
         let dayOfWeek = DateUtils.todayDayOfWeek(today: today)
         let prefs = AppPrefs.shared
@@ -29,7 +40,7 @@ enum TodayWidgetLoader {
         let themeKey = prefs.getThemeKey()
         do {
             guard let repo = WidgetLoader.makeRepo(),
-                  let table = WidgetTableResolver.resolveCurrentTable(repo) else {
+                  let table = WidgetLoader.tableFor(kind: kind, repo: repo) else {
                 return WidgetData(date: today, courses: [], timeJson: TimeTableUtils.DEFAULT_TIME_JSON,
                                   hasTable: false, isDark: isDark, themeKey: themeKey)
             }
@@ -49,14 +60,14 @@ enum TodayWidgetLoader {
 // MARK: - WeekList / WeekView ← WeekListWidget.loadDataSync (两者完全一致)
 
 enum WeekListWidgetLoader {
-    static func loadDataSync() -> WeekData {
+    static func loadDataSync(kind: String? = nil) -> WeekData {
         let today = Date()
         let prefs = AppPrefs.shared
         let isDark = prefs.isDarkMode()
         let themeKey = prefs.getThemeKey()
         do {
             guard let repo = WidgetLoader.makeRepo(),
-                  let table = WidgetTableResolver.resolveCurrentTable(repo) else {
+                  let table = WidgetLoader.tableFor(kind: kind, repo: repo) else {
                 return WeekData(days: [], hasTable: false, isDark: isDark, themeKey: themeKey)
             }
             let week = DateUtils.currentWeek(startDate: table.startDate, today: today)
@@ -77,7 +88,7 @@ enum WeekListWidgetLoader {
 // MARK: - TwoDay ← TwoDayWidget.loadDataSync
 
 enum TwoDayWidgetLoader {
-    static func loadDataSync() -> TwoDayData {
+    static func loadDataSync(kind: String? = nil) -> TwoDayData {
         let today = Date()
         let tomorrow = today.addingTimeInterval(86400)
         let prefs = AppPrefs.shared
@@ -85,7 +96,7 @@ enum TwoDayWidgetLoader {
         let themeKey = prefs.getThemeKey()
         do {
             guard let repo = WidgetLoader.makeRepo(),
-                  let table = WidgetTableResolver.resolveCurrentTable(repo) else {
+                  let table = WidgetLoader.tableFor(kind: kind, repo: repo) else {
                 return TwoDayData(days: [], hasTable: false, isDark: isDark, themeKey: themeKey)
             }
             let week = DateUtils.currentWeek(startDate: table.startDate, today: today)
@@ -111,7 +122,7 @@ enum TwoDayWidgetLoader {
 // MARK: - WeekGrid ← WeekGridWidgetProvider.loadWeekData
 
 enum WeekGridWidgetLoader {
-    static func loadWeekData() -> WeekData {
+    static func loadWeekData(kind: String? = nil) -> WeekData {
         let today = Date()
         let prefs = AppPrefs.shared
         let isDark = prefs.isDarkMode()
@@ -120,7 +131,7 @@ enum WeekGridWidgetLoader {
         let visibleDays = prefs.getVisibleDays()
         do {
             guard let repo = WidgetLoader.makeRepo(),
-                  let table = WidgetTableResolver.resolveCurrentTable(repo) else {
+                  let table = WidgetLoader.tableFor(kind: kind, repo: repo) else {
                 return WeekData(days: [], hasTable: false, isDark: isDark, themeKey: themeKey,
                                 showDate: showDate, visibleDays: visibleDays)
             }

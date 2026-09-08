@@ -303,7 +303,7 @@ struct GeneralSettingsScreen: View {
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 16))
+                    .font(.system(size: 20))
                     .foregroundColor(colors.onSurfaceVariant)
             }
             .padding(.horizontal, 16)
@@ -389,6 +389,9 @@ private struct WidgetSection: View {
     @Binding var expandedSections: Set<String>
     let refreshWidgets: () -> Void
 
+    // ← onOpenWidgetManagement: 跳二级页列出已放置的小组件
+    @State private var showManage = false
+
     @State private var widgetColorless: Bool = AppPrefs.shared.isWidgetColorless()
     @State private var widgetSeparator: Bool = AppPrefs.shared.isWidgetSeparator()
     @State private var vertPunct: Bool = AppPrefs.shared.isVertPunctReplace()
@@ -429,6 +432,30 @@ private struct WidgetSection: View {
                     refreshWidgets()
                 }
             }
+
+            // 管理桌面小组件: 跳二级页列出已放置的小组件(模板: 节假日课程灰显入口行)
+            // ← GeneralSettingsScreen.kt item{ Row{...} }: titleSmall + ChevronRight 20dp
+            Button { showManage = true } label: {
+                HStack {
+                    Text(L10n.format("widget_manage_entry"))
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(colors.onSurface)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 20))
+                        .foregroundColor(colors.onSurfaceVariant)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(colors.surfaceContainer)
+                .cornerRadius(SleepyShapes.large)
+            }
+            .buttonStyle(SleepyButtonStyle())
+            .accessibilityIdentifier("settings_widget_manage_entry")
+        }
+        .fullScreenCover(isPresented: $showManage) {
+            WidgetManagementScreen(onDismiss: { showManage = false })
         }
     }
 }
