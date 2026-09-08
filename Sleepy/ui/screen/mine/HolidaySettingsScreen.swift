@@ -171,62 +171,54 @@ struct HolidaySettingsScreen: View {
         .cornerRadius(SleepyShapes.large)
     }
 
-    // ← 数据源卡片: 标题+刷新按钮 / Loading·Failed·Empty·Loaded 四态
+    // ← 数据源卡(用户 2026-09-04): 标题+URL 同行, 刷新=图标(语言无关, 不随文案伸缩)。
+    //   Loading 态图标位转圈占位(行高稳定); Failed/Empty 提示行单独挂卡底(信息行不可省)。
     private var dataSourceCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 10) {
                 Text(L10n.format("holiday_data_source"))
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(colors.onSurface)
-                Spacer()
-                if case .loaded = state {
+                Text(L10n.format("holiday_source_label"))
+                    .font(.system(size: 12))
+                    .foregroundColor(colors.onSurfaceVariant)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if case .loading = state {
+                    // 图标位转圈占位 — 行高稳定
+                    ProgressView()
+                        .tint(colors.primary)
+                        .controlSize(.small)
+                        .frame(width: 36, height: 36)
+                } else {
+                    // 刷新=图标(与 Android Icons.Outlined.Refresh 同位): failed/empty/loaded 均可点
                     Button {
                         load(year, force: true)
                     } label: {
-                        Text(L10n.format("holiday_data_refresh"))
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(colors.onSecondaryContainer)
-                            .padding(.horizontal, 16)
-                            .frame(height: 48)
-                            .background(colors.secondaryContainer)
-                            .cornerRadius(SleepyShapes.large)
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 20))
+                            .foregroundColor(colors.onSurfaceVariant)
+                            .frame(width: 36, height: 36)
                     }
                     .buttonStyle(SleepyButtonStyle())
                     .accessibilityIdentifier("holiday_refresh")
+                    .accessibilityLabel(L10n.format("holiday_data_refresh"))
                 }
             }
-            switch state {
-            case .loading:
-                ProgressView()
-                    .tint(colors.primary)
-                    .controlSize(.small)
-            case .failed:
+            if case .failed = state {
                 Text(L10n.format("holiday_data_failed"))
                     .font(.system(size: 12))
                     .foregroundColor(colors.error)
-                Button {
-                    load(year, force: true)
-                } label: {
-                    Text(L10n.format("holiday_data_retry"))
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(colors.onSecondaryContainer)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 48)
-                        .background(colors.secondaryContainer)
-                        .cornerRadius(SleepyShapes.large)
-                }
-                .buttonStyle(SleepyButtonStyle())
-            case .empty:
+                    .padding(.bottom, 6)
+            } else if case .empty = state {
                 Text(L10n.format("holiday_data_empty"))
                     .font(.system(size: 12))
                     .foregroundColor(colors.onSurfaceVariant)
-            case .loaded:
-                Text("unpkg.com/holiday-calendar · CN")
-                    .font(.system(size: 12))
-                    .foregroundColor(colors.onSurfaceVariant)
+                    .padding(.bottom, 6)
             }
         }
-        .padding(16)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 6)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(colors.surfaceContainer)
         .cornerRadius(SleepyShapes.large)
@@ -268,36 +260,25 @@ struct HolidaySettingsScreen: View {
         .cornerRadius(SleepyShapes.large)
     }
 
-    // ← 灰显样式卡(HolidayStyleChip × 2)
+    // ← 灰显样式卡: 标题行右贴 segmented tabs — 与通用设置页各平铺卡同款(用户 2026-09-04)
     private var styleCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(L10n.format("settings_holiday_style"))
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(colors.onSurface)
-            Text(L10n.format("settings_holiday_style_sub"))
-                .font(.system(size: 12))
-                .foregroundColor(colors.onSurfaceVariant)
-            HStack(spacing: 8) {
-                HolidayStyleChip(
-                    label: L10n.format("settings_holiday_style_grey"),
-                    selected: style == "grey"
-                ) {
-                    style = "grey"
-                    prefs.setHolidayStyle("grey")
+        SettingsFlatCard(
+            title: L10n.format("settings_holiday_style"),
+            options: [
+                L10n.format("settings_holiday_style_grey"),
+                L10n.format("settings_holiday_style_strikethrough")
+            ],
+            selectedIndex: Binding(
+                get: { style == "strikethrough" ? 1 : 0 },
+                set: { idx in
+                    let next = idx == 1 ? "strikethrough" : "grey"
+                    guard next != style else { return }
+                    style = next
+                    prefs.setHolidayStyle(next)
                 }
-                HolidayStyleChip(
-                    label: L10n.format("settings_holiday_style_strikethrough"),
-                    selected: style == "strikethrough"
-                ) {
-                    style = "strikethrough"
-                    prefs.setHolidayStyle("strikethrough")
-                }
-            }
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(colors.surfaceContainer)
-        .cornerRadius(SleepyShapes.large)
+            ),
+            onSelect: { _ in }
+        )
     }
 
     /// 覆盖变化时基于原始网络数据即时重合并, 不重新走网络 ← Loaded 分支
@@ -590,15 +571,16 @@ private struct HolidayRangeEditDialog: View {
                 .background(colors.surfaceContainer)
                 .cornerRadius(SleepyTheme.fieldShape)
 
-            // ← native Picker(.segmented): 取代自制 HolidayStyleChip 双按钮
-            Picker("", selection: Binding(
-                get: { type == HolidayManager.TYPE_PUBLIC_HOLIDAY ? 0 : 1 },
-                set: { type = $0 == 0 ? HolidayManager.TYPE_PUBLIC_HOLIDAY : HolidayManager.TYPE_TRANSFER_WORKDAY }
-            )) {
-                Text(L10n.format("holiday_type_holiday")).tag(0)
-                Text(L10n.format("holiday_type_workday")).tag(1)
-            }
-            .pickerStyle(.segmented)
+            // ← SegmentedSwitcher 全宽(与设置页 Tab 同款, 替代散排 chip) — Android 1.0.51
+            SegmentedSwitcher(
+                options: [(0, L10n.format("holiday_type_holiday")),
+                          (1, L10n.format("holiday_type_workday"))],
+                selected: type == HolidayManager.TYPE_PUBLIC_HOLIDAY ? 0 : 1,
+                onSelect: { idx in
+                    type = idx == 0 ? HolidayManager.TYPE_PUBLIC_HOLIDAY
+                                    : HolidayManager.TYPE_TRANSFER_WORKDAY
+                }
+            )
 
             if !isNew {
                 // 删除走 errorContainer 色块 — 纯色块禁描边规则。
@@ -644,26 +626,5 @@ private struct HolidayRangeEditDialog: View {
             }
         }
         .padding(20)
-    }
-}
-
-// ← HolidayStyleChip
-struct HolidayStyleChip: View {
-    @Environment(\.localWakeUpColors) private var colors
-    let label: String
-    let selected: Bool
-    let onClick: () -> Void
-
-    var body: some View {
-        Button(action: onClick) {
-            Text(label)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(selected ? colors.onPrimaryContainer : colors.onSurface)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(selected ? colors.primaryContainer : colors.surfaceContainerHigh)
-                .cornerRadius(SleepyShapes.medium)
-        }
-        .buttonStyle(SleepyButtonStyle())
     }
 }

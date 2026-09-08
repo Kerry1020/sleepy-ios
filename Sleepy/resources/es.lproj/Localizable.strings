@@ -506,6 +506,7 @@
 "settings_holiday_entry_sub" = "Configurar reglas de atenuación y ver datos de festivos y días de recuperación";
 "holiday_page_title" = "Festivos y días de recuperación";
 "holiday_data_source" = "Fuente de datos";
+"holiday_source_label" = "unpkg.com/holiday-calendar · CN";
 "holiday_data_failed" = "No se pudieron obtener los datos de festivos y días de recuperación. Comprueba la red y reintenta";
 "holiday_data_empty" = "Sin datos de festivos ni días de recuperación para este año";
 "holiday_data_refresh" = "Actualizar";

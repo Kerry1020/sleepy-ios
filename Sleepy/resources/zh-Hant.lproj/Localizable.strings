@@ -506,6 +506,7 @@
 "settings_holiday_entry_sub" = "設定灰顯規則，查看假日和補班日資料";
 "holiday_page_title" = "假日與補班日";
 "holiday_data_source" = "資料來源";
+"holiday_source_label" = "unpkg.com/holiday-calendar · CN";
 "holiday_data_failed" = "假日或補班日資料取得失敗，請檢查網路後重試";
 "holiday_data_empty" = "該年份暫無假日或補班日資料";
 "holiday_data_refresh" = "重新整理資料";

@@ -147,28 +147,31 @@ struct ReminderScreen: View {
                         .font(.system(size: 14))
                         .foregroundColor(colors.onSurface)
                     Spacer()
-                    TextField("10", text: Binding(
-                        get: { minutesInput },
-                        set: { txt in
-                            let digits = String(txt.filter { $0.isNumber })
-                            if digits.isEmpty {
-                                minutesInput = ""
-                            } else if (Int(digits) ?? 0) <= 999 {
-                                minutesInput = digits
-                                scheduleMinutesPersist()
+                    // ← Android TextField 120dp 宽 + suffix: 单位在框内, 不再外挂
+                    HStack(spacing: 0) {
+                        TextField("10", text: Binding(
+                            get: { minutesInput },
+                            set: { txt in
+                                let digits = String(txt.filter { $0.isNumber })
+                                if digits.isEmpty {
+                                    minutesInput = ""
+                                } else if (Int(digits) ?? 0) <= 999 {
+                                    minutesInput = digits
+                                    scheduleMinutesPersist()
+                                }
                             }
-                        }
-                    ))
-                    .keyboardType(.numberPad)
-                    .multilineTextAlignment(.center)
-                    .frame(width: 110)
+                        ))
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.center)
+                        Text(L10n.format("reminder_before_minutes_unit"))
+                            .font(.system(size: 14))
+                            .foregroundColor(colors.onSurfaceVariant)
+                            .padding(.trailing, 12)
+                    }
+                    .frame(width: 120)
                     .padding(.vertical, 8)
                     .background(colors.surfaceContainerLowest)
                     .cornerRadius(SleepyTheme.fieldShape)
-                    // ← Android filled TextField, 无描边
-                    Text(L10n.format("reminder_before_minutes_unit"))
-                        .font(.system(size: 14))
-                        .foregroundColor(colors.onSurfaceVariant)
                 }
                 .padding(.vertical, 8)
                 .padding(.horizontal, 4)
@@ -220,22 +223,25 @@ struct ReminderScreen: View {
                                 }
                             }
                         } label: {
-                            HStack {
-                                Text(fluidPrimaryLabel)
-                                    .font(.system(size: 16))
-                                    .foregroundColor(colors.onSurface)
-                                Spacer()
+                            // ← Android readOnly TextField 形态: hint 作 label 在值上方, 尾随 ExpandMore
+                            VStack(alignment: .leading, spacing: 2) {
                                 Text(L10n.format("reminder_fluid_fields_hint"))
                                     .font(.system(size: 12))
                                     .foregroundColor(colors.onSurfaceVariant)
-                                Image(systemName: "chevron.down")
-                                    .foregroundColor(colors.onSurfaceVariant)
+                                HStack {
+                                    Text(fluidPrimaryLabel)
+                                        .font(.system(size: 16))
+                                        .foregroundColor(colors.onSurface)
+                                    Spacer()
+                                    Image(systemName: "chevron.down")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(colors.onSurfaceVariant)
+                                }
                             }
                             .padding(.horizontal, 12)
-                            .padding(.vertical, 10)
+                            .padding(.vertical, 8)
                             .background(colors.surfaceContainerLowest)
                             .cornerRadius(SleepyTheme.fieldShape)
-                            // ← Android filled TextField, 无描边
                         }
                         Text(L10n.format("reminder_fluid_note"))
                             .font(.system(size: 12))

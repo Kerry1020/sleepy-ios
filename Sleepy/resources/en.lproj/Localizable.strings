@@ -506,6 +506,7 @@
 "settings_holiday_entry_sub" = "Configure dimming rules and view holiday and make-up day data";
 "holiday_page_title" = "Holidays & Make-up Days";
 "holiday_data_source" = "Data source";
+"holiday_source_label" = "unpkg.com/holiday-calendar · CN";
 "holiday_data_failed" = "Failed to fetch holiday data. Check your network and retry";
 "holiday_data_empty" = "No holiday or make-up day data for this year";
 "holiday_data_refresh" = "Refresh";
