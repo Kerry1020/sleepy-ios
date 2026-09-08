@@ -79,6 +79,9 @@ final class JwImportViewModel: ObservableObject {
         case JwProtocol.TYPE_QZ_BR: parser = JwQzParser(html)
         case JwProtocol.TYPE_QZ_WITH_NODE: parser = JwQzParser(html)
         case JwProtocol.TYPE_QZ_OLD: parser = JwQzParser(html)
+        // 1.0.52: 强智 iEAS 网络版 + 国科大选课系统
+        case JwProtocol.TYPE_QZ_IEAS: parser = JwQzIeasParser(html)
+        case JwProtocol.TYPE_UCAS: parser = JwUcasParser(html)
         case JwProtocol.TYPE_URP: parser = JwUrpParser(html)
         case JwProtocol.TYPE_URP_NEW: parser = JwNewUrpParser(html)
         case JwProtocol.TYPE_WISEDU: parser = JwWiseduParser(html)
@@ -111,6 +114,8 @@ final class JwImportViewModel: ObservableObject {
             JwNeuParser(html),
             JwNewUrpParser(html),
             JwNewZfParser(html),
+            JwUcasParser(html),
+            JwQzIeasParser(html),
             JwQzParser(html),
             JwQzCrazyParser(html),
             JwUrpParser(html)
@@ -130,6 +135,14 @@ final class JwImportViewModel: ObservableObject {
         // ①b CQU — 重庆大学统一门户(host 锚点; 自建 REST, 非 jwapp)
         if u.range(of: "^https?://my\\.cqu\\.edu\\.cn(/.*)?$", options: .regularExpression) != nil {
             return JwProtocol.TYPE_CQU
+        }
+        // ①c UCAS — 国科大选课系统 (1.0.52): personSchedule 页面锚点
+        if u.contains("xkgo.ucas.ac.cn") && u.contains("/course/personschedule") {
+            return JwProtocol.TYPE_UCAS
+        }
+        // ②b QZ_IEAS — 必须先于通用 /kbcx/ 规则 (1.0.52)
+        if u.contains("/ieas2.1") || u.contains("jwxt.buaa.edu.cn") || u.contains("jwxt-7001.e2.buaa.edu.cn") {
+            return JwProtocol.TYPE_QZ_IEAS
         }
         if u.contains("jwglxt") || u.contains("/xtgl/") { return JwProtocol.TYPE_ZF_NEW }
         if u.contains("/jwtottxuxsysb/") { return JwProtocol.TYPE_ZF_NEW }

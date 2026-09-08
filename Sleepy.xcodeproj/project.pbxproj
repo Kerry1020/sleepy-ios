@@ -71,7 +71,9 @@
 		52BF11E4543EFC2F7C4941BA /* AppGroupResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3F73FAB76399721B954DF20 /* AppGroupResolver.swift */; };
 		52D98DAC3D9567B72C73792B /* schools.json in Resources */ = {isa = PBXBuildFile; fileRef = 40B0375B042F64DCB87DBE3F /* schools.json */; };
 		53AC158C8004669728F082C0 /* WidgetBindingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32FA87FAC3D04B6686F6E0DB /* WidgetBindingStore.swift */; };
+		547BD893CB503093341BE810 /* RowKeyDiffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C14C917D9FFF63F1BDA1150 /* RowKeyDiffer.swift */; };
 		57DAC24943EF538C3837B5FB /* VersionUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0892BA3B202EE76234C0CC9 /* VersionUtils.swift */; };
+		58FF882511A2FE5F130CF43E /* JwQzIeasParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5338A3818AD49E6EB2324B79 /* JwQzIeasParser.swift */; };
 		592D44339BC45779F6A848C8 /* JwWebViewLoginScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F7AF4E2551FE143942A3F3F /* JwWebViewLoginScreen.swift */; };
 		5A08679A20DB96F3A56D5DBB /* MineSettingsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD3F0EE026CF01741657A7AD /* MineSettingsUITests.swift */; };
 		5BB9CEB5499F051A3EE0F4D2 /* ManageImportUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2F2A17F12A54A7F6392BA2C /* ManageImportUITests.swift */; };
@@ -80,6 +82,7 @@
 		5D21F5E0A4B2FB62832B4851 /* ScheduleExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEAA495471D6CEA3AECFD615 /* ScheduleExporter.swift */; };
 		5D4A7479034564838FE09CF0 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 9479A91B84B8B1735A6AC878 /* SwiftSoup */; };
 		5ECE1550C726A3AF6308A71A /* WidgetTableResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C144DF8370196EBA2816A1B /* WidgetTableResolver.swift */; };
+		642E48735D38B833DEAE48A4 /* JwUcasParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FD5A52D7EC60F78D92780AF /* JwUcasParser.swift */; };
 		6490703A999373DFF63E3F2A /* SchoolSelectScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90B4ADA3F4D0F22AB81E78C4 /* SchoolSelectScreen.swift */; };
 		658D875BFD9C89E43F647582 /* CourseEditorUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64BF7FAB38EE44A780C793BD /* CourseEditorUITests.swift */; };
 		65CE9E557881A66E2169BF28 /* TimeTableEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 480CB26C5638A20DE5CED8AC /* TimeTableEntity.swift */; };
@@ -87,6 +90,7 @@
 		667A9EB53C54336E43442489 /* ThemePresets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B72E006270ED69703F906F4 /* ThemePresets.swift */; };
 		6681365B327B45F2D250BA43 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FE23E8A9E4FEBC54F0F90DF /* Theme.swift */; };
 		66F139067FBE341280D9CBF9 /* FileImportUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD39BACAC97BB2F4E6F0FF56 /* FileImportUITests.swift */; };
+		681AC5A2C9A44C84E305E5A2 /* RowKeyDiffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C14C917D9FFF63F1BDA1150 /* RowKeyDiffer.swift */; };
 		6A146A0A07E98B39A265A340 /* ReminderScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D8DF7E3509AC5B4147E75C8 /* ReminderScreen.swift */; };
 		6A66F8370C8F187915144393 /* HolidayManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F8FE3D103CAC0B91A9CE015 /* HolidayManagerTests.swift */; };
 		6AD52E7F43DBCB0EDE8839AA /* WidgetArchiveLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361943C96AEED91260036E34 /* WidgetArchiveLog.swift */; };
@@ -146,8 +150,10 @@
 		B1436FEAB213A86DC79048AA /* UpdateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF4648DE833D3D2C58C52E6C /* UpdateManager.swift */; };
 		B28F1749B30AA833506A16D0 /* SegmentedSwitcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA25C6698B82B80FF02AB1B /* SegmentedSwitcher.swift */; };
 		B707D96F7A4DCA000A563F43 /* JwParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9090ACA661D747DF0AB718 /* JwParser.swift */; };
+		B738E95AA6AB92330F8FB9BB /* JwQzIeasParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5338A3818AD49E6EB2324B79 /* JwQzIeasParser.swift */; };
 		B7B7B9E50F2427797E4F6752 /* CourseColorUtil.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F8589E7A5EA8C34355C1FFF /* CourseColorUtil.swift */; };
 		B8E34B66D9830F12249D9431 /* MarkdownBlocks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52A6E74309BB326A8378BC9A /* MarkdownBlocks.swift */; };
+		B92AA819E746F356382EE0D6 /* JwUcasParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FD5A52D7EC60F78D92780AF /* JwUcasParser.swift */; };
 		BA2743A24ED00F9986AB65E3 /* TimeTableUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74EB72448743A4CF5CF466C5 /* TimeTableUtils.swift */; };
 		BA5D6AE2D8A400A25159A6DE /* CourseColorUtil.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F8589E7A5EA8C34355C1FFF /* CourseColorUtil.swift */; };
 		BD8246AD64E1E8441C3550BC /* HolidayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C280149FF5701E57DD8E3418 /* HolidayManager.swift */; };
@@ -247,6 +253,7 @@
 		0718B20F0D0233CEBDC569F8 /* ImportAuditUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportAuditUITests.swift; sourceTree = "<group>"; };
 		0A34060A11A2074B2B02C7E1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		0C144DF8370196EBA2816A1B /* WidgetTableResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetTableResolver.swift; sourceTree = "<group>"; };
+		0C14C917D9FFF63F1BDA1150 /* RowKeyDiffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowKeyDiffer.swift; sourceTree = "<group>"; };
 		1274843FE9312E87CD5807D5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		12B67FFE926875C9BA1433BE /* ButtonHitAreaUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonHitAreaUITests.swift; sourceTree = "<group>"; };
 		12CB5E397A61641128360FA3 /* WeekListWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekListWidgetView.swift; sourceTree = "<group>"; };
@@ -277,6 +284,7 @@
 		3C66E6D2ABAEEAC25D75D8C3 /* ExportImportRoundTripTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportImportRoundTripTests.swift; sourceTree = "<group>"; };
 		3CE7034F859FC0E80A0569C9 /* SleepyTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = SleepyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3E7AD6CE77CFDEF12C064E61 /* WidgetArchivingUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetArchivingUITests.swift; sourceTree = "<group>"; };
+		3FD5A52D7EC60F78D92780AF /* JwUcasParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwUcasParser.swift; sourceTree = "<group>"; };
 		4025E8D10A574C8F59C29E21 /* TodayWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayWidgetView.swift; sourceTree = "<group>"; };
 		40B0375B042F64DCB87DBE3F /* schools.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = schools.json; sourceTree = "<group>"; };
 		425CDED54ED7F74106731E8F /* CourseDaoChainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseDaoChainTests.swift; sourceTree = "<group>"; };
@@ -293,6 +301,7 @@
 		4E82A553EBD1D0C8456D3011 /* SleepyPlaceholderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepyPlaceholderTests.swift; sourceTree = "<group>"; };
 		4F69E175915A92D0DDA63EC6 /* SheetDetentsCompat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SheetDetentsCompat.swift; sourceTree = "<group>"; };
 		52A6E74309BB326A8378BC9A /* MarkdownBlocks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownBlocks.swift; sourceTree = "<group>"; };
+		5338A3818AD49E6EB2324B79 /* JwQzIeasParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwQzIeasParser.swift; sourceTree = "<group>"; };
 		56B94B595CC8F831AE5AE3BC /* SleepyUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = SleepyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		58603B4EDA2A13DB3DE29C0F /* WidgetManagementScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetManagementScreen.swift; sourceTree = "<group>"; };
 		5ACF85CE927A56FE05B7CABB /* WidgetCourseCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetCourseCard.swift; sourceTree = "<group>"; };
@@ -498,6 +507,14 @@
 			path = component;
 			sourceTree = "<group>";
 		};
+		300F696B0BC9E6AD17CBA5A9 /* diff */ = {
+			isa = PBXGroup;
+			children = (
+				0C14C917D9FFF63F1BDA1150 /* RowKeyDiffer.swift */,
+			);
+			path = diff;
+			sourceTree = "<group>";
+		};
 		36402A5055750C390995F1BC /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -594,8 +611,10 @@
 				1D9090ACA661D747DF0AB718 /* JwParser.swift */,
 				3480ED82E92E5E453EA66874 /* JwProtocol.swift */,
 				D3D445F86E00820411E38285 /* JwQzCrazyParser.swift */,
+				5338A3818AD49E6EB2324B79 /* JwQzIeasParser.swift */,
 				166C8FB4895B9F8ACF079DDD /* JwQzParser.swift */,
 				22F391D73202D6B93FFF6070 /* JwSchoolInfo.swift */,
+				3FD5A52D7EC60F78D92780AF /* JwUcasParser.swift */,
 				461D4FA2DB17915ACF3D0063 /* JwUrpParser.swift */,
 				467B034A9889202CEA76931B /* JwWiseduParser.swift */,
 			);
@@ -768,6 +787,7 @@
 			isa = PBXGroup;
 			children = (
 				01DFCD1C3F6D2AABDD720227 /* dao */,
+				300F696B0BC9E6AD17CBA5A9 /* diff */,
 				7A160113E1905C5FA92D04C8 /* entity */,
 				6D71EC5495896087F43D122A /* jw */,
 				71298FDC3DED195BC478ABEC /* parser */,
@@ -992,8 +1012,10 @@
 				89FAB921C7D98EA9A507D61A /* JwParser.swift in Sources */,
 				CD11FBD5ABFA3953CE6E30A0 /* JwProtocol.swift in Sources */,
 				32C7A0EB4224644590EA4AB5 /* JwQzCrazyParser.swift in Sources */,
+				B738E95AA6AB92330F8FB9BB /* JwQzIeasParser.swift in Sources */,
 				C75EAA02EC7094A728B8A0F7 /* JwQzParser.swift in Sources */,
 				0730FEAE6931481C90A557C4 /* JwSchoolInfo.swift in Sources */,
+				B92AA819E746F356382EE0D6 /* JwUcasParser.swift in Sources */,
 				38C933C0072C5DB489AB22AA /* JwUrpParser.swift in Sources */,
 				592D44339BC45779F6A848C8 /* JwWebViewLoginScreen.swift in Sources */,
 				71A63D49A1A964C911C5F47A /* JwWiseduParser.swift in Sources */,
@@ -1008,6 +1030,7 @@
 				CCF2D5C5DAE7849F3A8D0C94 /* PillNavigationBar.swift in Sources */,
 				74678E3DCC6D48477BC81B24 /* PinyinMatcher.swift in Sources */,
 				6A146A0A07E98B39A265A340 /* ReminderScreen.swift in Sources */,
+				681AC5A2C9A44C84E305E5A2 /* RowKeyDiffer.swift in Sources */,
 				E3A1781977A55E7FE5CC8BA1 /* ScheduleExporter.swift in Sources */,
 				2333CE80B1AC298CAAD6A321 /* ScheduleParser.swift in Sources */,
 				4C11CEA9A518D6F2972027E6 /* ScheduleRepository.swift in Sources */,
@@ -1098,8 +1121,10 @@
 				B707D96F7A4DCA000A563F43 /* JwParser.swift in Sources */,
 				7EDE753B2953799E66FC71E7 /* JwProtocol.swift in Sources */,
 				35FFDF589B5449B7BFC58681 /* JwQzCrazyParser.swift in Sources */,
+				58FF882511A2FE5F130CF43E /* JwQzIeasParser.swift in Sources */,
 				4FB605D9F58DCE55719C200F /* JwQzParser.swift in Sources */,
 				3DD6F4241087EF31CE73CAE5 /* JwSchoolInfo.swift in Sources */,
+				642E48735D38B833DEAE48A4 /* JwUcasParser.swift in Sources */,
 				D911A052D7EDDB447BFE63DC /* JwUrpParser.swift in Sources */,
 				40061C26490E27046B141D5A /* JwWiseduParser.swift in Sources */,
 				ADC5B1DC5FC83964820C18EE /* L10n.swift in Sources */,
@@ -1107,6 +1132,7 @@
 				04C5A765C0B5CB1285ADC8C4 /* MarkdownBlocks.swift in Sources */,
 				7F9742C5721DF7B60B461AD9 /* NotificationScheduler.swift in Sources */,
 				708B015DABC17CBB868D1D6E /* PinyinMatcher.swift in Sources */,
+				547BD893CB503093341BE810 /* RowKeyDiffer.swift in Sources */,
 				5D21F5E0A4B2FB62832B4851 /* ScheduleExporter.swift in Sources */,
 				3853A4C40E605E0B23896116 /* ScheduleParser.swift in Sources */,
 				160CF854AADABDFB324E4D22 /* ScheduleRepository.swift in Sources */,

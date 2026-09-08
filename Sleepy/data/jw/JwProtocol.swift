@@ -68,11 +68,23 @@ enum JwProtocol {
     /// 上游协议形态: CreamPig233/neu_wisedu2wakeup (无 license) extract_schedule.js — 算法自写。
     static let TYPE_NEU = "neu"
 
+    /// 强智 iEAS 网络版 (/ieas2.1/...) — ASP.NET MVC, 课表 endpoint = /ieas2.1/kbcx/queryGrkb 返回 HTML(非 JSON)。
+    /// 学校样本: 北京航空航天大学 jwxt.buaa.edu.cn:7001/ieas2.1。
+    /// 与 TYPE_QZ (/jsxsd/ 强智 jxb) 同源, 但 URL 路径不同, 需独立锚点。
+    static let TYPE_QZ_IEAS = "qz_ieas"
+
+    /// 中国科学院大学选课系统: personSchedule 服务端 HTML 课表网格 + JSON courseTimeList。
+    static let TYPE_UCAS = "ucas"
+
     /// 协议显示名(用于 UI 提示) ← displayName
     static func displayName(_ type: String?) -> String {
         switch type {
         case TYPE_QZ, TYPE_QZ_OLD, TYPE_QZ_CRAZY, TYPE_QZ_BR, TYPE_QZ_WITH_NODE:
             return "强智教务"
+        case TYPE_QZ_IEAS:
+            return "强智教务(iEAS 网络版)"
+        case TYPE_UCAS:
+            return "国科大选课系统"
         case TYPE_ZF, TYPE_ZF_1, TYPE_ZF_NEW:
             return "正方教务"
         case TYPE_URP, TYPE_URP_NEW:
@@ -113,7 +125,7 @@ enum JwProtocol {
     /// 协议大类,用于 WebViewLogin UI 上的提示文案分类 ← category
     static func category(_ type: String?) -> String {
         switch type {
-        case TYPE_QZ, TYPE_QZ_OLD, TYPE_QZ_CRAZY, TYPE_QZ_BR, TYPE_QZ_WITH_NODE:
+        case TYPE_QZ, TYPE_QZ_OLD, TYPE_QZ_CRAZY, TYPE_QZ_BR, TYPE_QZ_WITH_NODE, TYPE_QZ_IEAS:
             return "qz"
         case TYPE_ZF, TYPE_ZF_1, TYPE_ZF_NEW:
             return "zf"
