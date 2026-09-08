@@ -17,8 +17,8 @@ Status values: `pending` means source comparison is still required; `in-progress
 | P1 | All tables | `ui/screen/mine/AllTablesScreen.swift` | `ui/screen/mine/AllTablesScreen.kt` | verified | current table, duplicate/edit/delete actions, row hit areas |
 | P1 | Edit/add table | `ui/screen/mine/EditTableScreen.swift` | `ui/screen/mine/EditTableScreen.kt` | verified | form sections, save/delete, native inputs |
 | P1 | Add course | `ui/screen/edit/AddCourseScreen.swift` | `ui/screen/edit/AddCourseScreen.kt` | verified | per-slot weeks/type, complete slot grouping, timetable-derived node bounds, conflict confirmation, native controls; custom-week list semantics remain documented |
-| P1 | Appearance | `ui/screen/mine/AppearanceScreen.swift` | `ui/screen/mine/AppearanceScreen.kt` | pending | theme/display controls, high refresh, nav mode |
-| P1 | General settings | `ui/screen/mine/GeneralSettingsScreen.swift` | `ui/screen/mine/GeneralSettingsScreen.kt` | in-progress | visible days, switches, native controls, constraints |
+| P1 | Appearance | `ui/screen/mine/AppearanceScreen.swift` | `ui/screen/mine/AppearanceScreen.kt` | verified | theme/display controls, high refresh, nav mode |
+| P1 | General settings | `ui/screen/mine/GeneralSettingsScreen.swift` | `ui/screen/mine/GeneralSettingsScreen.kt` | verified | visible days, switches, native controls, constraints; Android-only grid/week scale controls documented as an iOS contract gap |
 | P1 | Import flow | `ui/screen/imports/*.swift` | `ui/screen/imports/*.kt` | in-progress | school selection, import sheet, login states, errors |
 | P2 | Holiday / reminder | `HolidaySettingsScreen.swift`, `ReminderScreen.swift` | matching `*.kt` | pending | toggles, date/location controls, permission states |
 | P2 | Export/share | `ExportScreen.swift`, `ShareScheduleSheet.swift` | matching `*.kt` | pending | format selection, share actions, empty/error states |

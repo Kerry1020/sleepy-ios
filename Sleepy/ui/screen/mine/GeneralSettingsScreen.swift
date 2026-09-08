@@ -19,6 +19,9 @@ struct GeneralSettingsScreen: View {
     @State private var displayMode: String = AppPrefs.shared.getDisplayMode()
     @State private var gridSubInfo: String = AppPrefs.shared.getGridSubInfo()
     @State private var showDate: Bool = AppPrefs.shared.isShowDate()
+    /// 启动默认视图 — ← AppPrefs.getStartView Android (默认 "full")。仅通用设置里设置,
+    /// 手动切换课表顶部视图不写入(Android 注释硬规则, iOS 一致遵循)。
+    @State private var startView: String = AppPrefs.shared.getStartView()
     @State private var visibleDays: Set<Int> = AppPrefs.shared.getVisibleDays()
     @State private var courseColorless: Bool = AppPrefs.shared.isCourseColorless()
     @State private var conflictStyle: String = AppPrefs.shared.getConflictStyle()
@@ -26,7 +29,8 @@ struct GeneralSettingsScreen: View {
     @State private var conflictRailInset: Double = AppPrefs.shared.getConflictRailInset()
     @State private var conflictFoldSize: Double = AppPrefs.shared.getConflictFoldSize()
     @State private var highRefresh: Bool = AppPrefs.shared.isHighRefreshEnabled()
-    @State private var navDocked: Bool = AppPrefs.shared.isNavDocked()
+    /// 底栏样式 — false=贴底(默认), true=悬浮药丸(与 Android v1.0.45 b0f8280 对齐)
+    @State private var navFloating: Bool = AppPrefs.shared.isNavDocked()
     // ★ v7.10.18: HolidaySettings 在本屏内 sheet 弹出,无需走 root enum
     @State private var holidaySettingsItem: HolidaySettingsItem? = nil
     private struct HolidaySettingsItem: Identifiable { let id = UUID() }
@@ -58,6 +62,7 @@ struct GeneralSettingsScreen: View {
                                 displayModeCard
                                 gridSubInfoCard
                                 visibleDaysCard
+                                startViewCard
                                 showDateCard
                                 courseColorlessCard
                                 conflictStyleCard
@@ -69,9 +74,9 @@ struct GeneralSettingsScreen: View {
                             // ── 分组② 画面(高刷率 + 底栏样式) — ← Android v1.0.45 edec776/b0f8280 ──
                             DisplaySection(
                                 highRefresh: $highRefresh,
-                                navDocked: $navDocked,
-                                onNavDockChange: { on in
-                                    navDocked = on
+                                navFloating: $navFloating,
+                                onNavFloatingChange: { on in
+                                    navFloating = on
                                     prefs.setNavDocked(on)
                                     // 单源真值:AppRoot 监听 prefs 后即刻重渲底栏
                                 })
@@ -97,58 +102,55 @@ struct GeneralSettingsScreen: View {
         .navigationViewStyle(.stack)
     }
 
-    // 课程时间显示: 节次 / 时间
+    // 课程时间显示: 节次 / 时间 — ← Android SettingsFlatCard(标题行右侧 tab)
     private var displayModeCard: some View {
-        SettingsCard(title: L10n.format("settings_display_mode"),
-                     expanded: expandedSections.contains("displayMode"),
-                     onToggle: { toggleSection("displayMode") }) {
-            DisplayModeOption(label: L10n.format("settings_display_node"),
-                              subtitle: L10n.format("settings_display_node_sub"),
-                              selected: displayMode == "node") {
-                displayMode = "node"
-                prefs.setDisplayMode("node")
-                refreshWidgets()
-            }
-            SubDivider()
-            DisplayModeOption(label: L10n.format("settings_display_time"),
-                              subtitle: L10n.format("settings_display_time_sub"),
-                              selected: displayMode == "time") {
-                displayMode = "time"
-                prefs.setDisplayMode("time")
-                refreshWidgets()
-            }
-        }
+        SettingsFlatCard(
+            title: L10n.format("settings_display_mode"),
+            options: [
+                L10n.format("settings_display_node"),
+                L10n.format("settings_display_time")
+            ],
+            selectedIndex: Binding(
+                get: { displayMode == "time" ? 1 : 0 },
+                set: { idx in
+                    let v = idx == 1 ? "time" : "node"
+                    guard v != displayMode else { return }
+                    displayMode = v
+                    prefs.setDisplayMode(v)
+                    refreshWidgets()
+                }
+            ),
+            onSelect: { _ in }
+        )
     }
 
-    // 网格卡片副信息: 教室 / 教师 / 无
+    // 网格卡片副信息: 教室 / 教师 / 无 — ← Android SettingsFlatCard
     private var gridSubInfoCard: some View {
-        SettingsCard(title: L10n.format("settings_grid_sub_info"),
-                     expanded: expandedSections.contains("gridSubInfo"),
-                     onToggle: { toggleSection("gridSubInfo") }) {
-            DisplayModeOption(label: L10n.format("settings_grid_sub_room"),
-                              subtitle: L10n.format("settings_grid_sub_room_sub"),
-                              selected: gridSubInfo == "room") {
-                gridSubInfo = "room"
-                prefs.setGridSubInfo("room")
-                refreshWidgets()
-            }
-            SubDivider()
-            DisplayModeOption(label: L10n.format("settings_grid_sub_teacher"),
-                              subtitle: L10n.format("settings_grid_sub_teacher_sub"),
-                              selected: gridSubInfo == "teacher") {
-                gridSubInfo = "teacher"
-                prefs.setGridSubInfo("teacher")
-                refreshWidgets()
-            }
-            SubDivider()
-            DisplayModeOption(label: L10n.format("settings_grid_sub_none"),
-                              subtitle: L10n.format("settings_grid_sub_none_sub"),
-                              selected: gridSubInfo == "none") {
-                gridSubInfo = "none"
-                prefs.setGridSubInfo("none")
-                refreshWidgets()
-            }
-        }
+        SettingsFlatCard(
+            title: L10n.format("settings_grid_sub_info"),
+            options: [
+                L10n.format("settings_grid_sub_room"),
+                L10n.format("settings_grid_sub_teacher"),
+                L10n.format("settings_grid_sub_none")
+            ],
+            selectedIndex: Binding(
+                get: {
+                    switch gridSubInfo {
+                    case "room": return 0
+                    case "teacher": return 1
+                    default: return 2
+                    }
+                },
+                set: { idx in
+                    let v = ["room", "teacher", "none"][idx]
+                    guard v != gridSubInfo else { return }
+                    gridSubInfo = v
+                    prefs.setGridSubInfo(v)
+                    refreshWidgets()
+                }
+            ),
+            onSelect: { _ in }
+        )
     }
 
     // 显示星期: 周一~周日多选(至少留 1 天)
@@ -171,6 +173,28 @@ struct GeneralSettingsScreen: View {
         }
     }
 
+    // 启动默认视图: 周视图 / 卡片视图 — ← Android SettingsFlatCard
+    // 仅影响下次进入课表页,不刷新小组件。
+    private var startViewCard: some View {
+        SettingsFlatCard(
+            title: L10n.format("settings_start_view"),
+            options: [
+                L10n.format("settings_start_view_full"),
+                L10n.format("settings_start_view_cards")
+            ],
+            selectedIndex: Binding(
+                get: { startView == "cards" ? 1 : 0 },
+                set: { idx in
+                    let v = idx == 1 ? "cards" : "full"
+                    guard v != startView else { return }
+                    startView = v
+                    prefs.setStartView(v)
+                }
+            ),
+            onSelect: { _ in }
+        )
+    }
+
     // 课表显示日期: 开关
     private var showDateCard: some View {
         SettingsCard(title: L10n.format("settings_show_date"),
@@ -186,18 +210,30 @@ struct GeneralSettingsScreen: View {
         }
     }
 
-    // 课程胶囊统一底色: 开关(App 侧独立, 不刷新小组件)
+    // 课程胶囊统一底色: 标题行开关 — ← Android flat title-plus-switch row
     private var courseColorlessCard: some View {
-        SettingsCard(title: L10n.format("settings_course_colorless"),
-                     expanded: expandedSections.contains("courseColorless"),
-                     onToggle: { toggleSection("courseColorless") }) {
-            SettingToggleRow(label: L10n.format("settings_course_colorless"),
-                             subtitle: L10n.format("settings_course_colorless_sub"),
-                             checked: courseColorless) {
-                courseColorless = $0
-                prefs.setCourseColorless($0)
-            }
+        HStack {
+            Text(L10n.format("settings_course_colorless"))
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(colors.onSurface)
+            Spacer()
+            Toggle("", isOn: Binding(
+                get: { courseColorless },
+                set: {
+                    courseColorless = $0
+                    prefs.setCourseColorless($0)
+                }
+            ))
+            .toggleStyle(.switch)
+            .tint(colors.primary)
+            .labelsHidden()
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity)
+        .background(colors.surfaceContainer)
+        .cornerRadius(SleepyShapes.large)
+        .accessibilityLabel(Text(L10n.format("settings_course_colorless")))
     }
 
     // 冲突课程样式: 叠层 / 折角 / 竖轨(仅 App 内网格视图, 不涉及小组件, 无需 refreshWidgets)
@@ -341,12 +377,9 @@ private struct VisibleDayRow: View {
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 4)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            let n = checked ? visibleDays.subtracting([day]) : visibleDays.union([day])
-            guard !n.isEmpty else { return }
-            onChange(n)
-        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(DateUtils.localizedDay(day)))
+        .accessibilityAddTraits(checked ? .isSelected : [])
     }
 }
 
@@ -454,8 +487,8 @@ private struct LanguageSection: View {
 private struct DisplaySection: View {
     @Environment(\.localWakeUpColors) private var colors
     @Binding var highRefresh: Bool
-    @Binding var navDocked: Bool
-    let onNavDockChange: (Bool) -> Void
+    @Binding var navFloating: Bool
+    let onNavFloatingChange: (Bool) -> Void
 
     var body: some View {
         VStack(spacing: 16) {
@@ -481,11 +514,14 @@ private struct DisplaySection: View {
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(colors.onSurface)
                     Picker("", selection: Binding(
-                        get: { navDocked },
-                        set: { onNavDockChange($0) }
+                        get: { navFloating },
+                        set: { onNavFloatingChange($0) }
                     )) {
-                        Text(L10n.format("settings_nav_style_docked")).tag(true)
-                        Text(L10n.format("settings_nav_style_floating")).tag(false)
+                        // 标签顺序: 贴底(默认) → 悬浮;Picker 用 Bool tag 配 (false, true)
+                        // (← Android GeneralSettingsScreen.kt selectedKey = if (navDock) 1 else 0:
+                        //  选项索引 0=docked, 1=floating;navDock=true 即悬浮药丸)
+                        Text(L10n.format("settings_nav_style_docked")).tag(false)
+                        Text(L10n.format("settings_nav_style_floating")).tag(true)
                     }
                     .pickerStyle(.segmented)
                     .accessibilityIdentifier("settings_nav_style")

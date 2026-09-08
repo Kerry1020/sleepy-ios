@@ -74,6 +74,42 @@ struct SettingsCard<Content: View>: View {
     }
 }
 
+// ← SettingsFlatCard: 标题行右侧 segmented tabs, 对齐 Android SettingsFlatCard
+struct SettingsFlatCard: View {
+    @Environment(\.localWakeUpColors) private var colors
+    let title: String
+    let options: [String]
+    @Binding var selectedIndex: Int
+    let onSelect: (Int) -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(title)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(colors.onSurface)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Picker("", selection: Binding(
+                get: { selectedIndex },
+                set: {
+                    selectedIndex = $0
+                    onSelect($0)
+                }
+            )) {
+                ForEach(Array(options.enumerated()), id: \.offset) { index, label in
+                    Text(label).tag(index)
+                }
+            }
+            .pickerStyle(.segmented)
+            .accessibilityLabel(Text(title))
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity)
+        .background(colors.surfaceContainer)
+        .cornerRadius(SleepyShapes.large)
+    }
+}
+
 // ← DisplayModeOption
 struct DisplayModeOption: View {
     @Environment(\.localWakeUpColors) private var colors
