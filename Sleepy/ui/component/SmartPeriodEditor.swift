@@ -39,7 +39,7 @@ struct SmartPeriodEditor: View {
             // 第一节开始时间
             TimePickerField(value: config.startTime,
                             onValueChange: { newTime in onConfigChange({ var c = config; c.startTime = newTime; return c }()) },
-                            label: L10n.format("edit_period_first_start"))
+                            label: L10n.format("edit_period_first_start"), fillsWidth: true)
                 .padding(.bottom, 12)
 
             // 添加 break
@@ -141,6 +141,7 @@ private struct BreakGroupSection: View {
                         .foregroundColor(colors.onSurfaceVariant)
                 }
                 .buttonStyle(SleepyButtonStyle())
+                .frame(width: 28, height: 28)   // ← Android IconButton 28dp 方形
             }
 
             // 位置卡片网格(每行 8 个)
@@ -214,7 +215,7 @@ private struct PreviewList: View {
 
         if rows.isEmpty {
             Text(L10n.format("empty_placeholder"))
-                .font(.system(size: 12))
+                .font(.system(size: 16))   // ← Android 无 style 参数 = bodyLarge 16
                 .foregroundColor(colors.onSurfaceVariant)
         } else {
             VStack(spacing: 2) {
@@ -263,31 +264,39 @@ private struct NumberField: View {
     @State private var text: String = ""
 
     var body: some View {
+        // ← M3 filled TextField: label 浮动(有值 = 12pt 在值上方), suffix 在字段内右侧
         HStack(spacing: 4) {
-            TextField(label.isEmpty ? " " : label, text: Binding(
-                get: { text.isEmpty ? "\(value)" : text },
-                set: { newText in
-                    // 纯数字 + 最多 4 位(对齐 Android)
-                    if newText.allSatisfy({ $0.isNumber }) && newText.count <= 4 {
-                        text = newText
-                        if let parsed = Int(newText) { onValueChange(parsed) }
-                    }
+            VStack(alignment: .leading, spacing: 2) {
+                if !label.isEmpty {
+                    Text(label)
+                        .font(.system(size: 12))
+                        .foregroundColor(colors.onSurfaceVariant)
                 }
-            ))
-            .keyboardType(.numberPad)
-            .accessibilityIdentifier("number_\(label)")   // ← G5: 数字字段锚点
-            .font(.system(size: 16))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(colors.surfaceContainer)
-            .cornerRadius(SleepyTheme.fieldShape)
-            // ← Android NumberField = filled TextField, 无描边(Material3 filled 无 border)
+                TextField("", text: Binding(
+                    get: { text.isEmpty ? "\(value)" : text },
+                    set: { newText in
+                        // 纯数字 + 最多 4 位(对齐 Android)
+                        if newText.allSatisfy({ $0.isNumber }) && newText.count <= 4 {
+                            text = newText
+                            if let parsed = Int(newText) { onValueChange(parsed) }
+                        }
+                    }
+                ))
+                .keyboardType(.numberPad)
+                .accessibilityIdentifier("number_\(label)")   // ← G5: 数字字段锚点
+                .font(.system(size: 16))
+            }
             if !unit.isEmpty {
                 Text(unit)
-                    .font(.system(size: 12))
+                    .font(.system(size: 16))
                     .foregroundColor(colors.onSurfaceVariant)
             }
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(colors.surfaceContainer)
+        .cornerRadius(SleepyTheme.fieldShape)
+        // ← Android NumberField = filled TextField, 无描边(Material3 filled 无 border)
         .onAppear { text = "\(value)" }
         .onChange(of: value) { newValue in text = "\(newValue)" }
     }
@@ -307,7 +316,7 @@ private struct AddBreakChip: View {
                     .font(.system(size: 16))
                     .foregroundColor(color)
                 Text(L10n.format("add_label", label))
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 14, weight: .medium))   // ← FilterChip labelLarge 14sp
                     .foregroundColor(color)
             }
             .padding(.horizontal, 10)

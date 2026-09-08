@@ -85,6 +85,8 @@ struct TimePickerField: View {
     let value: String                  // HH:mm
     let onValueChange: (String) -> Void
     let label: String
+    // ← Android weight(1f)/fillMaxWidth 调用方传 true, 字段吃满可用宽
+    var fillsWidth: Bool = false
 
     @State private var showPicker = false
     @State private var pickerTime = Date()
@@ -96,15 +98,19 @@ struct TimePickerField: View {
             pickerTime = cal.date(bySettingHour: comps.0, minute: comps.1, second: 0, of: Date()) ?? Date()
             showPicker = true
         } label: {
-            HStack {
-                Text(value.isEmpty ? label : value)
-                    .font(.system(size: 16))
-                    .foregroundColor(colors.onSurface)
-                Spacer()
-                if !value.isEmpty {
+            // ← Android readOnly TextField 形态: 空值 = label 占位; 有值 = label 浮到值上方
+            VStack(alignment: .leading, spacing: 2) {
+                if value.isEmpty {
+                    Text(label)
+                        .font(.system(size: 16))
+                        .foregroundColor(colors.onSurfaceVariant)
+                } else {
                     Text(label)
                         .font(.system(size: 12))
                         .foregroundColor(colors.onSurfaceVariant)
+                    Text(value)
+                        .font(.system(size: 16))
+                        .foregroundColor(colors.onSurface)
                 }
             }
             .padding(.horizontal, 12)
@@ -114,6 +120,7 @@ struct TimePickerField: View {
             // ← Android filled TextField, 无描边
         }
         .buttonStyle(SleepyButtonStyle())
+        .frame(maxWidth: fillsWidth ? .infinity : nil, alignment: .leading)
         .sheet(isPresented: $showPicker) {
             VStack(spacing: 0) {
                 Text(L10n.format("select_time"))

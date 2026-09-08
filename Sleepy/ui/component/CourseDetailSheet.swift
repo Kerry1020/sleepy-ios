@@ -76,7 +76,7 @@ struct CourseDetailSheet: View {
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(colors.onPrimary)
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
+                                .frame(height: 40)
                                 .background(colors.primary)
                                 .cornerRadius(SleepyShapes.large)
                         }
@@ -116,17 +116,17 @@ private struct DefaultTopPickerSection: View {
     let selectedCourseId: Int64
 
     var body: some View {
+        // 簇键:公式唯一真值在引擎 — 与 ConflictClusterCard / topOverrides 同源 (← conflictClusterKey)
         let layers = ConflictLayoutEngine.chainGroups(cluster.courses)
-        let anchor = cluster.courses.first!
-        let clusterKey = "\(cluster.day):\(anchor.startNode):\(anchor.step)"
+        let clusterKey = ConflictLayoutEngine.conflictClusterKey(cluster)
         let savedRepId: Int64? = defaultTopStore.map[clusterKey]
 
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 2) {
             Text(L10n.format("conflict_default_top_title"))
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(colors.onSurface)
                 .padding(.top, 4)
-                .padding(.bottom, 2)
+                .padding(.bottom, 4)
 
             ForEach(Array(layers.enumerated()), id: \.offset) { _, layer in
                 let layerRepId = layer.first!.id
@@ -135,9 +135,9 @@ private struct DefaultTopPickerSection: View {
                 Button {
                     AppPrefs.shared.putConflictDefaultTop(clusterKey, selected ? nil : layerRepId)
                 } label: {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 4) {
                         Image(systemName: selected ? "largecircle.fill.circle" : "circle")
-                            .font(.system(size: 18))
+                            .font(.system(size: 20))
                             .foregroundColor(selected ? colors.primary : colors.onSurfaceVariant)
                         Text(label)
                             .font(.system(size: 14))
@@ -146,7 +146,7 @@ private struct DefaultTopPickerSection: View {
                             .truncationMode(.tail)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .padding(.vertical, 6)
+                    .padding(.vertical, 4)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(SleepyButtonStyle())

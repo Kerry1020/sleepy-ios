@@ -59,6 +59,7 @@ private struct ManualTimeSlotEditor: View {
                         Image(systemName: "plus")
                             .font(.system(size: 18))
                         Text(L10n.format("add_period"))
+                            .font(.system(size: 14))   // ← TextButton labelLarge 14sp
                     }
                     .foregroundColor(colors.primary)
                 }
@@ -115,9 +116,9 @@ private struct TimeSlotRowItem: View {
                 .foregroundColor(colors.onSurface)
                 .frame(width: 44, alignment: .leading)
             TimePickerField(value: row.start, onValueChange: onStartChange,
-                            label: L10n.format("start_label"))
+                            label: L10n.format("start_label"), fillsWidth: true)
             TimePickerField(value: row.end, onValueChange: onEndChange,
-                            label: L10n.format("end_label"))
+                            label: L10n.format("end_label"), fillsWidth: true)
             if canDelete {
                 Button(action: onDelete) {
                     Image(systemName: "minus.circle")
@@ -126,7 +127,7 @@ private struct TimeSlotRowItem: View {
                 }
                 .buttonStyle(SleepyButtonStyle())
                 .accessibilityIdentifier("slot_row_delete_\(row.node)")
-                .frame(width: 32)
+                .frame(width: 32, height: 32)   // ← Android IconButton 32dp 方形
             } else {
                 Spacer().frame(width: 32)
             }
