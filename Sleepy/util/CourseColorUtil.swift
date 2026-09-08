@@ -66,7 +66,9 @@ enum CourseColorUtil {
     /// TODO(Phase2): 哨兵值 #FF6750A4 与主题默认紫完全相同，用户主动选紫主题或导入指定此色
     ///   会被误判为「未设置」→ 需改为 isCustomColor 布尔字段 + DB migration。
     static func hasCustomColor(_ course: CourseEntity) -> Bool {
-        !course.color.isEmpty && course.color.uppercased() != SENTINEL_COLOR
+        // ← isNotBlank 语义(非空且非纯空白),与 Kotlin 对齐
+        !course.color.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && course.color.uppercased() != SENTINEL_COLOR
     }
 
     /// 明暗探针 — 读 CoursePalette.primary 亮度。
@@ -195,10 +197,137 @@ enum CourseColorUtil {
         let l = isDark ? L_DARK : L_LIGHT
         return hslToColorInt(hue, s, l)
     }
+
+    // ============================ 第三层 · issue#22 3 态取色入口 ============================
+    //
+    // 旧 pickCourseColorSwiftUI/pickCourseColorInt 不动 — 语义是"整门课一个色",
+    // 被 WidgetContent 之类纯 group-level 渲染路径使用。
+    // issue#22 同名课程多地点修复后, WeekGrid/WeekList/Widget/Today 等渲染
+    // 每个 block 独立色的入口走下方 *WithGroupRows 版本。
+
+    /// SwiftUI 路径 · issue#22 3 态取色入口。
+    /// - row: 目标行; groupRows: 同 groupId 所有行(含 row 自身), AUTO 模式按行序算 hue
+    static func pickCourseColorSwiftUIWithGroupRows(
+        _ row: CourseEntity, groupRows: [CourseEntity], isDark: Bool,
+        neutralColor: Color, colorless: Bool = false
+    ) -> Color {
+        switch row.colorMode {
+        case CourseColorMode.CUSTOM:
+            return parseColor(row.color).map { Color(uiArgb: UInt32($0)) } ?? neutralColor
+        case CourseColorMode.AUTO:
+            if colorless { return neutralColor }
+            let hue = GoldenAngleColor.forRow(row, groupRows, groupSourceColorHex(groupRows))
+            let (s, l) = GoldenAngleColor.hsl(hue, isDark)
+            return hslToColor(hue, s, l)
+        default:  // GROUP(0) 或未知值 → 组级行为
+            if hasCustomColor(row), let argb = parseColor(row.color) {
+                return Color(uiArgb: UInt32(argb))
+            }
+            if colorless { return neutralColor }
+            let hue = stableHue(row.groupId)
+            let s = isDark ? S_DARK : S_LIGHT
+            let l = isDark ? L_DARK : L_LIGHT
+            return hslToColor(hue, s, l)
+        }
+    }
+
+    /// Canvas 路径 · issue#22 3 态取色入口 (供 Widget 渲染)
+    static func pickCourseColorIntWithGroupRows(
+        _ row: CourseEntity, groupRows: [CourseEntity], isDark: Bool,
+        neutralColorInt: Int, colorless: Bool = false
+    ) -> Int {
+        switch row.colorMode {
+        case CourseColorMode.CUSTOM:
+            return parseColor(row.color) ?? neutralColorInt
+        case CourseColorMode.AUTO:
+            if colorless { return neutralColorInt }
+            let hue = GoldenAngleColor.forRow(row, groupRows, groupSourceColorHex(groupRows))
+            let (s, l) = GoldenAngleColor.hsl(hue, isDark)
+            return hslToColorInt(hue, s, l)
+        default:  // GROUP(0) 或未知值 → 组级行为
+            if hasCustomColor(row), let argb = parseColor(row.color) {
+                return argb
+            }
+            if colorless { return neutralColorInt }
+            let hue = stableHue(row.groupId)
+            let s = isDark ? S_DARK : S_LIGHT
+            let l = isDark ? L_DARK : L_LIGHT
+            return hslToColorInt(hue, s, l)
+        }
+    }
+
+    /// 组色源 — 同 groupId 内 colorMode=GROUP 中 id 最小的行的 color
+    static func groupSourceColorHex(_ groupRows: [CourseEntity]) -> String {
+        var source: CourseEntity? = groupRows
+            .filter { $0.colorMode == CourseColorMode.GROUP }
+            .min { $0.id < $1.id }
+        if source == nil {
+            source = groupRows.min { $0.id < $1.id }
+        }
+        return source?.color ?? ""
+    }
+}
+
+// ← GoldenAngleColor (issue#22 AUTO 模式, 不落库确定性重算)
+enum GoldenAngleColor {
+    private static let GOLDEN_ANGLE_DEG: Float = 137.508
+    private static let SATURATION_LIGHT: Float = 0.55
+    private static let SATURATION_DARK: Float = 0.40
+    private static let LIGHTNESS_LIGHT: Float = 0.82
+    private static let LIGHTNESS_DARK: Float = 0.28
+
+    /// forRow — hue = 组色源 hue + idx*137.508°, idx = row.id 在同组行升序中的序号
+    static func forRow(_ row: CourseEntity, _ groupRows: [CourseEntity], _ srcHex: String?) -> Float {
+        let baseHue = parseHexHue(srcHex)
+        let sorted = groupRows.sorted { $0.id < $1.id }
+        let idx = sorted.firstIndex { $0.id == row.id } ?? 0
+        let raw = baseHue + Float(idx) * GOLDEN_ANGLE_DEG
+        return ((raw.truncatingRemainder(dividingBy: 360) + 360)
+            .truncatingRemainder(dividingBy: 360))
+    }
+
+    /// hsl — 由 isDark 定 (saturation, lightness)
+    static func hsl(_ hue: Float, _ isDark: Bool) -> (Float, Float) {
+        let s = isDark ? SATURATION_DARK : SATURATION_LIGHT
+        let l = isDark ? LIGHTNESS_DARK : LIGHTNESS_LIGHT
+        return (s, l)
+    }
+
+    /// parseHexHue — 空白/坏 hex 回 0 (androidx runCatching+getOrDefault 语义)
+    private static func parseHexHue(_ hex: String?) -> Float {
+        guard let h = hex,
+              !h.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return 0 }
+        if let argb = CourseColorUtil.parseColor(h) {
+            return rgbToHslHue(argb)
+        }
+        return 0
+    }
+
+    /// rgbToHslHue — androidx RGBToHSL 的 hue 分量 (只取 hue)
+    private static func rgbToHslHue(_ argb: Int) -> Float {
+        let r = Float((argb >> 16) & 0xFF) / 255
+        let g = Float((argb >> 8) & 0xFF) / 255
+        let b = Float(argb & 0xFF) / 255
+        let maxc = max(r, g, b)
+        let minc = min(r, g, b)
+        if maxc == minc { return 0 }
+        let d = maxc - minc
+        var h: Float = 0
+        if maxc == r {
+            h = ((g - b) / d).truncatingRemainder(dividingBy: 6)
+        } else if maxc == g {
+            h = (b - r) / d + 2
+        } else {
+            h = (r - g) / d + 4
+        }
+        h = h * 60
+        h = h.truncatingRemainder(dividingBy: 360)
+        if h < 0 { h += 360 }
+        return h
+    }
 }
 
 extension Color {
-    /// ARGB UInt32 → SwiftUI Color
     init(uiArgb v: UInt32) {
         self.init(.sRGB,
                   red: Double((v >> 16) & 0xFF) / 255,

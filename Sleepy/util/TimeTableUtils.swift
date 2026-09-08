@@ -144,6 +144,8 @@ enum TimeTableUtils {
         var node: Int
         var start: String
         var end: String
+        /// Non-null only for nodes created by the manual-course edge controls.
+        var edgeClass: EdgeClass? = nil
     }
 
     /// timeJson -> 编辑 rows (按数组顺序)
@@ -156,15 +158,20 @@ enum TimeTableUtils {
             TimeSlotRow(
                 node: (o["node"] as? NSNumber)?.intValue ?? (i + 1),
                 start: (o["start"] as? String) ?? smartStartDefault(i + 1),
-                end: (o["end"] as? String) ?? smartEndDefault(i + 1)
+                end: (o["end"] as? String) ?? smartEndDefault(i + 1),
+                edgeClass: (o["edge"] as? String).flatMap(TimeTableUtils.parseEdgeClass)
             )
         }
     }
 
-    /// rows -> timeJson
+    /// rows -> timeJson (edge 元数据只在边缘节点时写出 "edge" 键)
     static func buildTimeJsonFromRows(_ rows: [TimeSlotRow]) -> String {
         let arr: [[String: Any]] = rows.map { row in
-            ["node": row.node, "start": row.start, "end": row.end]
+            var d: [String: Any] = ["node": row.node, "start": row.start, "end": row.end]
+            if let e = row.edgeClass {
+                d["edge"] = e.rawValue
+            }
+            return d
         }
         guard let data = try? JSONSerialization.data(withJSONObject: arr) else { return "[]" }
         return String(data: data, encoding: .utf8) ?? "[]"
@@ -181,6 +188,72 @@ enum TimeTableUtils {
     static func appendEmptyRow(_ rows: [TimeSlotRow]) -> [TimeSlotRow] {
         let nextNode = (rows.map { $0.node }.max() ?? 0) + 1
         return rows + [TimeSlotRow(node: nextNode, start: "", end: "")]
+    }
+
+    // ------------------------------------------------------------------
+    // 课表外节次 (issue #23 / 手动课程"非常规"开关)
+    // 标准节次 = 1..maxContiguousFromOne 的连续节点; 前置边缘 < 1, 后置边缘 > maxContiguous。
+    // 这些节点是 timeJson 的真实结构: 删除边缘节点的最后一门课时必须回收该节点。
+    // ------------------------------------------------------------------
+
+    /// 边缘节次的方向: 前置 (< 1) / 后置 (> maxContiguous)
+    enum EdgeClass: String, Codable, Equatable {
+        case before = "before"
+        case after = "after"
+    }
+
+    /// timeJson 中 1..N 的最大连续 N — 标准节次的上界。
+    /// 标准节点的 edgeClass 必须为 null; 默认 12 节制返回 12, 全删/异常返回 0。
+    private static func maxContiguousFromOne(_ rows: [TimeSlotRow]) -> Int {
+        let std = rows.filter { $0.edgeClass == nil }.map { $0.node }
+        let present = Set(std)
+        guard present.contains(1) else { return 0 }
+        var n = 1
+        while present.contains(n + 1) { n += 1 }
+        return n
+    }
+
+    /// "before"/"after" (大小写不敏感) -> EdgeClass, 其他 -> nil
+    private static func parseEdgeClass(_ s: String) -> EdgeClass? {
+        EdgeClass(rawValue: s.lowercased())
+    }
+
+    /// 在 timeJson 新增边缘节次节点:
+    ///   - Before: 无前置时 = 0, 否则 = (现有前置最小值) - 1
+    ///   - After:  无后置时 = maxContiguous + 1, 否则 = (现有后置最大值) + 1
+    static func insertEdgeNode(timeJson: String, edgeClass: EdgeClass, start: String, end: String) -> String {
+        let rows = parseTimeSlotRows(timeJson)
+        let newNode: Int
+        switch edgeClass {
+        case .before:
+            let eb = rows.filter { $0.edgeClass == .before }
+            newNode = eb.isEmpty ? 0 : (eb.map { $0.node }.min() ?? 0) - 1
+        case .after:
+            let maxStd = maxContiguousFromOne(rows)
+            let ea = rows.filter { $0.edgeClass == .after }
+            newNode = ea.isEmpty ? maxStd + 1 : (ea.map { $0.node }.max() ?? 0) + 1
+        }
+        return buildTimeJsonFromRows(rows + [TimeSlotRow(node: newNode, start: start, end: end, edgeClass: edgeClass)])
+    }
+
+    /// 删除边缘节次节点 — 仅当 (a) 确实是边缘节点 (b) 无课程引用时才回收; 否则原样返回
+    static func removeEdgeNodeIfUnused(timeJson: String, edgeNode: Int, usedNodes: Set<Int>) -> String {
+        let rows = parseTimeSlotRows(timeJson)
+        guard let target = rows.first(where: { $0.node == edgeNode }) else { return timeJson }
+        if target.edgeClass == nil { return timeJson }
+        if usedNodes.contains(edgeNode) { return timeJson }
+        return buildTimeJsonFromRows(rows.filter { $0.node != edgeNode })
+    }
+
+    /// 列出某方向的边缘节点号: Before 降序 (0,-1,...), After 升序 (13,14,...)
+    static func edgeNodesOf(timeJson: String, edgeClass: EdgeClass) -> [Int] {
+        let nodes = parseTimeSlotRows(timeJson)
+            .filter { $0.edgeClass == edgeClass }
+            .map { $0.node }
+        if edgeClass == .before {
+            return nodes.sorted(by: >)
+        }
+        return nodes.sorted()
     }
 
     /// v7.10.16k 无损合并 — "哪个大用哪个"(用户 2026-09-03):

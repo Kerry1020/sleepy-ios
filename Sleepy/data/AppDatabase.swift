@@ -1,7 +1,8 @@
 // AppDatabase.swift — ← data/AppDatabase.kt (GPL-3.0)
-// Room @Database(version=3) → GRDB。建表 SQL 与 Room schema 逐列对齐
+// Room @Database(version=4) → GRDB。建表 SQL 与 Room schema 逐列对齐
 // (列名/类型亲和/索引/FK CASCADE — Room 注解生成语义手工落 SQL)。
-// fallbackToDestructiveMigration → migrator 语义等价(v3 已是最新,降级/未知版本重建)。
+// fallbackToDestructiveMigration → migrator 语义等价(降级/未知版本重建);
+// v4 = 1.0.52 issue#22 colorMode 列(见下方 v4.addColorMode)。
 
 import Foundation
 import GRDB
@@ -99,6 +100,11 @@ final class AppDatabase {
             try db.create(indexOn: "courses", columns: ["tableId"])
             try db.create(indexOn: "courses", columns: ["day"])
             try db.create(indexOn: "courses", columns: ["startWeek", "endWeek"])
+        }
+
+        // ← MIGRATION_3_4 (1.0.52 issue#22): courses 加 colorMode 列, 旧数据全默认 0=GROUP
+        m.registerMigration("v4.addColorMode") { db in
+            try db.execute(sql: "ALTER TABLE courses ADD COLUMN colorMode INTEGER NOT NULL DEFAULT 0")
         }
 
         return m

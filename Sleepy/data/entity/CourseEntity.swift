@@ -34,7 +34,17 @@ struct CourseEntity: Codable, FetchableRecord, MutablePersistableRecord, Identif
     /// 周次类型: 0=每周, 1=单周, 2=双周
     var type: Int = 0
     /// 颜色 (ARGB Hex, 例如 "#FF6750A4")
+    ///
+    /// 字段语义随 colorMode 而异:
+    ///   - colorMode = GROUP  : 整门课程的"组色",所有节次共享(原行为)
+    ///   - colorMode = AUTO   : 本字段无意义;渲染时按 golden angle 137.508° 重算
+    ///   - colorMode = CUSTOM : 本字段存用户选定的十六进制
     var color: String
+    /// 颜色模式 (issue#22 同名课程多地点修复新增):
+    ///   0 = GROUP  — 跟随整门课程组色 (默认,旧数据全部走这个)
+    ///   1 = AUTO   — 自动色,渲染时按 row 自身 id 相对同组行序号实时算
+    ///   2 = CUSTOM — 自定义色,color 字段存十六进制
+    var colorMode: Int = 0
     /// 是否自定义时间 (即 startTime/endTime 由用户设置而非系统)
     /// 保留字段以兼容 WakeUp 旧 db
     var ownTime: Bool = false
@@ -69,12 +79,20 @@ struct CourseEntity: Codable, FetchableRecord, MutablePersistableRecord, Identif
         container["endWeek"] = endWeek
         container["type"] = type
         container["color"] = color
+        container["colorMode"] = colorMode
         container["ownTime"] = ownTime
         container["startTime"] = startTime
         container["endTime"] = endTime
         container["credit"] = credit
         container["level"] = level
     }
+}
+
+/// ← CourseColorMode (issue#22): 0=GROUP 跟随组色 / 1=AUTO 自动色 / 2=CUSTOM 自定义色
+enum CourseColorMode {
+    static let GROUP = 0
+    static let AUTO = 1
+    static let CUSTOM = 2
 }
 
 extension CourseEntity {
