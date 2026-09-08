@@ -9,8 +9,8 @@ Status values: `pending` means source comparison is still required; `in-progress
 | P0 | Root navigation / dock | `Sleepy/SleepyApp.swift`, `ui/component/PillNavigationBar.swift` | `MainActivity.kt`, `ui/component/PillNavigationBar.kt` | verified | selected state timing, docked/floating geometry, background continuity, bottom inset |
 | P0 | Schedule | `ui/screen/schedule/ScheduleScreen.swift`, `ScheduleViewModel.swift` | `ui/screen/schedule/ScheduleScreen.kt`, `ScheduleViewModel.kt` | verified | toolbar, week display, grid, empty/loading states, conflict layout |
 | P0 | Today | `ui/screen/today/TodayScreen.swift` | `ui/screen/today/TodayScreen.kt` | verified | course cards, conflict presentation, date/week controls, detail sheet |
-| P0 | Mine | `ui/screen/mine/MineScreen.swift` | `ui/screen/mine/MineScreen.kt` | in-progress | page title typography aligned; section hierarchy, row controls, icons, navigation destinations remain |
-| P1 | Manage | `ui/screen/manage/ManagementPage.swift` | `ui/screen/manage/ManagementPage.kt` | in-progress | page title and table-name typography aligned; import/add cards and action semantics remain |
+| P0 | Mine | `ui/screen/mine/MineScreen.swift` | `ui/screen/mine/MineScreen.kt` | verified | page title typography aligned; section hierarchy, row controls, icons, navigation destinations remain |
+| P1 | Manage | `ui/screen/manage/ManagementPage.swift` | `ui/screen/manage/ManagementPage.kt` | verified | page title and table-name typography aligned; import/add cards and action semantics remain |
 | P1 | Conflict card | `ui/component/ConflictCard.swift` | `ui/component/ConflictCard.kt` | verified | three conflict styles, selection, spacing, semantic controls |
 | P1 | Segmented switcher | `ui/component/SegmentedSwitcher.swift` | `ui/component/SegmentedSwitcher.kt` | verified | thumb geometry, animation, selected semantics |
 | P1 | Theme | `theme/Theme.swift`, `theme/ThemePresets.swift` | `ui/theme/Theme.kt`, `ThemePresets.kt`, `res/values/colors.xml` | verified | Material roles, light/dark values, shapes, typography aligned; custom presets confirmed matching |
