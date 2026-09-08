@@ -21,7 +21,7 @@ Status values: `pending` means source comparison is still required; `in-progress
 | P1 | General settings | `ui/screen/mine/GeneralSettingsScreen.swift` | `ui/screen/mine/GeneralSettingsScreen.kt` | verified | visible days, switches, native controls, constraints; Android-only grid/week scale controls documented as an iOS contract gap |
 | P1 | Import flow | `ui/screen/imports/*.swift` | `ui/screen/imports/*.kt` | in-progress | school selection, import sheet, login states, errors |
 | P2 | Holiday / reminder | `HolidaySettingsScreen.swift`, `ReminderScreen.swift` | matching `*.kt` | verified | toggles, date/location controls, permission states |
-| P2 | Export/share | `ExportScreen.swift`, `ShareScheduleSheet.swift` | matching `*.kt` | pending | format selection, share actions, empty/error states |
+| P2 | Export/share | `ExportScreen.swift`, `ShareScheduleSheet.swift` | matching `*.kt` | verified | format selection, share actions, empty/error states; sleepy-v1 native export row documented as a data-layer gap pending `SleepyNativeExporter` port |
 | P2 | About/license | `AboutScreen.swift`, `LicenseScreen.swift` | matching `*.kt` | in-progress | version/about content, acknowledgements, localization |
 | P2 | Shared sheets/editors | `CourseDetailSheet.swift`, `DateTimePickers.swift`, `SmartPeriodEditor.swift`, `TimeSlotEditor.swift`, `SettingsCards.swift` | matching component sources | pending | sheet detents, controls, spacing, typography |
 | P3 | Localization/layout stress | all user-visible SwiftUI strings | Android locale resources | pending | zh-Hans/zh-Hant/en/es/ja wrapping, truncation, accessibility labels |
