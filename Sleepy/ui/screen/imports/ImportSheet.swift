@@ -303,6 +303,8 @@ struct ImportSheet: View {
                 startDate: confirmedStartDate,
                 tableName: confirmedTableName,
                 timeJson: confirmedTimeJson,
+                // 仅"创建新课表"或"追加为新课表"需要命名; 覆盖课表不强制重命名
+                showTableName: pendingMode == .importAsNew || pendingMode == .appendAsNew,
                 onTableNameChange: { confirmedTableName = $0 },
                 onStartDateChange: { confirmedStartDate = $0 },
                 onTimeJsonChange: { confirmedTimeJson = $0 },
@@ -371,6 +373,7 @@ private struct ImportMethodRow: View {
                 Spacer()
                 if let trailing = trailing {
                     Image(systemName: trailing)
+                        .font(.system(size: 24))   // ← Android 无显式 size = 默认 24dp
                         .foregroundColor(colors.onSurfaceVariant)
                 }
             }
@@ -407,8 +410,8 @@ private struct FormatRow: View {
             if let onDetail {
                 Button(action: onDetail) {
                     Image(systemName: "info.circle")
-                        .font(.system(size: 14))
-                        .foregroundColor(colors.primary)
+                        .font(.system(size: 16))   // ← Android Info 16dp
+                        .foregroundColor(colors.onSurfaceVariant)   // ← Android tint onSurfaceVariant
                 }
                 .buttonStyle(SleepyButtonStyle())
                 .accessibilityLabel(L10n.format("format_detail_content_desc"))
@@ -577,14 +580,14 @@ private struct ImportPreviewDialog: View {
 
                     if !preview.conflicts.isEmpty {
                         Section(L10n.format("import_conflicts")) {
-                            ForEach(preview.conflicts.prefix(5)) { conflict in
+                            ForEach(preview.conflicts.prefix(3)) { conflict in
                                 Text("• \(conflict.incoming.courseName) ↔ \(conflict.existing.courseName)（\(DateUtils.localizedDay(conflict.incoming.day)) \(conflict.incoming.nodeString(isShort: true))）")
                                     .font(.system(size: 12))
                                     .foregroundColor(colors.onSurfaceVariant)
                                     .listRowBackground(colors.surfaceContainer)
                             }
-                            if preview.conflicts.count > 5 {
-                                Text(L10n.format("import_conflict_more", preview.conflicts.count - 5))
+                            if preview.conflicts.count > 3 {
+                                Text(L10n.format("import_conflict_more", preview.conflicts.count - 3))
                                     .font(.system(size: 11, weight: .medium))
                                     .foregroundColor(colors.onSurfaceVariant)
                                     .listRowBackground(colors.surfaceContainer)
@@ -596,7 +599,7 @@ private struct ImportPreviewDialog: View {
                         Section {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text(L10n.format("import_dropped_title", preview.parseResult.droppedLines.count))
-                                    .font(.system(size: 14, weight: .medium))
+                                    .font(.system(size: 14, weight: .medium))   // ← titleSmall 14sp Medium
                                     .foregroundColor(colors.onErrorContainer)
                                 Text(L10n.format("import_dropped_hint"))
                                     .font(.system(size: 12))
@@ -667,14 +670,13 @@ private struct ImportPreviewDialog: View {
                         }
                         .buttonStyle(SleepyButtonStyle())
                     }
+                    // ← Android TextButton: 纯文字 40dp, onSurfaceVariant
                     Button(action: onDismiss) {
                         Text(L10n.format("cancel"))
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(colors.onSurface)
+                            .foregroundColor(colors.onSurfaceVariant)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 44)
-                            .background(colors.surfaceContainer)
-                            .cornerRadius(SleepyShapes.medium)
+                            .frame(height: 40)
                     }
                     .buttonStyle(SleepyButtonStyle())
                 }
@@ -739,10 +741,10 @@ private struct PreviewMetricCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 11, weight: .medium))   // ← labelSmall 11sp Medium
                 .foregroundColor(fg.opacity(SleepyTheme.Alpha.highContent))
             Text(value)
-                .font(.system(size: 20, weight: .bold))
+                .font(.system(size: 22, weight: .bold))   // ← titleLarge 22sp Bold
                 .foregroundColor(fg)
         }
         .padding(.vertical, 12)
@@ -762,7 +764,7 @@ private struct PreviewInfoRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label)
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 11, weight: .medium))   // ← labelSmall 11sp Medium
                 .foregroundColor(colors.onSurfaceVariant)
             Text(value)
                 .font(.system(size: 14))
@@ -778,6 +780,7 @@ private struct ImportConfirmDialog: View {
     @State var startDate: String
     @State var tableName: String
     @State var timeJson: String
+    var showTableName: Bool = true
     let onTableNameChange: (String) -> Void
     let onStartDateChange: (String) -> Void
     let onTimeJsonChange: (String) -> Void
@@ -792,23 +795,27 @@ private struct ImportConfirmDialog: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 Text(L10n.format("import_confirm_title"))
-                    .font(.system(size: 20, weight: .medium))
+                    .font(.system(size: 24))   // ← M3 AlertDialog title = headlineSmall 24sp 常规
                     .foregroundColor(colors.onSurface)
                 Text(L10n.format("import_confirm_body"))
                     .font(.system(size: 14))
                     .foregroundColor(colors.onSurfaceVariant)
 
-                TextField(L10n.format("import_table_name"), text: $tableName)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .background(colors.surfaceContainer)
-                    .cornerRadius(SleepyTheme.fieldShape)
-                    .onChange(of: tableName) { onTableNameChange($0) }
+                if showTableName {
+                    TextField(L10n.format("import_table_name"), text: $tableName)
+                        .frame(maxWidth: .infinity)   // ← Android fillMaxWidth()
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(colors.surfaceContainer)
+                        .cornerRadius(SleepyTheme.fieldShape)
+                        .onChange(of: tableName) { onTableNameChange($0) }
+                }
 
                 DatePickerField(value: startDate, onValueChange: { newValue in
                     startDate = newValue
                     onStartDateChange(newValue)
-                }, label: L10n.format("import_week_start"), isError: localError != nil)
+                }, label: L10n.format("import_week_start"), isError: localError != nil,
+                   fillsWidth: true)
 
                 if let localError = localError {
                     Text(localError)
@@ -831,17 +838,20 @@ private struct ImportConfirmDialog: View {
         }
         .safeAreaInset(edge: .bottom) {
             HStack {
+                // ← Android TextButton 默认色 = primary, labelLarge 14sp Medium, 高 40dp
                 Button(action: onDismiss) {
                     Text(L10n.format("back"))
-                        .font(.system(size: 14))
-                        .foregroundColor(colors.onSurfaceVariant)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(colors.primary)
+                        .frame(height: 40)
                 }
                 .buttonStyle(SleepyButtonStyle())
                 Spacer()
                 Button(action: validateAndConfirm) {
                     Text(L10n.format("import_confirm"))
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(colors.onPrimary)
+                        .foregroundColor(colors.primary)
+                        .frame(height: 40)
                 }
                 .buttonStyle(SleepyButtonStyle())
             }

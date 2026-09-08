@@ -117,38 +117,45 @@ struct JwImportFlow: View {
             VStack(alignment: .leading, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(L10n.format("jw_config_title"))
-                        .font(.system(size: 20, weight: .medium))
+                        .font(.system(size: 24))   // ← M3 AlertDialog title = headlineSmall 24sp 常规
                         .foregroundColor(colors.onSurface)
                     Text("\(parsedCourses.count) \(L10n.format("import_courses"))")
                         .font(.system(size: 12))
                         .foregroundColor(colors.onSurfaceVariant)
                 }
-                // ← Android 1.0.51 ConfigureConfirm: 课表名 TextField(OutlinedTextField);
-                // 默认值来自 jw_import_title(校名), 用户可改; 提交时空字符串 fallback 回模板。
-                TextField(L10n.format("import_table_name"), text: $configTableName)
+                // ← Android 1.0.51 ConfigureConfirm 字段序: DatePickerField → 课表名 TextField;
+                // 名默认 jw_import_title(校名), 用户可改; 提交时空字符串 fallback 回模板。
+                DatePickerField(value: configStartDate, onValueChange: { configStartDate = $0 },
+                                label: L10n.format("import_week_start"), isError: false,
+                                fillsWidth: true)
+                TextField(L10n.format("jw_table_name_label"), text: $configTableName)
+                    .frame(maxWidth: .infinity)   // ← Android fillMaxWidth()
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
                     .background(colors.surfaceContainer)
                     .cornerRadius(SleepyTheme.fieldShape)
                     .accessibilityIdentifier("jw_config_table_name")
-                DatePickerField(value: configStartDate, onValueChange: { configStartDate = $0 },
-                                label: L10n.format("import_week_start"), isError: false)
                 TimeSlotEditor(rows: configRows, onRowsChange: { newRows in
                     configRows = newRows
                     configTimeJson = TimeTableUtils.buildTimeJsonFromRows(newRows)
                 })
 
                 HStack {
+                    // ← Android TextButton 默认色 = primary, labelLarge 14sp Medium, 高 40dp
                     Button(L10n.format("back")) {
                         stage = .webViewLogin
                         parsedCourses = []
                     }
-                    .foregroundColor(colors.onSurfaceVariant)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(colors.primary)
+                    .frame(height: 40)
                     Spacer()
                     Button(L10n.format("jw_config_confirm")) {
                         confirmAndImport()
                     }
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundColor(colors.primary)
+                    .frame(height: 40)
                 }
                 .buttonStyle(SleepyButtonStyle())
             }

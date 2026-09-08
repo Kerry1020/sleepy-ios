@@ -81,13 +81,18 @@ struct JwWebViewLoginScreen: View {
                         Text(L10n.format("jw_import_page"))
                     }
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(colors.onPrimary)
+                    .foregroundColor(webViewCoordinator == nil
+                        ? colors.onSurface.opacity(0.38)   // ← Android disabled: onSurface 38%
+                        : colors.onPrimary)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
-                    .background(colors.primary)
+                    .background(webViewCoordinator == nil
+                        ? colors.onSurface.opacity(0.12)   // ← Android disabled: onSurface 12% 容器
+                        : colors.primary)
                     .cornerRadius(SleepyShapes.extraLarge)
                 }
                 .buttonStyle(SleepyButtonStyle())
+                .disabled(webViewCoordinator == nil)   // ← Android enabled = webViewRef != null
             }
             .padding(16)
             .background(colors.surface)

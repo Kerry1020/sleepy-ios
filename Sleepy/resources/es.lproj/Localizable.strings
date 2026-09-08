@@ -71,6 +71,7 @@
 "import_conflicts" = "Conflictos";
 "import_appendable" = "Añadibles";
 "import_table_name" = "Nombre del horario";
+"jw_table_name_label" = "Nombre del horario";
 "import_start_date" = "Fecha de inicio";
 "import_suggestion" = "Sugerencia";
 "import_no_conflict" = "Sin conflictos — seguro añadir o sobrescribir";

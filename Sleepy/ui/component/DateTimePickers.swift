@@ -12,6 +12,8 @@ struct DatePickerField: View {
     let onValueChange: (String) -> Void
     let label: String
     var isError: Bool = false
+    // ← Android fillMaxWidth() 调用方传 true, 字段吃满可用宽
+    var fillsWidth: Bool = false
 
     @State private var showPicker = false
     @State private var pickerDate = Date()
@@ -23,6 +25,7 @@ struct DatePickerField: View {
                 set: { onValueChange($0) }
             ))
             .textFieldStyle(.plain)
+            .frame(maxWidth: fillsWidth ? .infinity : nil, alignment: .leading)
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
             .background(colors.surfaceContainer)

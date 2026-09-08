@@ -98,10 +98,13 @@ struct SchoolSelectScreen: View {
                 .padding(.vertical, 8)
 
             Text(L10n.format("school_pinyin_hint"))
-                .font(.system(size: 10))
+                .font(.system(size: 12))   // ← M3 supportingText bodySmall 12sp
                 .foregroundColor(colors.onSurfaceVariant)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 20)
+                // ← M3 supporting 文案缩进 = 字段内 16 + 屏幕边 16 = 32
+                .padding(.leading, 32)
+                .padding(.trailing, 16)
+                .padding(.bottom, 2)
 
             // 计数行
             HStack {
@@ -133,6 +136,7 @@ struct SchoolSelectScreen: View {
 
             if filtered.isEmpty && !isUrl {
                 Text(viewModel.schools.isEmpty ? L10n.format("loading") : L10n.format("no_school_found"))
+                    .font(.system(size: 16))   // ← Android 无 style 参数 = bodyLarge 16
                     .foregroundColor(colors.onSurfaceVariant)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if !(isUrl && filtered.isEmpty) {
@@ -263,7 +267,7 @@ private struct SchoolRow: View {
 
     private var rowContent: some View {
         HStack(spacing: 12) {
-            Image(systemName: "graduationcap.fill")
+            Image(systemName: "graduationcap")   // ← Android Icons.Outlined.School
                 .font(.system(size: 20))
                 .foregroundColor(colors.onPrimaryContainer)
                 .frame(width: 36, height: 36)
@@ -354,11 +358,11 @@ private struct UrlDirectRow: View {
                         .lineLimit(1)
                     if let proto = protocolType {
                         Text("\(L10n.format("url_detected")) \(JwProtocol.displayName(proto))")
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.system(size: 11))   // ← labelSmall 11sp 常规
                             .foregroundColor(colors.primary)
                     } else {
                         Text(L10n.format("url_auto_detect"))
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.system(size: 11))   // ← labelSmall 11sp 常规
                             .foregroundColor(colors.onSurfaceVariant)
                     }
                 }

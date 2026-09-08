@@ -71,6 +71,7 @@
 "import_conflicts" = "Conflicts";
 "import_appendable" = "Appendable";
 "import_table_name" = "Schedule Name";
+"jw_table_name_label" = "Schedule name";
 "import_start_date" = "Start Date";
 "import_suggestion" = "Suggestion";
 "import_no_conflict" = "No conflicts — safe to append or overwrite";

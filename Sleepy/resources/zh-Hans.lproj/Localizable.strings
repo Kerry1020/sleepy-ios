@@ -72,6 +72,7 @@
 "import_conflicts" = "冲突课程";
 "import_appendable" = "可追加";
 "import_table_name" = "导入后课表名";
+"jw_table_name_label" = "课表名称";
 "import_start_date" = "学期开始日期";
 "import_suggestion" = "建议";
 "import_no_conflict" = "没有冲突，可直接追加或覆盖";

@@ -71,6 +71,7 @@
 "import_conflicts" = "競合";
 "import_appendable" = "追加可能";
 "import_table_name" = "時間割名";
+"jw_table_name_label" = "時間割名";
 "import_start_date" = "学期開始日";
 "import_suggestion" = "提案";
 "import_no_conflict" = "競合なし — 追加または上書き可能";

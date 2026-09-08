@@ -71,6 +71,7 @@
 "import_conflicts" = "衝突課程";
 "import_appendable" = "可附加";
 "import_table_name" = "匯入後課表名";
+"jw_table_name_label" = "課表名稱";
 "import_start_date" = "學期開始日期";
 "import_suggestion" = "建議";
 "import_no_conflict" = "沒有衝突，可直接附加或覆蓋";
