@@ -232,11 +232,15 @@ struct ConflictClusterCard: View {
                 // v7.10.16m: FOLD 端态沉底(hidden)不渲染真卡 — 只留透明命中区
                 let r = rectOf(course, isFront: false)
                 if form == .fold && l.hidden {
-                    return AnyView(Color.clear
-                        .frame(width: CGFloat(r.width), height: CGFloat(r.height))
-                        .contentShape(Rectangle())
-                        .onTapGesture { switchTap(layerCount, layerRepOf(course.id) ?? course.id) }
-                        .offset(x: CGFloat(r.x), y: CGFloat(r.y)))
+                    return AnyView(Button {
+                        switchTap(layerCount, layerRepOf(course.id) ?? course.id)
+                    } label: {
+                        Color.clear
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(SleepyButtonStyle())
+                    .frame(width: CGFloat(r.width), height: CGFloat(r.height))
+                    .offset(x: CGFloat(r.x), y: CGFloat(r.y)))
                 }
                 return AnyView(ConflictCourseCard(
                     course: course,
@@ -262,20 +266,28 @@ struct ConflictClusterCard: View {
                     form: .stack,
                     colW: Double(colW), rowH: Double(rowH), gapH: Double(gapH),
                     minStart: minStart, clusterH: Double(clusterH), topInset: topInset)
-                return AnyView(Color.clear
-                    .frame(width: CGFloat(hit.width), height: CGFloat(hit.height))
-                    .contentShape(Rectangle())
-                    .onTapGesture { switchTap(layerCount, layerRepOf(hiddenCourse.id) ?? hiddenCourse.id) }
-                    .offset(x: CGFloat(hit.x), y: CGFloat(hit.y)))
+                return AnyView(Button {
+                    switchTap(layerCount, layerRepOf(hiddenCourse.id) ?? hiddenCourse.id)
+                } label: {
+                    Color.clear
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(SleepyButtonStyle())
+                .frame(width: CGFloat(hit.width), height: CGFloat(hit.height))
+                .offset(x: CGFloat(hit.x), y: CGFloat(hit.y)))
             case .fold:
                 let (w, h) = ConflictLayoutEngine.foldSwitchHitArea(
                     .fold, cardWidth: Double(colW), cardHeight: Double(clusterH), foldSize: foldSize)
                 let hitW = min(CGFloat(w), colW), hitH = min(CGFloat(h), clusterH)
-                return AnyView(Color.clear
-                    .frame(width: hitW, height: hitH)
-                    .contentShape(Rectangle())
-                    .onTapGesture { switchTap(layerCount, layerRepOf(hiddenCourse.id) ?? hiddenCourse.id) }
-                    .offset(x: colW - hitW, y: cardYOf(topCourse.startNode)))
+                return AnyView(Button {
+                    switchTap(layerCount, layerRepOf(hiddenCourse.id) ?? hiddenCourse.id)
+                } label: {
+                    Color.clear
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(SleepyButtonStyle())
+                .frame(width: hitW, height: hitH)
+                .offset(x: colW - hitW, y: cardYOf(topCourse.startNode)))
             case .noMark:
                 return AnyView(EmptyView())
             }
@@ -311,11 +323,15 @@ struct ConflictClusterCard: View {
                             let (w, h) = ConflictLayoutEngine.foldSwitchHitArea(
                                 .fold, cardWidth: Double(colW), cardHeight: Double(clusterH), foldSize: foldSize)
                             let hitW = min(CGFloat(w), colW), hitH = min(CGFloat(h), clusterH)
-                            Color.clear
-                                .frame(width: hitW, height: hitH)
-                                .contentShape(Rectangle())
-                                .onTapGesture { switchTap(layerCount, target) }
-                                .offset(x: colW - hitW, y: cardYOf(host.startNode))
+                            Button {
+                                switchTap(layerCount, target)
+                            } label: {
+                                Color.clear
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(SleepyButtonStyle())
+                            .frame(width: hitW, height: hitH)
+                            .offset(x: colW - hitW, y: cardYOf(host.startNode))
                         }
                     }
                 }
@@ -522,15 +538,19 @@ private struct ConflictCoursePickerSheet: View {
             ScrollView {
                 VStack(spacing: 4) {
                     ForEach(courses) { course in
-                        Text(course.courseName)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(colors.onSurface)
-                            .lineLimit(2)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                            .onTapGesture { onPick(course.id) }
-                            .padding(.vertical, 10)
-                            .padding(.horizontal, 8)
+                        Button {
+                            onPick(course.id)
+                        } label: {
+                            Text(course.courseName)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(colors.onSurface)
+                                .lineLimit(2)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 10)
+                                .padding(.horizontal, 8)
+                        }
+                        .buttonStyle(SleepyButtonStyle())
+                        .accessibilityLabel(course.courseName)
                     }
                 }
             }

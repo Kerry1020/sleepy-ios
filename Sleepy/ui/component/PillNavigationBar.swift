@@ -145,7 +145,7 @@ private struct DockedBar: View {
         }
         .frame(maxWidth: .infinity)
         .frame(height: DockedSpec.barHeight)
-        .background(colors.surfaceContainer.ignoresSafeArea(edges: .bottom))
+        .background(colors.surfaceContainer)
         // 收集 label 左缘(bar 局部)— 仅服务字符扫过变色,不再用于 thumb 位置
         .onPreferenceChange(PillGeomKey.self) { value in
             labelLeftsBar = value.labelLefts

@@ -113,6 +113,8 @@ private struct SegmentedSwitcherAnim<T: Hashable>: View {
                 }
                 .buttonStyle(SleepyButtonStyle())
                 .accessibilityIdentifier("seg_\(pair.1)")
+                .accessibilityLabel(pair.1)
+                .accessibilityAddTraits(pair.0 == selected ? .isSelected : [])
             }
         }
         .frame(height: 42)
