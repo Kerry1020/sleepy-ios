@@ -13,30 +13,50 @@ struct ExportScreen: View {
 
     @State private var shareSheet: ShareItem? = nil
     @State private var snackMessage: String? = nil
+    // ← 导出目标课表 — 本地选择, 不污染主页 selectedTableId/widget 默认表。
+    //   默认跟随当前课表; 用户切过一次后(pin)固定, 除非主页切到 pin 掉的表之外又变了。
+    @State private var exportTableId: Int64? = nil
+    // 选中表的课程: 当前表直接用 state.courses(已观察), 其他表选中时本地加载一次
+    @State private var loadedCourses: [CourseEntity]? = nil
+    @State private var showTablePicker = false
 
     var body: some View {
         let state = viewModel.state
-        let table = state.currentTable
-        let courses = state.courses
+        // ← Android: effectiveId = exportTableId ?: state.selectedTableId
+        let effectiveId = exportTableId ?? state.selectedTableId
+        let table = state.tables.first { $0.id == effectiveId } ?? state.currentTable
+        let courses = loadedCourses ?? state.courses
 
         VStack(spacing: 0) {
             SettingsTopBar(title: L10n.format("export_title"), onBack: onDismiss)
             if let table = table {
                 ScrollView {
                     VStack(spacing: 12) {
-                        // 顶部信息卡
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(table.name)
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(colors.onPrimaryContainer)
-                            Text("\(L10n.format("export_course_count", courses.count)) · \(L10n.format("export_start_date", table.startDate))")
-                                .font(.system(size: 14))
-                                .foregroundColor(colors.onPrimaryContainer)
+                        // 顶部信息卡 — 点击拉出课表选择(默认当前课表; 选后 pin, 不污染主页默认表)
+                        Button {
+                            showTablePicker = true
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text(table.name)
+                                        .font(.system(size: 16, weight: .bold))
+                                        .foregroundColor(colors.onPrimaryContainer)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    Image(systemName: "chevron.down")
+                                        .font(.system(size: 16))
+                                        .foregroundColor(colors.onPrimaryContainer)
+                                }
+                                Text("\(L10n.format("export_course_count", courses.count)) · \(L10n.format("export_start_date", table.startDate))")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(colors.onPrimaryContainer)
+                            }
+                            .padding(20)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(colors.primaryContainer)
+                            .cornerRadius(SleepyShapes.large)
                         }
-                        .padding(20)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(colors.primaryContainer)
-                        .cornerRadius(SleepyShapes.large)
+                        .buttonStyle(SleepyButtonStyle())
+                        .accessibilityIdentifier("export_table_card")
 
                         // 格式选项
                         VStack(spacing: 0) {
@@ -107,6 +127,30 @@ struct ExportScreen: View {
         .sheet(item: $shareSheet) { item in
             ShareSheet(text: item.text, subject: item.subject, url: item.url)
         }
+        .onAppear { reloadPinnedCourses(viewModel.state) }
+        .onChange(of: exportTableId) { _ in reloadPinnedCourses(viewModel.state) }
+        // ← 导出目标课表选择弹层 — 行样式对齐 ScheduleScreen TableSwitcherSheet(用户定版视觉)
+        .sheet(isPresented: $showTablePicker) {
+            ExportTablePickerSheet(
+                tables: state.tables,
+                selectedTableId: effectiveId,
+                mainSelectedId: state.selectedTableId,
+                onSelect: { id in
+                    exportTableId = id
+                    showTablePicker = false
+                },
+                onDismiss: { showTablePicker = false })
+        }
+    }
+
+    // 选中表的课程: 当前表直接用 state.courses(已观察), 其他表选中时本地加载一次
+    private func reloadPinnedCourses(_ state: ScheduleState) {
+        let effectiveId = exportTableId ?? state.selectedTableId
+        if let tid = effectiveId, tid != state.selectedTableId {
+            loadedCourses = try? ScheduleRepository(AppDatabase.getShared()).getCourses(tid)
+        } else {
+            loadedCourses = nil
+        }
     }
 
     // ← exportAndShare: 写临时文件 + 分享
@@ -128,6 +172,67 @@ struct ExportScreen: View {
         f.dateFormat = "yyyyMMdd_HHmmss"
         f.locale = Locale(identifier: "en_US_POSIX")
         return f.string(from: Date())
+    }
+}
+
+// ← 导出目标课表选择弹层(AlertDialog) — 行样式对齐 ScheduleScreen TableSwitcherSheet(用户定版视觉):
+// 选中行 primaryContainer + 对勾; 主页当前表挂 export_current_table_badge; 上限 360 高滚动。
+private struct ExportTablePickerSheet: View {
+    @Environment(\.localWakeUpColors) private var colors
+    let tables: [TimeTableEntity]
+    let selectedTableId: Int64?
+    let mainSelectedId: Int64?
+    let onSelect: (Int64) -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Text(L10n.format("export_pick_table"))
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(colors.onSurface)
+                .padding(.top, 16)
+            ScrollView {
+                VStack(spacing: 4) {
+                    ForEach(tables) { table in
+                        let isSelected = table.id == selectedTableId
+                        Button {
+                            onSelect(table.id)
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(table.name)
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(isSelected ? colors.onPrimaryContainer : colors.onSurface)
+                                        .lineLimit(2)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    if table.id == mainSelectedId {
+                                        Text(L10n.format("export_current_table_badge"))
+                                            .font(.system(size: 11))
+                                            .foregroundColor(isSelected ? colors.onPrimaryContainer : colors.onSurfaceVariant)
+                                    }
+                                }
+                                Spacer()
+                                if isSelected {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 15))
+                                        .foregroundColor(colors.primary)
+                                }
+                            }
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 8)
+                            .background(isSelected ? colors.primaryContainer : colors.surfaceContainer)
+                            .cornerRadius(SleepyShapes.small)
+                        }
+                        .buttonStyle(SleepyButtonStyle())
+                        .accessibilityIdentifier("export_table_row_\(table.id)")
+                    }
+                }
+                .padding(.horizontal, 16)
+            }
+            .frame(maxHeight: 360)
+        }
+        .padding(.bottom, 16)
+        .sheetDetents([.medium])
     }
 }
 

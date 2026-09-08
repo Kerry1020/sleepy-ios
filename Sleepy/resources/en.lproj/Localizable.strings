@@ -309,6 +309,8 @@
 "export_json_subtitle" = "Full schedule structure, directly importable by WakeUp and similar apps";
 "export_json_title" = "WakeUp-compatible JSON";
 "export_no_table" = "No schedule available to export";
+"export_pick_table" = "Choose a schedule to export";
+"export_current_table_badge" = "Current schedule";
 "export_saved_to" = "Saved to Download/Sleepy/%1$@";
 "export_share_chooser" = "Share Schedule";
 "export_share_subtitle" = "Short text format, pasteable into any chat app";

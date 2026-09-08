@@ -309,6 +309,8 @@
 "export_json_subtitle" = "完全な時間割構造、WakeUp などの同種アプリから直接インポート可能";
 "export_json_title" = "WakeUp 互換 JSON";
 "export_no_table" = "エクスポート可能な時間割がありません";
+"export_pick_table" = "エクスポートする時間割を選択";
+"export_current_table_badge" = "現在の時間割";
 "export_saved_to" = "Download/Sleepy/%1$@ に保存しました";
 "export_share_chooser" = "時間割を共有";
 "export_share_subtitle" = "短いテキスト形式、チャットアプリに貼り付け可能";

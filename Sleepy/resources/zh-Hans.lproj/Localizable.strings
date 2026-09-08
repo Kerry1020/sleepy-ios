@@ -172,6 +172,8 @@
 "mine_export" = "导出课表";
 "export_title" = "导出课表";
 "export_no_table" = "暂无可导出的课表";
+"export_pick_table" = "选择要导出的课表";
+"export_current_table_badge" = "当前课表";
 "export_course_count" = "%1$d 门课程";
 "export_start_date" = "开学 %1$@";
 "export_json_title" = "WakeUp 兼容 JSON";

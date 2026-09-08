@@ -309,6 +309,8 @@
 "export_json_subtitle" = "Estructura completa del horario, importable directamente por WakeUp y apps similares";
 "export_json_title" = "JSON compatible con WakeUp";
 "export_no_table" = "No hay horario disponible para exportar";
+"export_pick_table" = "Elige un horario para exportar";
+"export_current_table_badge" = "Horario actual";
 "export_saved_to" = "Guardado en Download/Sleepy/%1$@";
 "export_share_chooser" = "Compartir horario";
 "export_share_subtitle" = "Formato de texto corto, pegable en cualquier app de chat";
