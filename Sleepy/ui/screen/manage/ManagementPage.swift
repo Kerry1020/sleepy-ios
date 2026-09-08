@@ -5,6 +5,7 @@ import SwiftUI
 
 struct ManagementPage: View {
     @Environment(\.localWakeUpColors) private var colors
+    @Environment(\.localNavExtraBottomPadding) private var navExtra
     @ObservedObject var viewModel: ScheduleViewModel
     var autoShowImportSheet: Bool = false
     let onJwImportRequested: () -> Void
@@ -89,6 +90,9 @@ struct ManagementPage: View {
                 }
             }
             .padding(16)
+            // 悬浮底栏额外余量(→ Android LocalNavExtraBottomPadding): 镜像 Android
+            //   padding(bottom = 16.dp + navExtra) 让列表最后一行不被悬浮药丸遮住。
+            .padding(.bottom, navExtra)
         }
         .background(colors.background)
         .sheet(isPresented: $showImportSheet) {

@@ -6,6 +6,7 @@ import SwiftUI
 
 struct TodayScreen: View {
     @Environment(\.localWakeUpColors) private var colors
+    @Environment(\.localNavExtraBottomPadding) private var navExtra
     @Environment(\.localCoursePalette) private var palette
     @ObservedObject var viewModel: ScheduleViewModel
     var onEditCourse: ((CourseEntity) -> Void)? = nil
@@ -57,6 +58,9 @@ struct TodayScreen: View {
                 }
             }
             .padding(16)
+            // 悬浮底栏额外余量(→ Android LocalNavExtraBottomPadding): 镜像 Android
+            //   padding(bottom = 16.dp + navExtra) 让最后一张课卡不被悬浮药丸遮住。
+            .padding(.bottom, navExtra)
         }
         .background(colors.background)
         // 详情 Bottom Sheet — 与课表页同一组件同一交互(← TodayScreen.kt CourseDetailSheet)
@@ -232,49 +236,54 @@ private struct TodayCourseCard: View {
                                                    courseStep: course.step, timeJson: tj)
         }()
 
-        HStack(alignment: .top, spacing: 12) {
-            // 时间槽 — 固定宽度避免 "10:20-12:45" 被截断
-            VStack(alignment: .leading, spacing: 0) {
-                Text(course.nodeString(isShort: true))
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(fg)
-                    .lineLimit(1)
-                if let time = time {
-                    Text(time)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(fg.opacity(SleepyTheme.Alpha.highContent))
+        Button {
+            onClick?()
+        } label: {
+            HStack(alignment: .top, spacing: 12) {
+                // 时间槽 — 固定宽度避免 "10:20-12:45" 被截断
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(course.nodeString(isShort: true))
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(fg)
                         .lineLimit(1)
-                        .fixedSize()
-                }
-            }
-            .frame(width: 76, alignment: .leading)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(course.courseName)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(fg)
-                    .lineLimit(2)
-                let meta: String = {
-                    var s = ""
-                    if !course.teacher.isEmpty { s += course.teacher }
-                    if !course.room.isEmpty {
-                        if !s.isEmpty { s += " · " }
-                        s += course.room
+                    if let time = time {
+                        Text(time)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(fg.opacity(SleepyTheme.Alpha.highContent))
+                            .lineLimit(1)
+                            .fixedSize()
                     }
-                    return s
-                }()
-                if !meta.isEmpty {
-                    Text(meta)
-                        .font(.system(size: 12))
-                        .foregroundColor(fg.opacity(SleepyTheme.Alpha.highContent))
                 }
+                .frame(width: 76, alignment: .leading)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(course.courseName)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(fg)
+                        .lineLimit(2)
+                    let meta: String = {
+                        var s = ""
+                        if !course.teacher.isEmpty { s += course.teacher }
+                        if !course.room.isEmpty {
+                            if !s.isEmpty { s += " · " }
+                            s += course.room
+                        }
+                        return s
+                    }()
+                    if !meta.isEmpty {
+                        Text(meta)
+                            .font(.system(size: 12))
+                            .foregroundColor(fg.opacity(SleepyTheme.Alpha.highContent))
+                    }
+                }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
+            .padding(12)
         }
-        .padding(12)
+        .buttonStyle(SleepyButtonStyle())
         .background(bg)
         .cornerRadius(SleepyShapes.large)
-        .contentShape(Rectangle())
-        .onTapGesture { onClick?() }
+        .accessibilityIdentifier("today_course_\(course.id)")
+        .accessibilityLabel(course.courseName)
     }
 }

@@ -153,6 +153,15 @@ private struct CoursePaletteKey: EnvironmentKey {
     static let defaultValue: CoursePalette = lightCoursePalette
 }
 
+// ★ v1.0.45 悬浮底栏: 镜像 Android LocalNavExtraBottomPadding
+//   浮动模式下由 MainActivity 把 dockExtraDp 注入 CompositionLocal,
+//   各 scroll 容器消费并 padding(bottom = 16.dp + navExtra) → 列表最后一行
+//   不被悬浮药丸遮挡。iOS 端保持同名契约,AppRoot.floatingTabs 注入,scroll
+//   容器读 .localNavExtraBottomPadding 与 Android 一字对齐。docked 模式下为 0。
+private struct NavExtraBottomPaddingKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 0
+}
+
 extension EnvironmentValues {
     var localWakeUpColors: WakeUpColorScheme {
         get { self[WakeUpColorsKey.self] }
@@ -161,6 +170,11 @@ extension EnvironmentValues {
     var localCoursePalette: CoursePalette {
         get { self[CoursePaletteKey.self] }
         set { self[CoursePaletteKey.self] = newValue }
+    }
+    /// 悬浮底栏额外底部间距(与 Android LocalNavExtraBottomPadding 对齐)
+    var localNavExtraBottomPadding: CGFloat {
+        get { self[NavExtraBottomPaddingKey.self] }
+        set { self[NavExtraBottomPaddingKey.self] = newValue }
     }
 }
 

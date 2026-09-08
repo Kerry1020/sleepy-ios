@@ -6,6 +6,7 @@ import WidgetKit
 
 struct MineScreen: View {
     @Environment(\.localWakeUpColors) private var colors
+    @Environment(\.localNavExtraBottomPadding) private var navExtra
     @ObservedObject var viewModel: ScheduleViewModel
     var onOpenAllTables: () -> Void = {}
     var onOpenAppearance: () -> Void = {}
@@ -73,6 +74,9 @@ struct MineScreen: View {
                 }
             }
             .padding(16)
+            // 悬浮底栏额外余量(→ Android LocalNavExtraBottomPadding): 镜像 Android
+            //   padding(bottom = 16.dp + navExtra) 让列表最后一行不被悬浮药丸遮住。
+            .padding(.bottom, navExtra)
         }
         .background(colors.background)
         .overlay(alignment: .bottom) {

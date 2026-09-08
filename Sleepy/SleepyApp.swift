@@ -88,9 +88,9 @@ final class AppRootViewModel: ObservableObject {
     @Published var deepLinkCourse: CourseEntity? = nil
     // 语言切换重建 token(← Activity.recreate): L10n.didChange → 递增 → AppRoot 全树重建
     @Published var languageReload = 0
-    // ★ v1.0.45 底栏 dock 样式(默认 .docked = 贴底;悬浮形态由 PillNavigationBar.dockStyle 渲染)
+    // ★ v1.0.45 底栏 dock 样式: false=贴底, true=悬浮药丸
     //   ← Android v1.0.45 b0f8280;状态由 AppPrefs 持有, 监听 .didChange 自动反向同步
-    @Published var navDocked: Bool = AppPrefs.shared.isNavDocked()
+    @Published var navFloating: Bool = AppPrefs.shared.isNavDocked()
 
     private var langObserver: NSObjectProtocol?
     private var prefsObserver: NSObjectProtocol?
@@ -107,14 +107,14 @@ final class AppRootViewModel: ObservableObject {
             self?.languageReload += 1
         }
         // ★ v1.0.45: 用户在设置页改 nav dock 偏好 → AppPrefs 写盘 → UserDefaults 发 .didChange →
-        //   这里刷新 navDocked → PillNavigationBar 下一帧切 dockStyle 重建。
+        //   这里刷新 navFloating → PillNavigationBar 下一帧切 dockStyle 重建。
         //   高刷新率开关不需要反向同步(开关自身直接调 HighRefreshRate.apply, 不经 root)。
         prefsObserver = NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification, object: UserDefaults.standard, queue: .main
         ) { [weak self] _ in
             guard let self = self else { return }
-            let docked = AppPrefs.shared.isNavDocked()
-            if self.navDocked != docked { self.navDocked = docked }
+            let floating = AppPrefs.shared.isNavDocked()
+            if self.navFloating != floating { self.navFloating = floating }
         }
     }
 
@@ -177,6 +177,7 @@ final class AppRootViewModel: ObservableObject {
 struct AppRoot: View {
     @EnvironmentObject var root: AppRootViewModel
     @Environment(\.colorScheme) private var systemScheme
+    @Environment(\.localWakeUpColors) private var colors
     // ← themeMode/手动切主题联动
     @State private var themeMode: String = AppPrefs.shared.getThemeMode()
     @State private var themeKey: String = AppPrefs.shared.getThemeKey()
@@ -315,12 +316,14 @@ struct AppRoot: View {
     //   保证最后一行课程不被悬浮 bar 遮住(Android 同位 LocalNavExtraBottomPadding)。
     private var tabs: some View {
         Group {
-            if root.navDocked {
-                dockedTabs
-            } else {
+            if root.navFloating {
                 floatingTabs
+            } else {
+                dockedTabs
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(colors.background.ignoresSafeArea())
         .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 
@@ -407,14 +410,17 @@ struct AppRoot: View {
     //     最后一节课不被悬浮 bar 遮挡(Android LocalNavExtraBottomPadding 同位)
     //   - bar alignment .bottom 自带 PillNavigationBar 内部 bottomFloat=12pt,
     //     浮在屏幕底 12pt 上(可视即"悬浮胶囊")
+    //   - 同步把 floatingScrollBottomPadding 注入 .localNavExtraBottomPadding
+    //     让 MineScreen/ManagementPage/TodayScreen/CourseTableView 自己读 →
+    //     内部 padding(bottom, 16 + navExtra) 一字对齐 Android。
     private var floatingTabs: some View {
         ZStack(alignment: .bottom) {
             tabContent
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .ignoresSafeArea(edges: .bottom)
-                .padding(.bottom, floatingScrollBottomPadding)
             PillNavigationBar(items: navItems, dockStyle: .floating)
         }
+        .environment(\.localNavExtraBottomPadding, floatingScrollBottomPadding)
     }
 
     // FAB 式滚动余量 = capsuleHeight(64) + bottomFloat(12) + extra(12 视觉缓冲)

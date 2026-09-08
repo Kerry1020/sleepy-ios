@@ -28,6 +28,7 @@ struct TimeSlot {
 struct CardsGridView: View {
     @Environment(\.localWakeUpColors) private var colors
     @Environment(\.localCoursePalette) private var palette
+    @Environment(\.localNavExtraBottomPadding) private var navExtra
     let courses: [CourseEntity]
     let timeSlots: [TimeSlot]
     var visibleDays: Set<Int> = Set(1...7)
@@ -104,6 +105,10 @@ struct CardsGridView: View {
                     }
                     .frame(width: max(geo.size.width - sideInset, 0),
                            height: gridH, alignment: .topLeading)
+                    // 悬浮底栏额外余量(→ Android LocalNavExtraBottomPadding Spacer):
+                    //   镜像 Android CourseTableView.kt "Spacer(height = navExtra)" 末行追加,
+                    //   网格内最末一行课不被悬浮药丸遮住。
+                    Color.clear.frame(height: navExtra)
                 }
                 .padding(8)
             }
@@ -364,6 +369,7 @@ private struct DayHeadCell: View {
 struct FullWeekView: View {
     @Environment(\.localWakeUpColors) private var colors
     @Environment(\.localCoursePalette) private var palette
+    @Environment(\.localNavExtraBottomPadding) private var navExtra
     let courses: [CourseEntity]
     var visibleDays: Set<Int> = Set(1...7)
     var displayMode: String = "node"
@@ -384,6 +390,10 @@ struct FullWeekView: View {
                             timeJson: timeJson, today: today, greyDays: greyDays,
                             onCourseClick: onCourseClick)
                 // (参数顺序: byDay/visibleDays/displayMode/timeJson/today/onCourseClick)
+                // 悬浮底栏额外余量(→ Android LocalNavExtraBottomPadding Spacer):
+                //   镜像 Android FullWeekView 末行追加 Spacer(height = navExtra),
+                //   最后一张课不被悬浮药丸遮住。
+                Color.clear.frame(height: navExtra)
             }
         }
     }
