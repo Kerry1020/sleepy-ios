@@ -8,6 +8,7 @@
 //   - pendingImportText(外部 json 打开) → onOpenURL sleepy://import?text=
 
 import SwiftUI
+import UIKit
 import GRDB
 import WidgetKit
 
@@ -141,11 +142,25 @@ final class AppRootViewModel: ObservableObject {
     // ← 新建空表(AllTables / Management 共用)
     func createNewTableThenEdit() {
         let previousId = scheduleViewModel.state.currentTable?.id
-        let newId = scheduleViewModel.createEmptyTable(commitSelection: false)
+        // Select immediately so the editor has a synchronous currentTable while the
+        // GRDB observation catches up; handleBack() still rolls it back if discarded.
+        let newId = scheduleViewModel.createEmptyTable(commitSelection: true)
         previousDefaultTableId = previousId
         pendingNewTableId = newId
         editTableId = newId
-        overlayScreen = .editTable
+
+        // A fullScreenCover(item:) cannot swap its active item in place. All Tables
+        // is already presented when this callback fires, so close that cover first
+        // and present the editor on the next run loop after its dismissal begins.
+        if overlayScreen == .allTables {
+            overlayScreen = nil
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { [weak self] in
+                guard let self, self.pendingNewTableId == newId else { return }
+                self.overlayScreen = .editTable
+            }
+        } else {
+            overlayScreen = .editTable
+        }
     }
 
     // ← 深链: sleepy://course/<id>
@@ -249,145 +264,163 @@ struct AppRoot: View {
         // ★ v7.10.18 type-check v3: 9 个独立 PresentXxx ViewModifier, 每个子树
         //   独立类型推导, 避免 9 个 modifier 链触发 SwiftUI "unable to type-check"。
         tabs
-            .modifier(PresentAddCourse(
-                    isDark: isDark, themeKey: themeKey,
-                    overlayScreen: root.overlayScreen,
-                    editingCourse: root.editingCourse,
-                    scheduleViewModel: root.scheduleViewModel,
-                    onDismissAdd: { root.overlayScreen = nil; root.editingCourse = nil },
-                    onSavedAdd: { root.overlayScreen = nil; root.editingCourse = nil; root.currentTab = .schedule }))
-            .modifier(PresentEditTable(
-                    isDark: isDark, themeKey: themeKey,
-                    overlayScreen: root.overlayScreen,
-                    editTableId: root.editTableId,
-                    pendingNewTableId: root.pendingNewTableId,
-                    scheduleViewModel: root.scheduleViewModel,
-                    onBack: { root.handleBack() },
-                    onDiscardPending: {
-                        let discardId = root.pendingNewTableId
-                        let fallback = root.previousDefaultTableId
-                        root.pendingNewTableId = nil
-                        root.previousDefaultTableId = nil
-                        if let discardId = discardId {
-                            root.scheduleViewModel.discardNewTable(discardId, fallbackId: fallback)
-                        }
-                        root.overlayScreen = nil
-                        root.editTableId = nil
-                    },
-                    onSavedTable: {
-                        root.overlayScreen = nil
-                        root.editTableId = nil
-                        root.pendingNewTableId = nil
-                        root.previousDefaultTableId = nil
-                    },
-                    onDeletedTable: { root.overlayScreen = nil; root.editTableId = nil; root.currentTab = .schedule }))
-            .modifier(PresentAllTables(
-                    isDark: isDark, themeKey: themeKey,
-                    overlayScreen: root.overlayScreen,
-                    scheduleViewModel: root.scheduleViewModel,
-                    onDismissOverlay: { root.overlayScreen = nil },
-                    onCreateNewTable: { root.createNewTableThenEdit() },
-                    onOpenEditTable: { tableId in
-                        root.editTableId = tableId
-                        root.pendingNewTableId = nil
-                        root.overlayScreen = .editTable
-                    }))
-            .modifier(PresentGeneral(
-                    isDark: isDark, themeKey: themeKey,
-                    overlayScreen: root.overlayScreen,
-                    onDismissOverlay: { root.overlayScreen = nil }))
-            .modifier(PresentTheme(
-                    isDark: isDark, themeKey: themeKey,
-                    overlayScreen: root.overlayScreen,
-                    themeMode: themeMode,
-                    onDismissOverlay: { root.overlayScreen = nil },
-                    onThemeModeChange: { mode in
-                        themeMode = mode
-                        themeKey = AppPrefs.shared.getThemeKey()
-                    }))
-            .modifier(PresentExport(
-                    isDark: isDark, themeKey: themeKey,
-                    overlayScreen: root.overlayScreen,
-                    scheduleViewModel: root.scheduleViewModel,
-                    onDismissOverlay: { root.overlayScreen = nil }))
-            .modifier(PresentReminder(
-                    isDark: isDark, themeKey: themeKey,
-                    overlayScreen: root.overlayScreen,
-                    onDismissOverlay: { root.overlayScreen = nil }))
-            .modifier(PresentAbout(
-                    isDark: isDark, themeKey: themeKey,
-                    overlayScreen: root.overlayScreen,
-                    onDismissOverlay: { root.overlayScreen = nil },
-                    onOpenLicense: { root.overlayScreen = .license }))
-            .modifier(PresentLicense(
-                    isDark: isDark, themeKey: themeKey,
-                    overlayScreen: root.overlayScreen,
-                    onDismissOverlay: { root.overlayScreen = nil }))
+            .modifier(PresentOverlay(
+                isDark: isDark,
+                themeKey: themeKey,
+                overlayScreen: $root.overlayScreen,
+                editingCourse: root.editingCourse,
+                editTableId: root.editTableId,
+                pendingNewTableId: root.pendingNewTableId,
+                scheduleViewModel: root.scheduleViewModel,
+                themeMode: themeMode,
+                onDismiss: { root.overlayScreen = nil; root.editingCourse = nil },
+                onBack: { root.handleBack() },
+                onSavedAdd: {
+                    root.overlayScreen = nil
+                    root.editingCourse = nil
+                    root.currentTab = .schedule
+                },
+                onSavedTable: {
+                    root.overlayScreen = nil
+                    root.editTableId = nil
+                    root.pendingNewTableId = nil
+                    root.previousDefaultTableId = nil
+                },
+                onDeletedTable: {
+                    root.overlayScreen = nil
+                    root.editTableId = nil
+                    root.currentTab = .schedule
+                },
+                onCreateNewTable: { root.createNewTableThenEdit() },
+                onOpenEditTable: { tableId in
+                    root.editTableId = tableId
+                    root.pendingNewTableId = nil
+                    root.overlayScreen = .editTable
+                },
+                onThemeModeChange: { mode in
+                    themeMode = mode
+                    themeKey = AppPrefs.shared.getThemeKey()
+                },
+                onOpenLicense: { root.overlayScreen = .license }))
     }
 
     // ← Scaffold + PillNavigationBar + 4 Tab
+    // ★ v2.7 dock 模式二态:
+    //   - docked:  VStack(content + bar) → bar 贴底 76pt 占用下方(老行为)
+    //   - floating: ZStack(alignment: .bottom) + content fillMaxSize 直通屏底 +
+    //              bar 作为 overlay 浮在底部 12pt 上(背景延续,无空缺)。
+    //              ← Android ff66ddd "dock 模式弃 Scaffold bottomBar 占位, Box overlay
+    //                Align.BottomCenter 叠加; 内容 fillMaxSize 直通屏幕底" 1:1。
+    //   scroll padding 补偿 floatingScrollBottomPadding pt(FAB 式滚动余量),
+    //   保证最后一行课程不被悬浮 bar 遮住(Android 同位 LocalNavExtraBottomPadding)。
     private var tabs: some View {
-        VStack(spacing: 0) {
-            ZStack {
-                switch root.currentTab {
-                case .schedule:
-                    ScheduleScreen(
-                        viewModel: root.scheduleViewModel,
-                        onGoImport: { root.currentTab = .manage },
-                        onManualAdd: { root.overlayScreen = .addCourse },
-                        onEditCourse: { course in root.editingCourse = course })
-                case .today:
-                    TodayScreen(viewModel: root.scheduleViewModel,
-                                onEditCourse: { course in root.editingCourse = course })
-                case .manage:
-                    ManagementPage(
-                        viewModel: root.scheduleViewModel,
-                        autoShowImportSheet: PendingImportText.value != nil,
-                        onJwImportRequested: { jwImportRequested = true },
-                        onCreateNewTableRequested: { root.createNewTableThenEdit() },
-                        onManualAdd: { root.overlayScreen = .addCourse },
-                        onEditCurrentTable: {
-                            root.editTableId = nil
-                            root.pendingNewTableId = nil
-                            root.overlayScreen = .editTable
-                        },
-                        // ★ 导入完成链(← Android onImported: 关导入框+切课表 Tab;
-                        //   onOpenEditTable: 新导入表 → 打开表编辑页)
-                        onImported: {
-                            PendingImportText.value = nil
-                            root.currentTab = .schedule
-                        },
-                        onOpenEditTable: { tableId in
-                            PendingImportText.value = nil
-                            root.editTableId = tableId
-                            root.pendingNewTableId = nil
-                            root.overlayScreen = .editTable
-                        })
-                case .mine:
-                    MineScreen(
-                        viewModel: root.scheduleViewModel,
-                        onOpenAllTables: { root.overlayScreen = .allTables },
-                        onOpenAppearance: { root.overlayScreen = .theme },
-                        onOpenGeneral: { root.overlayScreen = .general },
-                        onOpenExport: { root.overlayScreen = .export },
-                        onOpenReminder: { root.overlayScreen = .reminder },
-                        onOpenAbout: { root.overlayScreen = .about })
-                }
+        Group {
+            if root.navDocked {
+                dockedTabs
+            } else {
+                floatingTabs
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            // PillNavigationBar(← Scaffold.bottomBar)
-            PillNavigationBar(items: [
-                PillNavItemData(id: "schedule", icon: "calendar", label: L10n.format("tab_schedule"),
-                                selected: root.currentTab == .schedule) { root.currentTab = .schedule },
-                PillNavItemData(id: "today", icon: "doc.on.doc", label: L10n.format("tab_today"),
-                                selected: root.currentTab == .today) { root.currentTab = .today },
-                PillNavItemData(id: "manage", icon: "gearshape", label: L10n.format("tab_manage"),
-                                selected: root.currentTab == .manage) { root.currentTab = .manage },
-                PillNavItemData(id: "mine", icon: "person", label: L10n.format("tab_mine"),
-                                selected: root.currentTab == .mine) { root.currentTab = .mine },
-            ], dockStyle: root.navDocked ? .docked : .floating)
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
+    }
+
+    // 4 个 tab 的数据:共用于 docked / floating 两个分支,避免重复
+    private var navItems: [PillNavItemData] {
+        [
+            PillNavItemData(id: "schedule", icon: "calendar",
+                            label: L10n.format("tab_schedule"),
+                            selected: root.currentTab == .schedule) { root.currentTab = .schedule },
+            PillNavItemData(id: "today", icon: "doc.on.doc",
+                            label: L10n.format("tab_today"),
+                            selected: root.currentTab == .today) { root.currentTab = .today },
+            PillNavItemData(id: "manage", icon: "gearshape",
+                            label: L10n.format("tab_manage"),
+                            selected: root.currentTab == .manage) { root.currentTab = .manage },
+            PillNavItemData(id: "mine", icon: "person",
+                            label: L10n.format("tab_mine"),
+                            selected: root.currentTab == .mine) { root.currentTab = .mine },
+        ]
+    }
+
+    // 当前 Tab 对应屏(ScheduleScreen / TodayScreen / ManagementPage / MineScreen)
+    @ViewBuilder
+    private var tabContent: some View {
+        switch root.currentTab {
+        case .schedule:
+            ScheduleScreen(
+                viewModel: root.scheduleViewModel,
+                onGoImport: { root.currentTab = .manage },
+                onManualAdd: { root.overlayScreen = .addCourse },
+                onEditCourse: { course in root.editingCourse = course })
+        case .today:
+            TodayScreen(viewModel: root.scheduleViewModel,
+                        onEditCourse: { course in root.editingCourse = course })
+        case .manage:
+            ManagementPage(
+                viewModel: root.scheduleViewModel,
+                autoShowImportSheet: PendingImportText.value != nil,
+                onJwImportRequested: { jwImportRequested = true },
+                onCreateNewTableRequested: { root.createNewTableThenEdit() },
+                onManualAdd: { root.overlayScreen = .addCourse },
+                onEditCurrentTable: {
+                    root.editTableId = nil
+                    root.pendingNewTableId = nil
+                    root.overlayScreen = .editTable
+                },
+                // ★ 导入完成链(← Android onImported: 关导入框+切课表 Tab;
+                //   onOpenEditTable: 新导入表 → 打开表编辑页)
+                onImported: {
+                    PendingImportText.value = nil
+                    root.currentTab = .schedule
+                },
+                onOpenEditTable: { tableId in
+                    PendingImportText.value = nil
+                    root.editTableId = tableId
+                    root.pendingNewTableId = nil
+                    root.overlayScreen = .editTable
+                })
+        case .mine:
+            MineScreen(
+                viewModel: root.scheduleViewModel,
+                onOpenAllTables: { root.overlayScreen = .allTables },
+                onOpenAppearance: { root.overlayScreen = .theme },
+                onOpenGeneral: { root.overlayScreen = .general },
+                onOpenExport: { root.overlayScreen = .export },
+                onOpenReminder: { root.overlayScreen = .reminder },
+                onOpenAbout: { root.overlayScreen = .about })
+        }
+    }
+
+    // ★ docked 模式:bar 占用 76pt(老行为)
+    private var dockedTabs: some View {
+        VStack(spacing: 0) {
+            tabContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            PillNavigationBar(items: navItems, dockStyle: .docked)
+        }
+    }
+
+    // ★ floating 模式:
+    //   - ZStack overlay 让 bar 浮在内容之上,不占布局空间
+    //   - ignoresSafeArea bottom 让内容背景直通屏幕底(无空缺)
+    //   - 内容底部 padding = floatingScrollBottomPadding → FAB 式滚动余量,
+    //     最后一节课不被悬浮 bar 遮挡(Android LocalNavExtraBottomPadding 同位)
+    //   - bar alignment .bottom 自带 PillNavigationBar 内部 bottomFloat=12pt,
+    //     浮在屏幕底 12pt 上(可视即"悬浮胶囊")
+    private var floatingTabs: some View {
+        ZStack(alignment: .bottom) {
+            tabContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .ignoresSafeArea(edges: .bottom)
+                .padding(.bottom, floatingScrollBottomPadding)
+            PillNavigationBar(items: navItems, dockStyle: .floating)
+        }
+    }
+
+    // FAB 式滚动余量 = capsuleHeight(64) + bottomFloat(12) + extra(12 视觉缓冲)
+    // ← Android ff66ddd navHeight + fabPadding + WindowInsets.navigationBars
+    private var floatingScrollBottomPadding: CGFloat {
+        DockSpec.capsuleHeight + DockSpec.bottomFloat + 12
     }
 
     // ← handleDeepLinkIntent(平台差异表#4: Intent extras → URL scheme)
@@ -419,6 +452,107 @@ struct AppRoot: View {
 //   "unable to type-check this expression in reasonable time"。
 //   闭包走构造注入, AppRoot 显式传 root 派生值。
 
+private struct PresentOverlay: ViewModifier {
+    let isDark: Bool
+    let themeKey: String
+    @Binding var overlayScreen: AppRootViewModel.OverlayScreen?
+    let editingCourse: CourseEntity?
+    let editTableId: Int64?
+    let pendingNewTableId: Int64?
+    let scheduleViewModel: ScheduleViewModel
+    let themeMode: String
+    let onDismiss: () -> Void
+    let onBack: () -> Void
+    let onSavedAdd: () -> Void
+    let onSavedTable: () -> Void
+    let onDeletedTable: () -> Void
+    let onCreateNewTable: () -> Void
+    let onOpenEditTable: (Int64) -> Void
+    let onThemeModeChange: (String) -> Void
+    let onOpenLicense: () -> Void
+
+    func body(content: Content) -> some View {
+        content.fullScreenCover(item: Binding<AppRootViewModel.OverlayScreen?>(
+            get: {
+                if overlayScreen != nil { return overlayScreen }
+                return editingCourse == nil ? nil : .addCourse
+            },
+            set: { newValue in
+                if newValue == nil { onDismiss() }
+            }
+        )) { screen in
+            overlayContent(screen)
+        }
+    }
+
+    @ViewBuilder
+    private func overlayContent(_ screen: AppRootViewModel.OverlayScreen) -> some View {
+        switch screen {
+        case .addCourse:
+            AddCourseScreen(
+                viewModel: scheduleViewModel,
+                onDismiss: onDismiss,
+                onSaved: onSavedAdd,
+                editingCourse: editingCourse)
+                .themedOverlay(isDark: isDark, themeKey: themeKey)
+                .interactiveEdgeBack(onBack: onDismiss)
+        case .allTables:
+            AllTablesScreen(
+                viewModel: scheduleViewModel,
+                onDismiss: onDismiss,
+                onCreateNewTable: onCreateNewTable,
+                onOpenEditTable: onOpenEditTable)
+                .themedOverlay(isDark: isDark, themeKey: themeKey)
+                .interactiveEdgeBack(onBack: onDismiss)
+        case .editTable:
+            EditTableScreen(
+                viewModel: scheduleViewModel,
+                tableId: editTableId,
+                pendingNewTableId: pendingNewTableId,
+                onDismiss: onBack,
+                onDiscardPending: onBack,
+                onSaved: onSavedTable,
+                onDeleted: onDeletedTable)
+                .themedOverlay(isDark: isDark, themeKey: themeKey)
+                .interactiveEdgeBack(onBack: onBack)
+        case .general:
+            GeneralSettingsScreen(onDismiss: onDismiss)
+                .themedOverlay(isDark: isDark, themeKey: themeKey)
+                .interactiveEdgeBack(onBack: onDismiss)
+        case .theme:
+            AppearanceScreen(
+                onDismiss: onDismiss,
+                themeMode: themeMode,
+                onThemeModeChange: onThemeModeChange)
+                .themedOverlay(isDark: isDark, themeKey: themeKey)
+                .interactiveEdgeBack(onBack: onDismiss)
+        case .export:
+            ExportScreen(viewModel: scheduleViewModel, onDismiss: onDismiss)
+                .themedOverlay(isDark: isDark, themeKey: themeKey)
+                .interactiveEdgeBack(onBack: onDismiss)
+        case .reminder:
+            ReminderScreen(onDismiss: onDismiss)
+                .themedOverlay(isDark: isDark, themeKey: themeKey)
+                .interactiveEdgeBack(onBack: onDismiss)
+        case .about:
+            AboutScreen(onDismiss: onDismiss, onOpenLicense: onOpenLicense)
+                .themedOverlay(isDark: isDark, themeKey: themeKey)
+                .interactiveEdgeBack(onBack: onDismiss)
+        case .license:
+            LicenseScreen(onDismiss: onDismiss)
+                .themedOverlay(isDark: isDark, themeKey: themeKey)
+                .interactiveEdgeBack(onBack: onDismiss)
+        }
+    }
+}
+
+private extension View {
+    func themedOverlay(isDark: Bool, themeKey: String) -> some View {
+        modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
+            .preferredColorScheme(isDark ? .dark : .light)
+    }
+}
+
 private struct PresentAddCourse: ViewModifier {
     let isDark: Bool
     let themeKey: String
@@ -439,6 +573,7 @@ private struct PresentAddCourse: ViewModifier {
                 editingCourse: editingCourse)
             .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
             .preferredColorScheme(isDark ? .dark : .light)
+                .interactiveEdgeBack(onBack: onDismissAdd)
         }
     }
 }
@@ -469,6 +604,7 @@ private struct PresentEditTable: ViewModifier {
                 onDeleted: onDeletedTable)
             .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
             .preferredColorScheme(isDark ? .dark : .light)
+            .interactiveEdgeBack(onBack: onBack)
         }
     }
 }
@@ -493,6 +629,7 @@ private struct PresentAllTables: ViewModifier {
                 onOpenEditTable: onOpenEditTable)
             .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
             .preferredColorScheme(isDark ? .dark : .light)
+            .interactiveEdgeBack(onBack: onDismissOverlay)
         }
     }
 }
@@ -510,6 +647,7 @@ private struct PresentGeneral: ViewModifier {
             GeneralSettingsScreen(onDismiss: onDismissOverlay)
                 .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
                 .preferredColorScheme(isDark ? .dark : .light)
+                .interactiveEdgeBack(onBack: onDismissOverlay)
         }
     }
 }
@@ -532,6 +670,7 @@ private struct PresentTheme: ViewModifier {
                 onThemeModeChange: onThemeModeChange)
             .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
             .preferredColorScheme(isDark ? .dark : .light)
+            .interactiveEdgeBack(onBack: onDismissOverlay)
         }
     }
 }
@@ -550,6 +689,7 @@ private struct PresentExport: ViewModifier {
             ExportScreen(viewModel: scheduleViewModel, onDismiss: onDismissOverlay)
                 .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
                 .preferredColorScheme(isDark ? .dark : .light)
+                .interactiveEdgeBack(onBack: onDismissOverlay)
         }
     }
 }
@@ -567,6 +707,7 @@ private struct PresentReminder: ViewModifier {
             ReminderScreen(onDismiss: onDismissOverlay)
                 .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
                 .preferredColorScheme(isDark ? .dark : .light)
+                .interactiveEdgeBack(onBack: onDismissOverlay)
         }
     }
 }
@@ -587,6 +728,7 @@ private struct PresentAbout: ViewModifier {
                 onOpenLicense: onOpenLicense)
             .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
             .preferredColorScheme(isDark ? .dark : .light)
+            .interactiveEdgeBack(onBack: onDismissOverlay)
         }
     }
 }
@@ -604,6 +746,106 @@ private struct PresentLicense: ViewModifier {
             LicenseScreen(onDismiss: onDismissOverlay)
                 .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
                 .preferredColorScheme(isDark ? .dark : .light)
+                .interactiveEdgeBack(onBack: onDismissOverlay)
         }
+    }
+}
+
+// Root overlays use fullScreenCover/sheet for state-driven presentation. Those
+// presentations support pull-down dismissal, but not UINavigationController's
+// left-edge interactive pop. Bridge that native gesture to the existing close
+// callback without changing overlay state ownership or pending-table cleanup.
+private struct InteractiveEdgeBackModifier: ViewModifier {
+    let onBack: () -> Void
+
+    func body(content: Content) -> some View {
+        content.overlay {
+            InteractiveEdgeBackHost(onBack: onBack)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .allowsHitTesting(false)
+        }
+    }
+}
+
+private struct InteractiveEdgeBackHost: UIViewControllerRepresentable {
+    let onBack: () -> Void
+
+    func makeUIViewController(context: Context) -> EdgeBackViewController {
+        EdgeBackViewController(onBack: onBack)
+    }
+
+    func updateUIViewController(_ controller: EdgeBackViewController, context: Context) {
+        controller.onBack = onBack
+    }
+}
+
+private final class EdgeBackViewController: UIViewController, UIGestureRecognizerDelegate {
+    var onBack: () -> Void
+    private weak var installedView: UIView?
+    private var didDismiss = false
+
+    init(onBack: @escaping () -> Void) {
+        self.onBack = onBack
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        installRecognizerIfNeeded()
+    }
+
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        installedView?.gestureRecognizers?.removeAll(where: { $0.delegate === self })
+        installedView = nil
+    }
+
+    private func installRecognizerIfNeeded() {
+        guard installedView == nil else { return }
+        let hostView: UIView = parent?.view ?? self.view
+        let recognizer = UIPanGestureRecognizer(target: self,
+                                                action: #selector(handleEdgePan(_:)))
+        recognizer.maximumNumberOfTouches = 1
+        recognizer.cancelsTouchesInView = false
+        recognizer.delegate = self
+        hostView.addGestureRecognizer(recognizer)
+        installedView = hostView
+    }
+
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                           shouldReceive touch: UITouch) -> Bool {
+        let point = touch.location(in: gestureRecognizer.view)
+        return point.x <= 30
+    }
+
+    @objc private func handleEdgePan(_ recognizer: UIPanGestureRecognizer) {
+        switch recognizer.state {
+        case .began:
+            didDismiss = false
+        case .ended:
+            let translation = recognizer.translation(in: recognizer.view)
+            let velocity = recognizer.velocity(in: recognizer.view)
+            let width = max(recognizer.view?.bounds.width ?? 1, 1)
+            let progress = translation.x / width
+            if !didDismiss && (progress > 0.25 || velocity.x > 600) {
+                didDismiss = true
+                onBack()
+            }
+        case .cancelled, .failed:
+            didDismiss = false
+        default:
+            break
+        }
+    }
+}
+
+private extension View {
+    func interactiveEdgeBack(onBack: @escaping () -> Void) -> some View {
+        modifier(InteractiveEdgeBackModifier(onBack: onBack))
     }
 }

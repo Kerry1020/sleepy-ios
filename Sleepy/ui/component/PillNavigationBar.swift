@@ -68,7 +68,9 @@ struct PillNavItemData: Identifiable {
 // MARK: - 几何规格常量(对应 Android NavDockSpec,逐行对齐)
 
 // 悬浮胶囊尺寸(← Android NavDockSpec 1:1)
-private enum DockSpec {
+//   暴露 module-internal 是为了让 SleepyApp.floatingScrollBottomPadding 也能读到,
+//   集中单点维护(不要把 64/12 散到 SleepyApp 里再写一遍)。
+enum DockSpec {
     static let horizontalMargin: CGFloat = 16   // 左右距屏幕边缘
     static let bottomFloat: CGFloat = 12        // 胶囊底边悬于手势条上方的高度
     static let capsuleHeight: CGFloat = 64      // 胶囊本体高(icon+label 双行)
@@ -107,9 +109,7 @@ private struct DockedBar: View {
 
     @State private var labelLeftsBar: [Int: CGFloat] = [:]
     @State private var charRectsCache: [Int: [CGRect]] = [:]
-    @State private var thumbCenterX: CGFloat = 0
     @State private var barWidth: CGFloat = 0
-    @State private var thumbPlaced = false
 
     private var selectedIndex: Int { items.firstIndex(where: { $0.selected }) ?? 0 }
 
@@ -117,12 +117,14 @@ private struct DockedBar: View {
         let selected = selectedIndex
         ZStack(alignment: .topLeading) {
             // thumb 色块 — 64×32 y=12 → 上下对称(SleepyShapes.large 圆角)
+            // ★ v2.7 强制绑定:thumb 位置 = centerForIndex(selectedIndex) 派生值,
+            //   没有 @State 滞后,没有 onChange 闭包捕获。SwiftUI .animation(value:)
+            //   自动在 selectedIndex 变化时滑移,旧值与新值之间没有"错帧"。
             RoundedRectangle(cornerRadius: SleepyShapes.large)
                 .fill(colors.secondaryContainer)
                 .frame(width: DockedSpec.thumbWidth, height: DockedSpec.thumbHeight)
-                .offset(x: thumbCenterX - DockedSpec.thumbWidth / 2,
-                        y: DockedSpec.thumbYOffset)
-                .opacity(thumbPlaced ? 1 : 0)
+                .offset(x: thumbX, y: DockedSpec.thumbYOffset)
+                .animation(.spring(response: 0.18, dampingFraction: 1.0), value: thumbCenterX)
 
             HStack(spacing: 0) {
                 ForEach(Array(items.enumerated()), id: \.element.id) { idx, item in
@@ -144,14 +146,10 @@ private struct DockedBar: View {
         .frame(maxWidth: .infinity)
         .frame(height: DockedSpec.barHeight)
         .background(colors.surfaceContainer.ignoresSafeArea(edges: .bottom))
-        // 收集 label 左缘(bar 局部)— v2.6 后仅服务字符扫过变色,不再用于 thumb 位置
+        // 收集 label 左缘(bar 局部)— 仅服务字符扫过变色,不再用于 thumb 位置
         .onPreferenceChange(PillGeomKey.self) { value in
             labelLeftsBar = value.labelLefts
         }
-        // thumb 弹簧跟随 selectedIndex(barWidth 变化时重算 → 旋转/分屏自适应)
-        .onChange(of: selected) { newSelected in animateThumb(to: newSelected) }
-        .onChange(of: barWidth) { _ in animateThumb(to: selected) }
-        .onAppear { animateThumb(to: selected) }
     }
 
     // ★ v2.6 确定性几何 — 不依赖异步测量,thumb 位置 = inset + slot*i + slot/2
@@ -164,20 +162,9 @@ private struct DockedBar: View {
         inset + slotWidth * CGFloat(i) + slotWidth / 2
     }
 
-    /// 确定性 thumb 目标中心 — 不用 PreferenceKey,首跳即准。
-    /// 参数显式传入目标索引(避免 iOS 15 真机上 onChange 闭包捕获旧 self → 读到旧 selectedIndex → 高亮慢一拍)。
-    private func animateThumb(to index: Int) {
-        guard barWidth > 0 else { return }
-        let target = centerForIndex(index)
-        if !thumbPlaced {
-            thumbCenterX = target
-            thumbPlaced = true
-            return
-        }
-        withAnimation(.spring(response: 0.18, dampingFraction: 1.0)) {
-            thumbCenterX = target
-        }
-    }
+    // ★ v2.7 强制绑定:thumb 中心 = 选中项中心(派生值,非 @State)
+    private var thumbCenterX: CGFloat { centerForIndex(selectedIndex) }
+    private var thumbX: CGFloat { thumbCenterX - DockedSpec.thumbWidth / 2 }
 
     @ViewBuilder
     private func dockedTabColumn(idx: Int, item: PillNavItemData, selected: Int) -> some View {
@@ -288,10 +275,15 @@ private struct FloatingBar: View {
         }
     }
 
-    @State private var thumbCenterX: CGFloat = 0
-    @State private var thumbPlaced = false
-
     private var selectedIndex: Int { items.firstIndex(where: { $0.selected }) ?? 0 }
+
+    // ★ v2.7 强制绑定:thumb 中心直接由当前选中项座位派生,不保存独立位置 state。
+    //   .animation(value:) 在 selectedIndex 变化时自动滑移,无 @State 滞后帧。
+    private var thumbCenterX: CGFloat {
+        guard selectedIndex >= 0, selectedIndex < seatCenters.count else { return 0 }
+        return seatCenters[selectedIndex]
+    }
+    private var thumbX: CGFloat { thumbCenterX - DockSpec.thumbWidth / 2 }
 
     var body: some View {
         let selected = selectedIndex
@@ -305,10 +297,8 @@ private struct FloatingBar: View {
                 RoundedRectangle(cornerRadius: DockSpec.thumbHeight / 2)
                     .fill(colors.secondaryContainer)
                     .frame(width: DockSpec.thumbWidth, height: DockSpec.thumbHeight)
-                    .offset(
-                        x: thumbCenterX - DockSpec.thumbWidth / 2,
-                        y: DockSpec.thumbYOffset)
-                    .opacity(thumbPlaced ? 1 : 0)
+                    .offset(x: thumbX, y: DockSpec.thumbYOffset)
+                    .animation(.spring(response: 0.18, dampingFraction: 1.0), value: thumbCenterX)
 
                 // 4 个 tab HStack:itemGap=4 居中分布,内边距 innerPad=8
                 HStack(spacing: DockSpec.itemGap) {
@@ -334,23 +324,6 @@ private struct FloatingBar: View {
         .padding(.horizontal, DockSpec.horizontalMargin)
         .padding(.bottom, DockSpec.bottomFloat)
         .frame(maxWidth: .infinity)
-        // thumb 弹簧跟随 selectedIndex
-        .onChange(of: selected) { _ in animateThumbToSelected() }
-        .onAppear { animateThumbToSelected() }
-    }
-
-    private func animateThumbToSelected() {
-        let idx = selectedIndex
-        guard idx >= 0, idx < seatCenters.count else { return }
-        let target = seatCenters[idx]
-        if !thumbPlaced {
-            thumbCenterX = target
-            thumbPlaced = true
-            return
-        }
-        withAnimation(.spring(response: 0.18, dampingFraction: 1.0)) {
-            thumbCenterX = target
-        }
     }
 
     @ViewBuilder
