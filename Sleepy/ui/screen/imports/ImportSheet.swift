@@ -30,6 +30,8 @@ struct ImportPreview {
     let parseResult: ScheduleParser.ParseResult
     let existingCourses: [CourseEntity]
     let conflicts: [CourseConflict]
+    /// issue#22: 同 groupId 多地点提示 — 不阻塞导入,只让用户心里有数
+    var multiLocationWarnings: [String] = []
 
     var incomingCount: Int { parseResult.courses.count }
     var conflictCount: Int { conflicts.count }
@@ -578,6 +580,28 @@ private struct ImportPreviewDialog: View {
                         }
                     }
 
+                    // ← issue#22 同名课程多地点提示 (secondaryContainer 卡片, 不阻塞导入)
+                    if !preview.multiLocationWarnings.isEmpty {
+                        Section {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(L10n.format("import_multi_location_warning"))
+                                    .font(.system(size: 14, weight: .medium))   // ← titleSmall
+                                    .foregroundColor(colors.onSecondaryContainer)
+                                ForEach(preview.multiLocationWarnings.prefix(5), id: \.self) { warning in
+                                    Text("• \(warning)")
+                                        .font(.system(size: 12))   // ← bodySmall
+                                        .foregroundColor(colors.onSecondaryContainer)
+                                }
+                                if preview.multiLocationWarnings.count > 5 {
+                                    Text(L10n.format("more_unexpanded", preview.multiLocationWarnings.count - 5))
+                                        .font(.system(size: 11, weight: .medium))   // ← labelSmall
+                                        .foregroundColor(colors.onSecondaryContainer)
+                                }
+                            }
+                            .listRowBackground(colors.secondaryContainer)
+                        }
+                    }
+
                     if !preview.conflicts.isEmpty {
                         Section(L10n.format("import_conflicts")) {
                             ForEach(preview.conflicts.prefix(3)) { conflict in
@@ -919,12 +943,25 @@ extension ImportSheet {
                 existingCourses.first { Self.coursesConflict(incoming, $0) }
                     .map { CourseConflict(incoming: incoming, existing: $0) }
             }
+            // ← issue#22: 同 groupId 多地点提示 — 不阻塞导入, 让用户心里有数
+            var multiLocWarnings: [String] = []
+            let roomGroups = Dictionary(grouping: parseResult.courses) { $0.groupId }
+            for (gid, cs) in roomGroups {
+                if gid.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { continue }
+                let distinctRooms = Set(cs.map { $0.room.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty })
+                if distinctRooms.count >= 2 {
+                    multiLocWarnings.append(L10n.format(
+                        "import_multi_location_warning_detail", cs.first?.courseName ?? "", distinctRooms.count))
+                }
+            }
             return ImportPreview(
                 targetTableId: tableId,
                 targetTableName: existingTable?.name ?? L10n.format("manage_current_table"),
                 parseResult: parseResult,
                 existingCourses: existingCourses,
-                conflicts: conflicts)
+                conflicts: conflicts,
+                multiLocationWarnings: multiLocWarnings)
         case .failure(let e):
             onError(L10n.format("import_failed", e.localizedDescription))
             return nil
