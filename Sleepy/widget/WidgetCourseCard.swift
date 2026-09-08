@@ -11,12 +11,15 @@ struct WidgetCourseCard: View {
     let colorless: Bool
     var fontSizeSp: CGFloat = 12
     var displayMode: String = "node"
+    /// issue#22: 同 groupId 全行(含自身) — AUTO/CUSTOM 取色按行判; 空=回退 [course]
+    var groupRows: [CourseEntity] = []
 
     var body: some View {
         // 统一取色入口 (决策 D3) — colorless 灰底传 surfaceVariant
-        let bgColor = CourseColorUtil.pickCourseColorSwiftUI(course, isDark: scheme.isDark,
-                                                             neutralColor: scheme.surfaceVariant,
-                                                             colorless: colorless)
+        // issue#22: 改走 *WithGroupRows 三态入口
+        let bgColor = CourseColorUtil.pickCourseColorSwiftUIWithGroupRows(course,
+            groupRows: groupRows.isEmpty ? [course] : groupRows,
+            isDark: scheme.isDark, neutralColor: scheme.surfaceVariant, colorless: colorless)
         // 文字色亮度自适应 (决策 D5-13) — 深色自定义课色上切白字, 浅色底仍 onSurface
         let textColor = CourseColorUtil.textColorOn(bg: bgColor, isDark: scheme.isDark,
                                                     onSurface: scheme.onSurface)

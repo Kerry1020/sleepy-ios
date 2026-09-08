@@ -116,8 +116,10 @@ private struct WeekListDayColumn: View {
                 VStack(spacing: 3) {
                     ForEach(day.courses, id: \.id) { course in
                         // ★ 课程颜色背景 (对齐 WeekGrid 风格) — 统一入口 CourseColorUtil (决策 D3)
-                        let bgColor = CourseColorUtil.pickCourseColorSwiftUI(
-                            course, isDark: s.isDark, neutralColor: s.surfaceVariant, colorless: colorless)
+                        // issue#22: 同名课程多地点 — 用 day.courses 同 groupId 全行, 支持 AUTO/CUSTOM 按行判
+                        let bgColor = CourseColorUtil.pickCourseColorSwiftUIWithGroupRows(
+                            course, groupRows: day.courses.filter { $0.groupId == course.groupId },
+                            isDark: s.isDark, neutralColor: s.surfaceVariant, colorless: colorless)
                         Text(course.courseName)
                             .font(.system(size: 9, weight: .bold))
                             .foregroundColor(CourseColorUtil.textColorOn(bg: bgColor, isDark: s.isDark,

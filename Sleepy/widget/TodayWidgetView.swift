@@ -103,7 +103,8 @@ struct TodayWidgetEntryView: View {
                     ForEach(visible) { course in
                         WidgetCourseCard(course: course, timeJson: data.timeJson, scheme: s,
                                          colorless: colorless, fontSizeSp: 12,
-                                         displayMode: displayMode)
+                                         displayMode: displayMode,
+                                         groupRows: data.courses.filter { $0.groupId == course.groupId })
                             .frame(height: 38)
                     }
                 }

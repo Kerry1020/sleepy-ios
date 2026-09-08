@@ -46,11 +46,13 @@ struct TodayScreen: View {
                     // v7.10.10 冲突分栏: 单栏整宽; 多栏并排+栏间浅细竖线(与周视图同款)
                     ForEach(laneRows, id: \.courses.first!.id) { row in
                         if row.laneCount == 1, let only = row.courses.first {
-                            TodayCourseCard(course: only, timeJson: state.currentTable?.timeJson) {
+                            TodayCourseCard(course: only, timeJson: state.currentTable?.timeJson,
+                                            groupRows: todayCourses.filter { $0.groupId == only.groupId }) {
                                 selectedCourse = only
                             }
                         } else {
-                            TodayLaneRow(row: row, timeJson: state.currentTable?.timeJson) { c in
+                            TodayLaneRow(row: row, timeJson: state.currentTable?.timeJson,
+                                         todayCourses: todayCourses) { c in
                                 selectedCourse = c
                             }
                         }
@@ -84,6 +86,7 @@ private struct TodayLaneRow: View {
     @Environment(\.localWakeUpColors) private var colors
     let row: ConflictLayoutEngine.WeekLaneRow
     var timeJson: String? = nil
+    var todayCourses: [CourseEntity] = []
     let onCourseClick: (CourseEntity) -> Void
 
     var body: some View {
@@ -97,7 +100,8 @@ private struct TodayLaneRow: View {
                 let laneCourses = row.courses.filter { row.laneOf[$0.id] == li }
                 VStack(spacing: 6) {
                     ForEach(laneCourses) { laneCourse in
-                        TodayCourseCard(course: laneCourse, timeJson: timeJson) {
+                        TodayCourseCard(course: laneCourse, timeJson: timeJson,
+                                        groupRows: todayCourses.filter { $0.groupId == laneCourse.groupId }) {
                             onCourseClick(laneCourse)
                         }
                     }
@@ -218,13 +222,16 @@ private struct TodayCourseCard: View {
     @Environment(\.localCoursePalette) private var palette
     let course: CourseEntity
     var timeJson: String? = nil
+    /// issue#22: 同 groupId 全行(含自身) — AUTO/CUSTOM 取色按行判; 空则回退 [course](= Android `listOf(course)` 默认值)
+    var groupRows: [CourseEntity] = []
     var onClick: (() -> Void)? = nil
 
+    // 统一取色入口 — hue 源自动对齐 groupId; issue#22 改走 *WithGroupRows 三态入口
     var body: some View {
         let isDark = CourseColorUtil.isPaletteDark(palette)
-        // 统一取色入口 — hue 源自动对齐 groupId
-        let bg = CourseColorUtil.pickCourseColorSwiftUI(
-            course, isDark: isDark, neutralColor: colors.surfaceVariant,
+        let bg = CourseColorUtil.pickCourseColorSwiftUIWithGroupRows(
+            course, groupRows: groupRows.isEmpty ? [course] : groupRows,
+            isDark: isDark, neutralColor: colors.surfaceVariant,
             colorless: AppPrefs.shared.isCourseColorless())
         let fg = CourseColorUtil.textColorOn(bg: bg, isDark: isDark, onSurface: colors.onSurface)
         let time: String? = {

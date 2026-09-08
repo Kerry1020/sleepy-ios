@@ -42,6 +42,8 @@ struct WeekGridWidgetEntryView: View {
         let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: data.isDark)
         let colorless = AppPrefs.shared.isWidgetColorless()
         let todayDow = DateUtils.todayDayOfWeek(today: Date())
+        // issue#22: 同名课程多地点 — 跨天汇总 course 全集, 传取色入口做 AUTO/CUSTOM 按行判
+        let allCourses = data.days.flatMap { $0.courses }
 
         // ── 数据 ── (parseTimeSlots → TimeTableUtils; maxNode 派生同 Android)
         let timeJson = data.days.first?.timeJson ?? ""
@@ -165,7 +167,8 @@ struct WeekGridWidgetEntryView: View {
                                     let isToday = dow == todayDow
                                     WeekGridDayColumn(dayData: dayData, scheme: s, colorless: colorless,
                                                       isToday: isToday, maxNode: maxNode,
-                                                      slotH: slotH, dayW: dayW, gapH: gapH)
+                                                      slotH: slotH, dayW: dayW, gapH: gapH,
+                                                      allCourses: allCourses)
                                 }
                             }
                         }
@@ -203,6 +206,7 @@ private struct WeekGridDayColumn: View {
     let slotH: CGFloat
     let dayW: CGFloat
     let gapH: CGFloat
+    let allCourses: [CourseEntity]
 
     var body: some View {
         // today 背景列(primaryContainer @ 40/255 ≈ 16%)
@@ -218,7 +222,8 @@ private struct WeekGridDayColumn: View {
                         if let course = courseStarting(at: node) {
                             WeekGridCourseCard(course: course, scheme: scheme, colorless: colorless,
                                                slotH: slotH, gapH: gapH, dayW: dayW,
-                                               maxNode: maxNode)
+                                               maxNode: maxNode,
+                                               groupRows: allCourses.filter { $0.groupId == course.groupId })
                         } else {
                             Color.clear
                         }
@@ -257,11 +262,15 @@ private struct WeekGridCourseCard: View {
     let gapH: CGFloat
     let dayW: CGFloat
     let maxNode: Int
+    /// issue#22: 同 groupId 全行(含自身) — AUTO/CUSTOM 取色按行判
+    var groupRows: [CourseEntity] = []
 
     var body: some View {
         // 卡片背景色 — 统一入口 CourseColorUtil (决策 D3); colorless 灰底传 surfaceVariant
-        let baseColor = CourseColorUtil.pickCourseColorSwiftUI(
-            course, isDark: scheme.isDark, neutralColor: scheme.surfaceVariant, colorless: colorless)
+        // issue#22: 改走 *WithGroupRows 三态入口
+        let baseColor = CourseColorUtil.pickCourseColorSwiftUIWithGroupRows(
+            course, groupRows: groupRows.isEmpty ? [course] : groupRows,
+            isDark: scheme.isDark, neutralColor: scheme.surfaceVariant, colorless: colorless)
         // 文字色: 深底白字 / 浅底近黑 (isDarkOn)
         let textColor = Self.isDarkOn(baseColor) ? Color.white : Color(0xFF1D1B20)
 

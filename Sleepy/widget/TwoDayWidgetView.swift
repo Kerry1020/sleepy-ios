@@ -127,7 +127,8 @@ private struct TwoDayColumn: View {
                     ForEach(visible, id: \.id) { course in
                         WidgetCourseCard(course: course, timeJson: day.timeJson, scheme: s,
                                          colorless: colorless, fontSizeSp: 10,
-                                         displayMode: displayMode)
+                                         displayMode: displayMode,
+                                         groupRows: day.courses.filter { $0.groupId == course.groupId })
                             .frame(height: 36)
                     }
                     if day.courses.count > maxCourses {
