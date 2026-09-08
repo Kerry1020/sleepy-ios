@@ -118,6 +118,10 @@ struct ConflictClusterCard: View {
     let maxNode: Int
     let gapW: CGFloat
     let gapH: CGFloat
+    /// issue#23: 边缘节点(课表外节次)允许进簇 — 传 timeSlots 让簇内 filter+clamp
+    /// 能用真实 slotIndex 替代过时的 startNode ∈ [1, maxNode] 判定。
+    /// 不传 = 旧行为(startNode ∈ [1, maxNode] 才绘)。
+    var timeSlots: [TimeSlot] = []
     let isGrey: Bool
     /// v7.10.16r 轮换(issue#10): 会话内轮换步数(nil=默认序),不落盘
     var rotationStep: Int? = nil
@@ -142,8 +146,13 @@ struct ConflictClusterCard: View {
         // 布局现算(引擎零缓存承诺)——override 变化即重排;hidden 与渲染同一裁剪空间
         let laid = ConflictLayoutEngine.layoutCluster(
             cluster, style: style, topOverrideId: effectiveTopId, maxNode: maxNode)
-        // 绘制集: 出界课原循环本就跳过(startNode ∈ [1, maxNode])
-        let drawList = laid.filter { (1...maxNode).contains($0.course.startNode) }
+        // 绘制集: 与原单卡循环同一过滤 — issue#23: 边缘节点用 slotIndexOf ≥ 0 替代
+        // 旧 startNode ∈ [1, maxNode],否则 第 0 节 / 第 N+1 节 课会在簇内被静默吞掉。
+        // timeSlots 为空(旧调用方)= 退回旧行为,数据脏课被显式过滤仍兜底。
+        let slotIndexOf: (Int) -> Int = timeSlots.isEmpty
+            ? { node in (1...maxNode).contains(node) ? node - 1 : -1 }
+            : { node in timeSlots.firstIndex { $0.nodeStart == node } ?? -1 }
+        let drawList = laid.filter { slotIndexOf($0.course.startNode) >= 0 }
         let hiddenCount = drawList.filter { $0.hidden }.count
         // N 徽标可见性: 图层 N≥3 且存在 hidden 课(v7.6: N 按图层数)
         let chainGroups = ConflictLayoutEngine.chainGroups(drawList.map { $0.course })
@@ -167,8 +176,12 @@ struct ConflictClusterCard: View {
         // 簇几何: 整簇基点 = 主课判定序首位课(override 不改变该锚点)
         let baseNode = cluster.courses.first!.startNode
         let minStart = drawList.map { $0.course.startNode }.min()!
-        let clampedSteps: [Int64: Int] = Dictionary(uniqueKeysWithValues: drawList.map {
-            ($0.course.id, min(max($0.course.step, 1), maxNode - $0.course.startNode + 1))
+        let clampedSteps: [Int64: Int] = Dictionary(uniqueKeysWithValues: drawList.map { laidItem in
+            let sIdx = slotIndexOf(laidItem.course.startNode)
+            // issue#23: 步长上限按 timeSlots 剩余行数算,边缘节点也走同一公式
+            // (maxNode - startNode + 1 在 startNode > maxNode 时会变 ≤ 0,导致 edge 课被压成 1 节)
+            let maxStep = sIdx < 0 ? max(laidItem.course.step, 1) : max(timeSlots.count - sIdx, 1)
+            return (laidItem.course.id, min(max(laidItem.course.step, 1), maxStep))
         })
         let maxEnd = drawList.map { $0.course.startNode + (clampedSteps[$0.course.id] ?? 1) }.max()! - 1
         let clusterH = rowH * CGFloat(maxEnd - minStart + 1) - gapH
@@ -188,9 +201,11 @@ struct ConflictClusterCard: View {
         let chainStripActive = topLaid.chainFront
 
         // ---- 局部渲染辅助(依赖 body 局部量,以闭包内联) ----
+        // issue#22: 同名课程多地点 — 传 cluster 全行作为 groupRows,支持 AUTO/CUSTOM 模式取色
+        let groupRowsForCard = cluster.courses
         func courseColorOf(_ course: CourseEntity) -> Color {
-            var bg = CourseColorUtil.pickCourseColorSwiftUI(
-                course, isDark: isDark,
+            var bg = CourseColorUtil.pickCourseColorSwiftUIWithGroupRows(
+                course, groupRows: groupRowsForCard, isDark: isDark,
                 neutralColor: colors.surfaceVariant,
                 colorless: AppPrefs.shared.isCourseColorless())
             if isGrey { bg = bg.opacity(SleepyTheme.Alpha.inactive) }
@@ -224,7 +239,8 @@ struct ConflictClusterCard: View {
                         course: course, onClick: { onCourseClick(course) },
                         isDark: isDark, isGrey: isGrey,
                         folded: cardIsFolded && !l.hidden,
-                        foldSize: foldSize, corner: cardCorner)
+                        foldSize: foldSize, corner: cardCorner,
+                        groupRows: groupRowsForCard)
                         .frame(width: CGFloat(r.width), height: CGFloat(r.height))
                         .offset(x: CGFloat(r.x), y: CGFloat(r.y)))
                 }
@@ -246,7 +262,8 @@ struct ConflictClusterCard: View {
                     course: course,
                     onClick: { switchTap(layerCount, layerRepOf(course.id) ?? course.id) },
                     isDark: isDark, isGrey: isGrey,
-                    folded: false, foldSize: foldSize, corner: cardCorner)
+                    folded: false, foldSize: foldSize, corner: cardCorner,
+                    groupRows: groupRowsForCard)
                     .frame(width: CGFloat(r.width), height: CGFloat(r.height))
                     .offset(x: CGFloat(r.x), y: CGFloat(r.y)))
             case .mark(let hiddenId, let variant):
@@ -434,10 +451,13 @@ private struct ConflictCourseCard: View {
     var folded: Bool = false
     var foldSize: CGFloat = 16
     var corner: CGFloat = 12
+    /// issue#22: 同 groupId 全行(AUTO 模式按行序算 hue; 不传 = 退化为单行 groupRows)
+    var groupRows: [CourseEntity] = []
 
     var body: some View {
-        let bg = CourseColorUtil.pickCourseColorSwiftUI(
-            course, isDark: isDark,
+        let effRows = groupRows.isEmpty ? [course] : groupRows
+        let bg = CourseColorUtil.pickCourseColorSwiftUIWithGroupRows(
+            course, groupRows: effRows, isDark: isDark,
             neutralColor: colors.surfaceVariant,
             colorless: AppPrefs.shared.isCourseColorless())
         let fg = CourseColorUtil.textColorOn(bg: bg, isDark: isDark, onSurface: colors.onSurface)

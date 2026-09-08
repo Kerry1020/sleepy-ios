@@ -43,6 +43,12 @@ struct CardsGridView: View {
         let maxNode = timeSlots.map { $0.nodeEnd }.max() ?? 12
         let sortedDays = visibleDays.sorted()
         let dayCount = sortedDays.count
+        // issue#23: 边缘节次节点的"行号"按 timeSlots 自然顺序取(已按 node ASC 排序);
+        // 前置节点(-1, 0)排到 grid 顶部, 后置节点(N+1, N+2)排到 grid 底部。
+        // 返回 -1 = 该节点不在 timeSlots(数据脏); 调用方判 >= 0 再绘。
+        let slotIndexOf: (Int) -> Int = { node in
+            timeSlots.firstIndex { $0.nodeStart == node } ?? -1
+        }
 
         // 布局常量(全 dp)
         let headH: CGFloat = 52
@@ -59,7 +65,8 @@ struct CardsGridView: View {
             let gapW = min(5, max(3, geo.size.width * 0.012))
             let contentW = max(geo.size.width - sideInset - timeW - gapW * CGFloat(dayCount), 0)
             let colW = max(contentW / CGFloat(dayCount), 28)
-            let gridH = rowH * CGFloat(maxNode)   // grid 内容区固定高度
+            // issue#23: grid 高度按 timeSlots 行数算(maxNode 已不反映边缘节点总数)
+            let gridH = rowH * CGFloat(max(timeSlots.count, 1))
 
             ScrollView(.vertical) {
                 VStack(spacing: 0) {
@@ -98,7 +105,8 @@ struct CardsGridView: View {
                         // CourseOverlayCard 单卡路径(回归保护)(← CourseTableView.kt Grid 主体)
                         GridConflictLayer(
                             courses: courses, visibleDays: visibleDays, sortedDays: sortedDays,
-                            maxNode: maxNode, timeW: timeW, colW: colW, rowH: rowH,
+                            maxNode: maxNode, timeSlots: timeSlots,
+                            timeW: timeW, colW: colW, rowH: rowH,
                             gapW: gapW, gapH: gapH, greyDays: greyDays,
                             isDark: CourseColorUtil.isPaletteDark(palette),
                             onCourseClick: onCourseClick)
@@ -129,6 +137,8 @@ struct GridConflictLayer: View {
     let visibleDays: Set<Int>
     let sortedDays: [Int]
     let maxNode: Int
+    /// issue#23: 边缘节点行号/步长按 timeSlots 真实行序; 空 = 旧 startNode ∈ [1,maxNode] 行为
+    let timeSlots: [TimeSlot]
     let timeW: CGFloat
     let colW: CGFloat
     let rowH: CGFloat
@@ -149,19 +159,23 @@ struct GridConflictLayer: View {
         let defaultTopMap = defaultTopStore.map
         let clusters = ConflictLayoutEngine.findClusters(courses)
         let clusteredIds = Set(clusters.flatMap { $0.courses.map { $0.id } })
+        // issue#23: 边缘节点用 slotIndexOf 兜底,数据脏返回 -1 直接过滤
+        let slotIndexOf: (Int) -> Int = timeSlots.isEmpty
+            ? { node in (1...maxNode).contains(node) ? node - 1 : -1 }
+            : { node in timeSlots.firstIndex { $0.nodeStart == node } ?? -1 }
 
         ZStack(alignment: .topLeading) {
             let clusterItems = Array(clusters.enumerated())
             ForEach(clusterItems, id: \.offset) { item in
                 let cluster = item.element
-                // 簇内课若因 visibleDays/maxNode 过滤全出界则整簇跳过
+                // 簇内课若因 visibleDays 过滤或节点不在 timeJson 则整簇跳过
                 if visibleDays.contains(cluster.day) {
-                    let inGrid = cluster.courses.filter { (1...maxNode).contains($0.startNode) }
+                    let inGrid = cluster.courses.filter { slotIndexOf($0.startNode) >= 0 }
                     if !inGrid.isEmpty {
                         let anchor = cluster.courses.first! // 主课判定序首位,决定簇基点
                         let dayIdx = sortedDays.firstIndex(of: cluster.day) ?? 0
                         let cardX = timeW + gapW + (colW + gapW) * CGFloat(dayIdx)
-                        let cardY = rowH * CGFloat(anchor.startNode - 1)
+                        let cardY = rowH * CGFloat(max(slotIndexOf(anchor.startNode), 0))
                         let clusterKey = ConflictLayoutEngine.conflictClusterKey(cluster)
                         ConflictClusterCard(
                             cluster: cluster,
@@ -171,6 +185,7 @@ struct GridConflictLayer: View {
                             onCourseClick: onCourseClick,
                             colW: colW, rowH: rowH, maxNode: maxNode,
                             gapW: gapW, gapH: gapH,
+                            timeSlots: timeSlots,
                             isGrey: greyDays.contains(cluster.day),
                             rotationStep: rotationSteps[clusterKey],
                             onRotate: {
@@ -186,16 +201,19 @@ struct GridConflictLayer: View {
             }
             ForEach(courses) { course in
                 if visibleDays.contains(course.day),
-                   (1...maxNode).contains(course.startNode),
+                   slotIndexOf(course.startNode) >= 0,
                    !clusteredIds.contains(course.id) { // 簇内课已由 ConflictClusterCard 绘制
                     let dayIdx = sortedDays.firstIndex(of: course.day) ?? 0
-                    let steps = min(max(course.step, 1), maxNode - course.startNode + 1)
+                    let nodeIdx = slotIndexOf(course.startNode)
+                    // 步长上限按剩余行数算(边缘节点也按 timeSlots 总行数取模)
+                    let steps = min(max(course.step, 1), timeSlots.count - nodeIdx)
                     let cardX = timeW + gapW + (colW + gapW) * CGFloat(dayIdx)
-                    let cardY = rowH * CGFloat(course.startNode - 1)
+                    let cardY = rowH * CGFloat(nodeIdx)
                     let cardH = rowH * CGFloat(steps) - gapH
                     CourseOverlayCard(course: course, cardHeight: cardH,
                                       isDark: isDark,
-                                      isGrey: greyDays.contains(course.day)) {
+                                      isGrey: greyDays.contains(course.day),
+                                      groupRows: courses.filter { $0.groupId == course.groupId }) {
                         onCourseClick(course)
                     }
                     .frame(width: colW, height: cardH)
@@ -244,11 +262,14 @@ private struct CourseOverlayCard: View {
     var cardHeight: CGFloat = 0   // 0 = 调用方未提供, 回退旧行为
     let isDark: Bool
     var isGrey: Bool = false      // 节假日灰显
+    /// issue#22: 同 groupId 全行(AUTO 模式按行序算 hue; 不传 = 退化为单行 groupRows)
+    var groupRows: [CourseEntity] = []
     let onClick: () -> Void
 
     var body: some View {
-        let bg = CourseColorUtil.pickCourseColorSwiftUI(
-            course, isDark: isDark,
+        let effRows = groupRows.isEmpty ? [course] : groupRows
+        let bg = CourseColorUtil.pickCourseColorSwiftUIWithGroupRows(
+            course, groupRows: effRows, isDark: isDark,
             neutralColor: colors.surfaceVariant,
             colorless: AppPrefs.shared.isCourseColorless())
         let fg = CourseColorUtil.textColorOn(bg: bg, isDark: isDark, onSurface: colors.onSurface)
@@ -549,7 +570,8 @@ private struct DetailDayCard: View {
                     ForEach(rows, id: \.courses.first!.id) { row in
                         if row.laneCount == 1, let only = row.courses.first {
                             LessonRow(course: only, displayMode: displayMode, timeJson: timeJson,
-                                      isGrey: isGrey) {
+                                      isGrey: isGrey,
+                                      groupRows: courses.filter { $0.groupId == only.groupId }) {
                                 onCourseClick(only)
                             }
                         } else {
@@ -567,7 +589,8 @@ private struct DetailDayCard: View {
                                     VStack(spacing: 5) {
                                         ForEach(laneCourses) { laneCourse in
                                             LessonRow(course: laneCourse, displayMode: displayMode,
-                                                      timeJson: timeJson, isGrey: isGrey) {
+                                                      timeJson: timeJson, isGrey: isGrey,
+                                                      groupRows: courses.filter { $0.groupId == laneCourse.groupId }) {
                                                 onCourseClick(laneCourse)
                                             }
                                         }
@@ -596,12 +619,16 @@ private struct LessonRow: View {
     let displayMode: String
     let timeJson: String
     var isGrey: Bool = false
+    /// issue#22: 同 groupId 全行(AUTO 模式按行序算 hue; 不传 = 退化为单行 groupRows)
+    var groupRows: [CourseEntity] = []
     let onClick: () -> Void
 
     var body: some View {
         let isDark = CourseColorUtil.isPaletteDark(palette)
-        let bg = CourseColorUtil.pickCourseColorSwiftUI(
-            course, isDark: isDark, neutralColor: colors.surfaceVariant,
+        let effRows = groupRows.isEmpty ? [course] : groupRows
+        let bg = CourseColorUtil.pickCourseColorSwiftUIWithGroupRows(
+            course, groupRows: effRows, isDark: isDark,
+            neutralColor: colors.surfaceVariant,
             colorless: AppPrefs.shared.isCourseColorless())
         let fg = CourseColorUtil.textColorOn(bg: bg, isDark: isDark, onSurface: colors.onSurface)
         // 节假日灰显 ← effectiveBg/effectiveFg/textDecoration
