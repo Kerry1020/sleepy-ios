@@ -28,21 +28,31 @@ struct JwImportFlow: View {
     @State private var configStartDate = ""
     @State private var configTimeJson = ""
     @State private var configRows: [TimeTableUtils.TimeSlotRow] = []
+    // 课表名 — 默认 jw_import_title(校名)模板, 用户可编辑; 与 Android 1.0.51 ConfigureConfirm
+    // AlertDialog 里 OutlinedTextField 一致。
+    @State private var configTableName = ""
 
     var body: some View {
         ZStack {
             content
 
-            // 错误提示(中央 errorContainer 卡)
+            // 错误提示(中央 errorContainer 卡 — 原生 Button 一键关闭)
             if let msg = errorMsg {
-                Text(msg)
-                    .font(.system(size: 14))
-                    .foregroundColor(colors.onErrorContainer)
-                    .padding(16)
-                    .background(colors.errorContainer)
-                    .cornerRadius(SleepyShapes.medium)
-                    .padding(32)
-                    .onTapGesture { errorMsg = nil }
+                Button {
+                    errorMsg = nil
+                } label: {
+                    Text(msg)
+                        .font(.system(size: 14))
+                        .foregroundColor(colors.onErrorContainer)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(16)
+                }
+                .buttonStyle(SleepyButtonStyle())
+                .background(colors.errorContainer)
+                .cornerRadius(SleepyShapes.medium)
+                .padding(32)
+                .accessibilityIdentifier("jw_error_banner")
+                .accessibilityLabel(msg)
             }
             // 状态提示(底部)
             if let msg = statusMsg {
@@ -113,6 +123,14 @@ struct JwImportFlow: View {
                         .font(.system(size: 12))
                         .foregroundColor(colors.onSurfaceVariant)
                 }
+                // ← Android 1.0.51 ConfigureConfirm: 课表名 TextField(OutlinedTextField);
+                // 默认值来自 jw_import_title(校名), 用户可改; 提交时空字符串 fallback 回模板。
+                TextField(L10n.format("import_table_name"), text: $configTableName)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(colors.surfaceContainer)
+                    .cornerRadius(SleepyTheme.fieldShape)
+                    .accessibilityIdentifier("jw_config_table_name")
                 DatePickerField(value: configStartDate, onValueChange: { configStartDate = $0 },
                                 label: L10n.format("import_week_start"), isError: false)
                 TimeSlotEditor(rows: configRows, onRowsChange: { newRows in
@@ -163,6 +181,7 @@ struct JwImportFlow: View {
         }
         configStartDate = ""
         configTimeJson = ""
+        configTableName = L10n.format("jw_import_title", sch.name)
         stage = .configureConfirm
         statusMsg = nil
     }
@@ -193,10 +212,15 @@ struct JwImportFlow: View {
         guard let school = parsedSchool else { return }
         do {
             let maxNode = configRows.map { $0.node }.max() ?? 0
+            // ← Android 1.0.51 一致: 用户编辑的课表名为空时回退 jw_import_title(校名)
+            let trimmedName = configTableName.trimmingCharacters(in: .whitespacesAndNewlines)
+            let finalTableName = trimmedName.isEmpty
+                ? L10n.format("jw_import_title", school.name)
+                : trimmedName
             let tableId = try JwImportViewModel.importAsNewTable(
                 AppDatabase.getShared(),
                 courses: parsedCourses,
-                tableName: L10n.format("jw_import_title", school.name),
+                tableName: finalTableName,
                 startDate: configStartDate,
                 timeJson: configTimeJson,
                 nodesPerDay: maxNode)
