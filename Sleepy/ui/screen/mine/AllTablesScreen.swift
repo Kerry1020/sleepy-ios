@@ -20,69 +20,74 @@ struct AllTablesScreen: View {
                     Spacer().frame(height: 4)
                     ForEach(state.tables) { table in
                         let isCurrent = table.id == state.selectedTableId
-                        // ← Kotlin Row + noRippleClickable: 行用 tap 手势而非 Button,
-                        //   否则嵌套在内层 Button(齿轮)的点击会冒泡给行, 齿轮永远打不开编辑页
                         HStack(spacing: 12) {
-                                if isCurrent {
-                                    Image(systemName: "checkmark.circle")
-                                        .font(.system(size: 24))
-                                        .foregroundColor(colors.primary)
-                                } else {
-                                    RoundedRectangle(cornerRadius: SleepyShapes.medium)
-                                        .fill(colors.outlineVariant)
-                                        .frame(width: 24, height: 24)
-                                }
-                                VStack(alignment: .leading, spacing: 2) {
-                                    // ★ M3 对比度修正: 当前行配 onPrimaryContainer 系
-                                    Text(table.name)
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(isCurrent ? colors.onPrimaryContainer : colors.onSurface)
-                                    Text(isCurrent ? L10n.format("current_table_week", state.currentWeek)
-                                                   : L10n.format("table_start_date", table.startDate))
-                                        .font(.system(size: 12))
-                                        .foregroundColor(isCurrent
-                                            ? colors.onPrimaryContainer.opacity(SleepyTheme.Alpha.highContent)
-                                            : colors.onSurfaceVariant)
-                                    // v7.10.15 导入时间(createdAt>0 才显示; v1.0.16 前老表无此值)
-                                    if table.createdAt > 0 {
-                                        Text(L10n.format("table_created_at", Self.createdAtText(table.createdAt)))
-                                            .font(.system(size: 11))
-                                            .foregroundColor(isCurrent
-                                                ? colors.onPrimaryContainer.opacity(SleepyTheme.Alpha.highContent)
-                                                : colors.onSurfaceVariant)
-                                    }
-                                }
-                                Spacer()
-                                // v7.10.15 duplicate 图标 — 创建课表副本, 置于设置图标左边
-                                Button {
-                                    viewModel.duplicateTable(table.id)
-                                } label: {
-                                    Image(systemName: "doc.on.doc")
-                                        .font(.system(size: 18))
-                                        .foregroundColor(colors.onSurfaceVariant)
-                                }
-                                .buttonStyle(SleepyButtonStyle())
-                                .accessibilityIdentifier("table_duplicate_\(table.id)")
-                                Button {
-                                    onOpenEditTable(table.id)
-                                } label: {
-                                    Image(systemName: "gearshape")
-                                        .font(.system(size: 20))
-                                        .foregroundColor(colors.onSurfaceVariant)
-                                }
-                                .buttonStyle(SleepyButtonStyle())
-                                .accessibilityIdentifier("table_edit_\(table.id)")
-                            }
-                            .padding(14)
-                            .background(isCurrent ? colors.primaryContainer : colors.surfaceContainer)
-                            .cornerRadius(SleepyShapes.large)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
+                            Button {
                                 if !isCurrent {
                                     viewModel.selectTable(table.id)
                                     onDismiss()
                                 }
+                            } label: {
+                                HStack(spacing: 12) {
+                                    if isCurrent {
+                                        Image(systemName: "checkmark.circle")
+                                            .font(.system(size: 24))
+                                            .foregroundColor(colors.primary)
+                                    } else {
+                                        RoundedRectangle(cornerRadius: SleepyShapes.medium)
+                                            .fill(colors.outlineVariant)
+                                            .frame(width: 24, height: 24)
+                                    }
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        // ★ M3 对比度修正: 当前行配 onPrimaryContainer 系
+                                        Text(table.name)
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundColor(isCurrent ? colors.onPrimaryContainer : colors.onSurface)
+                                        Text(isCurrent ? L10n.format("current_table_week", state.currentWeek)
+                                                       : L10n.format("table_start_date", table.startDate))
+                                            .font(.system(size: 12))
+                                            .foregroundColor(isCurrent
+                                                ? colors.onPrimaryContainer.opacity(SleepyTheme.Alpha.highContent)
+                                                : colors.onSurfaceVariant)
+                                        // v7.10.15 导入时间(createdAt>0 才显示; v1.0.16 前老表无此值)
+                                        if table.createdAt > 0 {
+                                            Text(L10n.format("table_created_at", Self.createdAtText(table.createdAt)))
+                                                .font(.system(size: 11))
+                                                .foregroundColor(isCurrent
+                                                    ? colors.onPrimaryContainer.opacity(SleepyTheme.Alpha.highContent)
+                                                    : colors.onSurfaceVariant)
+                                        }
+                                    }
+                                    Spacer(minLength: 0)
+                                }
+                                .contentShape(Rectangle())
                             }
+                            .buttonStyle(SleepyButtonStyle())
+                            .accessibilityIdentifier("table_select_\(table.id)")
+                            .accessibilityLabel(table.name)
+                            Spacer(minLength: 0)
+                            // v7.10.15 duplicate 图标 — 创建课表副本, 置于设置图标左边
+                            Button {
+                                viewModel.duplicateTable(table.id)
+                            } label: {
+                                Image(systemName: "doc.on.doc")
+                                    .font(.system(size: 18))
+                                    .foregroundColor(colors.onSurfaceVariant)
+                            }
+                            .buttonStyle(SleepyButtonStyle())
+                            .accessibilityIdentifier("table_duplicate_\(table.id)")
+                            Button {
+                                onOpenEditTable(table.id)
+                            } label: {
+                                Image(systemName: "gearshape")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(colors.onSurfaceVariant)
+                            }
+                            .buttonStyle(SleepyButtonStyle())
+                            .accessibilityIdentifier("table_edit_\(table.id)")
+                        }
+                        .padding(14)
+                        .background(isCurrent ? colors.primaryContainer : colors.surfaceContainer)
+                        .cornerRadius(SleepyShapes.large)
                     }
 
                     // 新建按钮(FilledTonalButton)

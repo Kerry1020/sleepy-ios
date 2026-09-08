@@ -42,10 +42,28 @@ struct EditTableScreen: View {
 
     var body: some View {
         let state = viewModel.state
-        // tableId == nil means edit current table
-        let table = tableId != nil ? state.tables.first { $0.id == tableId } : state.currentTable
+        // 1) 显式 tableId 命中: 用它
+        // 2) tableId == nil: 编辑当前选中表
+        // 3) 新建场景: pendingNewTableId 命中但 state.tables 还没同步刷新
+        //    → 用 state.tables.first(按 createdAt 倒序已是时间最近)兜底,
+        //    让 EditTableScreen 不卡在 not-found
+        let resolved: TimeTableEntity? = {
+            if let tableId = tableId, let hit = state.tables.first(where: { $0.id == tableId }) {
+                return hit
+            }
+            if tableId == nil, let cur = state.currentTable { return cur }
+            if let pending = pendingNewTableId,
+               let fallback = state.tables.first(where: { $0.id == pending }) {
+                return fallback
+            }
+            if let pending = pendingNewTableId,
+               let latest = state.tables.first {
+                return latest
+            }
+            return state.tables.first
+        }()
 
-        if let table = table {
+        if let table = resolved {
             content(table: table)
         } else {
             VStack {
