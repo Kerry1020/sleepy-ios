@@ -646,6 +646,7 @@ private struct ImportPreviewDialog: View {
                             } label: {
                                 Text(L10n.format("import_append_conflict"))
                                     .font(.system(size: 14, weight: .medium))
+                                    .lineLimit(1)   // ← Android maxLines = 1
                                     .foregroundColor(colors.onErrorContainer)
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 40)

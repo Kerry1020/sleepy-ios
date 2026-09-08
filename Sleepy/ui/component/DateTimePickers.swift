@@ -41,6 +41,8 @@ struct DatePickerField: View {
                     .foregroundColor(colors.primary)
             }
             .buttonStyle(SleepyButtonStyle())
+            // ← Android Icon contentDescription = select_date
+            .accessibilityLabel(L10n.format("select_date"))
         }
         .sheet(isPresented: $showPicker) {
             VStack(spacing: 0) {

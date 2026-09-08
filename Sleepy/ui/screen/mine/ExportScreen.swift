@@ -45,6 +45,8 @@ struct ExportScreen: View {
                                     Image(systemName: "chevron.down")
                                         .font(.system(size: 16))
                                         .foregroundColor(colors.onPrimaryContainer)
+                                        // ← Android contentDescription = export_pick_table
+                                        .accessibilityLabel(L10n.format("export_pick_table"))
                                 }
                                 Text("\(L10n.format("export_course_count", courses.count)) · \(L10n.format("export_start_date", table.startDate))")
                                     .font(.system(size: 14))

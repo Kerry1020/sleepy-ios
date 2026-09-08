@@ -261,10 +261,10 @@ private struct ScheduleTopBar: View {
 
             // 最左操作区: logo(课表切换) + 撤回(仅有可撤回快照时显示)
             HStack(spacing: 6) {
-                WeekNavButton(icon: "calendar", onClick: onSwitchTable)
+                WeekNavButton(icon: "calendar", a11yLabel: L10n.format("schedule_switch_table"), onClick: onSwitchTable)
                     .accessibilityIdentifier("switch_table")
                 if hasUndoSnapshot {
-                    WeekNavButton(icon: "arrow.uturn.backward", onClick: onUndo)
+                    WeekNavButton(icon: "arrow.uturn.backward", a11yLabel: L10n.format("schedule_undo"), onClick: onUndo)
                         .accessibilityIdentifier("undo_button")
                 }
             }
@@ -272,9 +272,9 @@ private struct ScheduleTopBar: View {
 
             // 右侧操作区: 加课 + 分享 — 与翻页箭头同款圆形底
             HStack(spacing: 6) {
-                WeekNavButton(icon: "plus", onClick: onAddCourse)
+                WeekNavButton(icon: "plus", a11yLabel: L10n.format("schedule_add_course"), onClick: onAddCourse)
                     .accessibilityIdentifier("topbar_add")
-                WeekNavButton(icon: "square.and.arrow.up", onClick: onShare)
+                WeekNavButton(icon: "square.and.arrow.up", a11yLabel: L10n.format("schedule_share_table"), onClick: onShare)
                     .accessibilityIdentifier("topbar_share")
             }
             .frame(maxWidth: .infinity, alignment: .trailing)
@@ -411,9 +411,19 @@ private struct TableSwitcherSheet: View {
 private struct WeekNavButton: View {
     @Environment(\.localWakeUpColors) private var colors
     let icon: String
+    // ← Android contentDescriptionRes: 传了才挂 a11y 标签, 箭头按钮不传
+    var a11yLabel: String? = nil
     let onClick: () -> Void
 
     var body: some View {
+        if let a11yLabel {
+            button.accessibilityLabel(a11yLabel)
+        } else {
+            button
+        }
+    }
+
+    private var button: some View {
         Button(action: onClick) {
             Image(systemName: icon)
                 .foregroundColor(colors.onSurfaceVariant)

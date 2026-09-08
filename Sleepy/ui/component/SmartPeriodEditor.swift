@@ -142,6 +142,8 @@ private struct BreakGroupSection: View {
                 }
                 .buttonStyle(SleepyButtonStyle())
                 .frame(width: 28, height: 28)   // ← Android IconButton 28dp 方形
+                // ← Android contentDescription = delete
+                .accessibilityLabel(L10n.format("delete"))
             }
 
             // 位置卡片网格(每行 8 个)

@@ -75,6 +75,8 @@ struct AllTablesScreen: View {
                             }
                             .buttonStyle(SleepyButtonStyle())
                             .accessibilityIdentifier("table_duplicate_\(table.id)")
+                            // ← Android contentDescription = all_tables_duplicate
+                            .accessibilityLabel(L10n.format("all_tables_duplicate"))
                             Button {
                                 onOpenEditTable(table.id)
                             } label: {
@@ -84,6 +86,8 @@ struct AllTablesScreen: View {
                             }
                             .buttonStyle(SleepyButtonStyle())
                             .accessibilityIdentifier("table_edit_\(table.id)")
+                            // ← Android contentDescription = action_settings
+                            .accessibilityLabel(L10n.format("action_settings"))
                         }
                         .padding(14)
                         .background(isCurrent ? colors.primaryContainer : colors.surfaceContainer)
@@ -138,6 +142,8 @@ struct SettingsTopBar: View {
             }
             .buttonStyle(SleepyButtonStyle())
             .accessibilityIdentifier("topbar_back")
+            // ← Android ArrowBack contentDescription = back
+            .accessibilityLabel(L10n.format("back"))
             Text(title)
                 .font(.system(size: 20, weight: .medium))
                 .foregroundColor(colors.onBackground)

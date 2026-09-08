@@ -361,6 +361,8 @@ struct LicenseScreen: View {
                     Image(systemName: expanded ? "chevron.up" : "chevron.down")
                         .font(.system(size: 20))
                         .foregroundColor(colors.onSurfaceVariant)
+                    // ← Android contentDescription = collapse/expand
+                        .accessibilityLabel(expanded ? "collapse" : "expand")
                 }
             }
         }

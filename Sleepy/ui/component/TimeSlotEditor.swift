@@ -127,6 +127,8 @@ private struct TimeSlotRowItem: View {
                 }
                 .buttonStyle(SleepyButtonStyle())
                 .accessibilityIdentifier("slot_row_delete_\(row.node)")
+                // ← Android contentDescription = delete_period
+                .accessibilityLabel(L10n.format("delete_period"))
                 .frame(width: 32, height: 32)   // ← Android IconButton 32dp 方形
             } else {
                 Spacer().frame(width: 32)
