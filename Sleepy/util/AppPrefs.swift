@@ -102,9 +102,11 @@ final class AppPrefs {
         sp().set(enabled, forKey: Self.KEY_HIGH_REFRESH)
     }
 
-    /// 底栏样式 — true=贴底(默认), false=悬浮。
+    /// 底栏样式 — true=贴底, false=悬浮(默认,与 Android v1.0.45 AppPrefs.KEY_NAV_DOCK 对齐)。
+    /// 关键修复(2026-09-08): iOS 老版默认 true=贴底, 与 Android 默认 false=悬浮方向相反,
+    /// → 新装用户/老用户升级后均看不到 Android 已发布的悬浮形态, 报「依旧没有悬浮」。
     func isNavDocked() -> Bool {
-        sp().object(forKey: Self.KEY_NAV_DOCK) as? Bool ?? true
+        sp().object(forKey: Self.KEY_NAV_DOCK) as? Bool ?? false
     }
 
     func setNavDocked(_ docked: Bool) {

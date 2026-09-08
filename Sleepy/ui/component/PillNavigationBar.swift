@@ -149,9 +149,9 @@ private struct DockedBar: View {
             labelLeftsBar = value.labelLefts
         }
         // thumb 弹簧跟随 selectedIndex(barWidth 变化时重算 → 旋转/分屏自适应)
-        .onChange(of: selected) { _ in animateThumbToSelected() }
-        .onChange(of: barWidth) { _ in animateThumbToSelected() }
-        .onAppear { animateThumbToSelected() }
+        .onChange(of: selected) { newSelected in animateThumb(to: newSelected) }
+        .onChange(of: barWidth) { _ in animateThumb(to: selected) }
+        .onAppear { animateThumb(to: selected) }
     }
 
     // ★ v2.6 确定性几何 — 不依赖异步测量,thumb 位置 = inset + slot*i + slot/2
@@ -164,10 +164,11 @@ private struct DockedBar: View {
         inset + slotWidth * CGFloat(i) + slotWidth / 2
     }
 
-    /// 确定性 thumb 目标中心 — 不用 PreferenceKey,首跳即准
-    private func animateThumbToSelected() {
+    /// 确定性 thumb 目标中心 — 不用 PreferenceKey,首跳即准。
+    /// 参数显式传入目标索引(避免 iOS 15 真机上 onChange 闭包捕获旧 self → 读到旧 selectedIndex → 高亮慢一拍)。
+    private func animateThumb(to index: Int) {
         guard barWidth > 0 else { return }
-        let target = centerForIndex(selectedIndex)
+        let target = centerForIndex(index)
         if !thumbPlaced {
             thumbCenterX = target
             thumbPlaced = true
@@ -319,14 +320,11 @@ private struct FloatingBar: View {
                 .frame(width: totalWidth, height: DockSpec.capsuleHeight)
             }
             .frame(width: totalWidth, height: DockSpec.capsuleHeight)
-            // 玻璃:超薄材质(底) + 表面色 0.86(上) = 高斯模糊 + 表面色 tint
+            // 表面色 0.86 — 与 Android DockNavigationBar glassBg = surfaceContainer.copy(alpha=0.86f) 1:1。
+            // 不加 .ultraThinMaterial: Android 是纯平面色(无高斯模糊),双层 tint 会发白发灰。
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(.ultraThinMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: cornerRadius)
-                            .fill(colors.surfaceContainer.opacity(0.86))
-                    )
+                    .fill(colors.surfaceContainer.opacity(0.86))
             )
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
             // shadow elevation 12dp(Compose) ≈ SwiftUI radius 12 y 4 black 0.2
