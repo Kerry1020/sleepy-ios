@@ -244,35 +244,86 @@ private struct SchoolRow: View {
     let school: JwSchoolInfo
     let onClick: () -> Void
 
+    private var isClickable: Bool {
+        school.isSupported && !school.url.isEmpty
+    }
+
     var body: some View {
-        Button(action: onClick) {
-            HStack(spacing: 12) {
-                Image(systemName: "graduationcap.fill")
-                    .font(.system(size: 20))
-                    .foregroundColor(colors.onPrimaryContainer)
-                    .frame(width: 36, height: 36)
-                    .background(colors.primaryContainer)
-                    .cornerRadius(SleepyShapes.small)
-                VStack(alignment: .leading, spacing: 2) {
+        Group {
+            if isClickable {
+                Button(action: onClick) {
+                    rowContent
+                }
+                .buttonStyle(SleepyButtonStyle())
+            } else {
+                rowContent
+            }
+        }
+    }
+
+    private var rowContent: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "graduationcap.fill")
+                .font(.system(size: 20))
+                .foregroundColor(colors.onPrimaryContainer)
+                .frame(width: 36, height: 36)
+                .background(colors.primaryContainer)
+                .cornerRadius(SleepyShapes.small)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    schoolStatusBadge
                     Text(school.name)
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(colors.onSurface)
-                    if !school.url.isEmpty {
-                        Text(JwProtocol.displayName(school.type) + " · " +
-                             school.url.replacingOccurrences(of: "https://", with: "")
-                                 .replacingOccurrences(of: "http://", with: "")
-                                 .trimmingCharacters(in: CharacterSet(charactersIn: "/")))
-                            .font(.system(size: 12))
-                            .foregroundColor(colors.onSurfaceVariant)
-                            .lineLimit(1)
-                    }
+                        .foregroundColor(isClickable ? colors.onSurface : colors.onSurfaceVariant)
                 }
-                Spacer()
+                if !school.url.isEmpty {
+                    Text(JwProtocol.displayName(school.type) + " · " +
+                         school.url.replacingOccurrences(of: "https://", with: "")
+                             .replacingOccurrences(of: "http://", with: "")
+                             .trimmingCharacters(in: CharacterSet(charactersIn: "/")))
+                        .font(.system(size: 12))
+                        .foregroundColor(colors.onSurfaceVariant)
+                        .lineLimit(1)
+                }
             }
-            .padding(.vertical, 14)
-            .padding(.horizontal, 4)
+            Spacer()
         }
-        .buttonStyle(SleepyButtonStyle())
+        .padding(.vertical, 14)
+        .padding(.horizontal, 4)
+    }
+
+    @ViewBuilder
+    private var schoolStatusBadge: some View {
+        switch school.status {
+        case JwSchoolInfo.STATUS_PENDING:
+            badge(label: L10n.t("jw_pending_pending"),
+                  background: colors.tertiaryContainer,
+                  foreground: colors.onTertiaryContainer)
+        case JwSchoolInfo.STATUS_GRAD_PENDING:
+            badge(label: L10n.t("jw_pending_pending") + " · " + L10n.t("jw_pending_grad"),
+                  background: colors.tertiaryContainer,
+                  foreground: colors.onTertiaryContainer)
+        case JwSchoolInfo.STATUS_GRAD_SUPPORTED:
+            badge(label: L10n.t("jw_pending_grad"),
+                  background: colors.secondaryContainer,
+                  foreground: colors.onSecondaryContainer)
+        case JwSchoolInfo.STATUS_LEGACY:
+            badge(label: L10n.t("jw_pending_legacy"),
+                  background: colors.surfaceVariant,
+                  foreground: colors.onSurfaceVariant)
+        default:
+            EmptyView()
+        }
+    }
+
+    private func badge(label: String, background: Color, foreground: Color) -> some View {
+        Text(label)
+            .font(.system(size: 11))
+            .foregroundColor(foreground)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(background)
+            .cornerRadius(SleepyShapes.small)
     }
 }
 
