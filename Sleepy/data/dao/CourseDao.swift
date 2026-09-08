@@ -42,6 +42,22 @@ struct CourseDao {
         try db.write { try course.update($0) }
     }
 
+    // @Update — issue#22 行级 diff/patch 用 — 批量 update, 保留各行 id
+    func updateAll(_ courses: [CourseEntity]) throws {
+        try db.write { db in
+            for c in courses { try c.update(db) }
+        }
+    }
+
+    // DELETE FROM courses WHERE id IN (:ids) — issue#22 行级 diff/patch 用
+    func deleteByIds(_ ids: [Int64]) throws {
+        try db.write { db in
+            let qs = ids.map { _ in "?" }.joined(separator: ",")
+            try db.execute(sql: "DELETE FROM courses WHERE id IN (\(qs))",
+                           arguments: StatementArguments(ids))
+        }
+    }
+
     // DELETE FROM courses WHERE id = :id
     func deleteById(_ id: Int64) throws {
         try db.write { try $0.execute(sql: "DELETE FROM courses WHERE id = ?", arguments: [id]) }

@@ -145,6 +145,17 @@ final class ScheduleRepository {
         onDataChanged()
     }
 
+    /// issue#22 行级 diff/patch 落库 ← applyDiff(tableId, diff)
+    /// Android 注释要求"调用前必须已 captureForUndo";iOS 侧 captureForUndo 是 private,
+    /// 这里改为内部捕获(功能等价:撤销快照仍在写库前生成)。顺序 delete → update → insert。
+    func applyDiff(_ tableId: Int64, _ diff: DiffResult) throws {
+        try captureForUndo()
+        if !diff.toDelete.isEmpty { try courseDao.deleteByIds(diff.toDelete) }
+        if !diff.toUpdate.isEmpty { try courseDao.updateAll(diff.toUpdate) }
+        if !diff.toInsert.isEmpty { try courseDao.insertAll(diff.toInsert) }
+        onDataChanged()
+    }
+
     func deleteCourse(_ id: Int64) throws {
         try captureForUndo()
         try courseDao.deleteById(id)
