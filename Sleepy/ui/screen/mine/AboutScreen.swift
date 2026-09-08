@@ -40,18 +40,11 @@ struct AboutScreen: View {
                 VStack(spacing: 12) {
                     Spacer().frame(height: 24)
 
-                    // App name + icon
+                    // App name(← 1.0.51: 纯文字, 无 logo 图; headlineMedium bold 28sp)
                     VStack(spacing: 4) {
-                        Image("SleepyLogo")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 96, height: 96)
-                            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                            .shadow(color: colors.primary.opacity(0.18), radius: 12, y: 6)
-                            .accessibilityLabel(L10n.format("app_name"))
                         Spacer().frame(height: 8)
                         Text(L10n.format("app_name"))
-                            .font(.system(size: 22, weight: .bold))
+                            .font(.system(size: 28, weight: .bold))
                             .foregroundColor(colors.onSurface)
                         Text("v\(UpdateManager.currentVersionName)")
                             .font(.system(size: 14))
@@ -170,13 +163,44 @@ struct AboutScreen: View {
                         }
                     }
 
+                    // Feedback card — ← 1.0.51 反馈卡: GitHub Issue / 邮件两个入口
+                    //   (FeedbackComposer 已 1:1 移植, 这里只是接上 UI)
+                    InfoCard {
+                        HStack(spacing: 12) {
+                            Image(systemName: "ant")
+                                .font(.system(size: 24))
+                                .foregroundColor(colors.primary)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(L10n.format("about_feedback"))
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(colors.onSurface)
+                                Text(L10n.format("about_feedback_detail"))
+                                    .font(.system(size: 12))
+                                    .foregroundColor(colors.onSurfaceVariant)
+                            }
+                            Spacer()
+                            Button { openGitHubFeedback() } label: {
+                                Image(systemName: "arrow.up.right.square")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(colors.primary)
+                            }
+                            .buttonStyle(SleepyButtonStyle())
+                            .accessibilityLabel(L10n.format("about_feedback_github"))
+                            Button { openEmailFeedback() } label: {
+                                Image(systemName: "envelope")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(colors.primary)
+                            }
+                            .buttonStyle(SleepyButtonStyle())
+                            .accessibilityLabel(L10n.format("about_feedback_email"))
+                        }
+                    }
+
                     // License 入口行(v1.0.46 用户令): 长卡拆独立二级页, 这里只留入口
                     InfoCard {
                         Button(action: onOpenLicense) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "doc.text")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(colors.primary)
+                            // ← Android 无前导图标: 标题+副题+尾随 ChevronRight(20dp)
+                            HStack(spacing: 0) {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(L10n.format("about_license_title"))
                                         .font(.system(size: 16, weight: .semibold))
@@ -185,9 +209,9 @@ struct AboutScreen: View {
                                         .font(.system(size: 12))
                                         .foregroundColor(colors.onSurfaceVariant)
                                 }
-                                Spacer()
+                                .frame(maxWidth: .infinity, alignment: .leading)
                                 Image(systemName: "chevron.right")
-                                    .font(.system(size: 14, weight: .semibold))
+                                    .font(.system(size: 20))
                                     .foregroundColor(colors.onSurfaceVariant)
                             }
                         }
@@ -250,6 +274,51 @@ struct AboutScreen: View {
 
     private func openURL(_ s: String) {
         if let url = URL(string: s) { UIApplication.shared.open(url) }
+    }
+
+    // ← diagnostic(): Android FeedbackComposer.Diagnostic 的 iOS 填实
+    private func diagnostic() -> FeedbackComposer.Diagnostic {
+        let scale = UIScreen.main.scale
+        let bounds = UIScreen.main.bounds.size
+        return FeedbackComposer.Diagnostic(
+            versionName: UpdateManager.currentVersionName,
+            versionCode: buildCode,
+            osVersion: UIDevice.current.systemVersion,
+            deviceBrand: "Apple",
+            deviceModel: UIDevice.current.model,
+            resolution: "\(Int(bounds.width * scale))x\(Int(bounds.height * scale))",
+            locale: Locale.preferredLanguages.first ?? "en",
+            isDebug: isDebugBuild)
+    }
+
+    private var isDebugBuild: Bool {
+        #if DEBUG
+        true
+        #else
+        false
+        #endif
+    }
+
+    // ← openGitHubFeedback: bug_report.yml 模板 + 诊断块(标题/正文与 Android 同源)
+    private func openGitHubFeedback() {
+        openURL(FeedbackComposer.githubIssueUrl(
+            title: "[Sleepy] ",
+            body: "请描述你遇到的问题或建议：",
+            diag: diagnostic(),
+            template: "bug_report.yml"))
+    }
+
+    // ← openEmailFeedback: 无邮件客户端 → snackbar 改用 GitHub Issue
+    private func openEmailFeedback() {
+        let uri = FeedbackComposer.mailtoUri(
+            subject: L10n.format("about_feedback_email_subject"),
+            body: L10n.format("about_feedback_email_body"),
+            diag: diagnostic())
+        guard let url = URL(string: uri), UIApplication.shared.canOpenURL(url) else {
+            snackMessage = L10n.format("about_feedback_no_mail_app")
+            return
+        }
+        UIApplication.shared.open(url)
     }
 
     // ← checkUpdate
