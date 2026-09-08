@@ -144,6 +144,10 @@ private let perSchoolEntries: [PerSchoolEntry] = [
         usage: "MarkYangKp/ZhengFangJY"
     ),
     PerSchoolEntry(
+        id: "school-ucas", title: "中国科学院大学 UCAS",
+        usage: "ldiex/UCAS_Course_Schedule_Convertor\nHurray0/UCAS_GET_Course\ncld378632668/ucas_course_tool\nGentleCP/UCAS-Helper"
+    ),
+    PerSchoolEntry(
         id: "school-bjfu", title: "北京林业大学 BJFU",
         usage: "Bloomberg2000/bjfu_course_ics_generator\nBloomberg2000/bjfu_util.py"
     ),
