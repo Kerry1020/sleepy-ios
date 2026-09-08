@@ -12,6 +12,8 @@ struct ScheduleState {
     var courses: [CourseEntity] = []
     var currentWeek: Int = 1
     var selectedWeek: Int = 1
+    /// false=首次加载(本周), true=用户/系统已选定周 — 课程变更时 selectedWeek 不再被重置
+    var initialWeekSettled: Bool = false
     var nodesPerDay: Int = 12
     var selectedCourseId: Int64? = nil
     var showCourseDialog: Bool = false
@@ -86,7 +88,8 @@ final class ScheduleViewModel: ObservableObject {
                 let week = table.map { DateUtils.currentWeek(startDate: $0.startDate) } ?? 1
                 self.state.courses = courses
                 self.state.currentWeek = week
-                self.state.selectedWeek = week
+                self.state.selectedWeek = self.state.initialWeekSettled ? self.state.selectedWeek : week
+                self.state.initialWeekSettled = true
                 self.state.nodesPerDay = table?.nodesPerDay ?? 12
                 // 课程数据变更后刷新所有 widget
                 self.onWidgetsNeedReload()
@@ -97,6 +100,7 @@ final class ScheduleViewModel: ObservableObject {
     func selectTable(_ id: Int64) {
         manualSelectDone = true
         state.selectedTableId = id
+        state.initialWeekSettled = false
         loadCourses(id)
         Task {
             try? repo.setDefault(id)
@@ -145,6 +149,13 @@ final class ScheduleViewModel: ObservableObject {
         if isFirstTable {
             // 数据库侧 isDefault 唯一性保证
             try? repo.setDefault(id)
+        }
+        // observeAllTables 在 receive(on: DispatchQueue.main) 后异步回调。
+        // 先同步补入内存状态,让立即打开的 EditTableScreen 能解析新表。
+        if id != 0, !state.tables.contains(where: { $0.id == id }) {
+            var insertedTable = table
+            insertedTable.id = id
+            state.tables.append(insertedTable)
         }
         if commitSelection {
             manualSelectDone = true
@@ -222,7 +233,8 @@ final class ScheduleViewModel: ObservableObject {
     }
 
     func changeWeek(_ week: Int) {
-        guard week >= 1 else { return }
+        let maxWeek = state.currentTable?.maxWeek ?? 20
+        guard week >= 1, week <= maxWeek else { return }
         state.selectedWeek = week
     }
 

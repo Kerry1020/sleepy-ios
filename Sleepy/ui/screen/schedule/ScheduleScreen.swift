@@ -16,7 +16,8 @@ struct ScheduleScreen: View {
     var onManualAdd: () -> Void = {}
     var onEditCourse: (CourseEntity) -> Void = { _ in }
 
-    @State private var viewMode: ViewMode = .full
+    // ← AppPrefs.getStartView Android; 顶部手动切换仍只改本地页面状态,不写回启动偏好
+    @State private var viewMode: ViewMode = AppPrefs.shared.getStartView() == "cards" ? .cards : .full
     @State private var selectedCourse: CourseEntity? = nil
     // v7.10.16: 无可撤回时 toast 提示(按钮不隐藏保持布局稳定)
     @State private var showUndoNoneToast = false
@@ -160,9 +161,8 @@ private struct WeekPager: View {
     let visibleDays: Set<Int>
     let onCourseClick: (CourseEntity) -> Void
 
-    // 本页灰显的星期几 ← Android produceState greyDays: 逐日 shouldGrey
-    @State private var greyDays: Set<Int> = []
-    @State private var greyLoadedWeek: Int = -1
+    // 每个 pager 页独立缓存灰显星期 ← Android produceState(greyDays, page, startDate)
+    @State private var greyDaysByWeek: [Int: Set<Int>] = [:]
 
     var body: some View {
         let state = viewModel.state
@@ -186,7 +186,7 @@ private struct WeekPager: View {
                                      displayMode: displayMode,
                                      timeJson: state.currentTable?.timeJson ?? "",
                                      onCourseClick: onCourseClick,
-                                     greyDays: page == state.selectedWeek ? greyDays : [])
+                                     greyDays: greyDaysByWeek[page] ?? [])
                     case .cards:
                         CardsGridView(courses: weekCourses,
                                       timeSlots: cardTimeSlots(table: state.currentTable),
@@ -195,7 +195,7 @@ private struct WeekPager: View {
                                       startDate: state.currentTable?.startDate ?? "",
                                       currentWeek: page,
                                       onCourseClick: onCourseClick,
-                                      greyDays: page == state.selectedWeek ? greyDays : [])
+                                      greyDays: greyDaysByWeek[page] ?? [])
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -204,25 +204,23 @@ private struct WeekPager: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .tabViewStyle(.page(indexDisplayMode: .never))
-        // 计算本周哪些天是节假日/周末(灰显用) ← Android produceState(greyDays, page, startDate)
-        .task(id: "\(state.selectedWeek)-\(state.currentTable?.startDate ?? "")") {
+        // 每页独立计算灰显星期(节假日/周末) ← Android produceState(greyDays, page, startDate)
+        .task(id: "\(state.currentTable?.startDate ?? "")-\(state.selectedWeek)-\(pagerMaxWeek)") {
             let start = state.currentTable?.startDate ?? ""
             guard !start.isEmpty else {
-                greyDays = []
-                greyLoadedWeek = state.selectedWeek
+                greyDaysByWeek = [:]
                 return
             }
-            let week = state.selectedWeek
-            if week == greyLoadedWeek { return }
-            var grey: Set<Int> = []
-            for day in 1...7 {
-                if let date = DateUtils.dateOfWeek(startDate: start, week: week, dayOfWeek: day),
-                   await HolidayManager.shouldGrey(date) {
-                    grey.insert(day)
+            for week in 1...pagerMaxWeek where greyDaysByWeek[week] == nil {
+                var grey: Set<Int> = []
+                for day in 1...7 {
+                    if let date = DateUtils.dateOfWeek(startDate: start, week: week, dayOfWeek: day),
+                       await HolidayManager.shouldGrey(date) {
+                        grey.insert(day)
+                    }
                 }
+                greyDaysByWeek[week] = grey
             }
-            greyDays = grey
-            greyLoadedWeek = week
         }
     }
 }
