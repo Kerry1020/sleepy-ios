@@ -20,7 +20,7 @@ Status values: `pending` means source comparison is still required; `in-progress
 | P1 | Appearance | `ui/screen/mine/AppearanceScreen.swift` | `ui/screen/mine/AppearanceScreen.kt` | verified | theme/display controls, high refresh, nav mode |
 | P1 | General settings | `ui/screen/mine/GeneralSettingsScreen.swift` | `ui/screen/mine/GeneralSettingsScreen.kt` | verified | visible days, switches, native controls, constraints; Android-only grid/week scale controls documented as an iOS contract gap |
 | P1 | Import flow | `ui/screen/imports/*.swift` | `ui/screen/imports/*.kt` | in-progress | school selection, import sheet, login states, errors |
-| P2 | Holiday / reminder | `HolidaySettingsScreen.swift`, `ReminderScreen.swift` | matching `*.kt` | pending | toggles, date/location controls, permission states |
+| P2 | Holiday / reminder | `HolidaySettingsScreen.swift`, `ReminderScreen.swift` | matching `*.kt` | verified | toggles, date/location controls, permission states |
 | P2 | Export/share | `ExportScreen.swift`, `ShareScheduleSheet.swift` | matching `*.kt` | pending | format selection, share actions, empty/error states |
 | P2 | About/license | `AboutScreen.swift`, `LicenseScreen.swift` | matching `*.kt` | in-progress | version/about content, acknowledgements, localization |
 | P2 | Shared sheets/editors | `CourseDetailSheet.swift`, `DateTimePickers.swift`, `SmartPeriodEditor.swift`, `TimeSlotEditor.swift`, `SettingsCards.swift` | matching component sources | pending | sheet detents, controls, spacing, typography |
