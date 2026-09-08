@@ -13,7 +13,7 @@ Status values: `pending` means source comparison is still required; `in-progress
 | P1 | Manage | `ui/screen/manage/ManagementPage.swift` | `ui/screen/manage/ManagementPage.kt` | in-progress | page title and table-name typography aligned; import/add cards and action semantics remain |
 | P1 | Conflict card | `ui/component/ConflictCard.swift` | `ui/component/ConflictCard.kt` | in-progress | three conflict styles, selection, spacing, semantic controls |
 | P1 | Segmented switcher | `ui/component/SegmentedSwitcher.swift` | `ui/component/SegmentedSwitcher.kt` | in-progress | thumb geometry, animation, selected semantics |
-| P1 | Theme | `theme/Theme.swift`, `theme/ThemePresets.swift` | `ui/theme/Theme.kt`, `ThemePresets.kt`, `res/values/colors.xml` | pending | Material roles, light/dark values, shapes, typography |
+| P1 | Theme | `theme/Theme.swift`, `theme/ThemePresets.swift` | `ui/theme/Theme.kt`, `ThemePresets.kt`, `res/values/colors.xml` | verified | Material roles, light/dark values, shapes, typography aligned; custom presets confirmed matching |
 | P1 | All tables | `ui/screen/mine/AllTablesScreen.swift` | `ui/screen/mine/AllTablesScreen.kt` | in-progress | current table, duplicate/edit/delete actions, row hit areas |
 | P1 | Edit/add table | `ui/screen/mine/EditTableScreen.swift` | `ui/screen/mine/EditTableScreen.kt` | in-progress | form sections, save/delete, native inputs |
 | P1 | Add course | `ui/screen/edit/AddCourseScreen.swift` | `ui/screen/edit/AddCourseScreen.kt` | pending | form layout, time/course fields, color picker, save behavior |
