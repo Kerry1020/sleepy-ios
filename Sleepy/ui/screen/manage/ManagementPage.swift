@@ -41,7 +41,8 @@ struct ManagementPage: View {
         ScrollView {
             VStack(spacing: 16) {
                 Text(L10n.format("tab_manage"))
-                    .font(.system(size: 22, weight: .medium))
+                    // ← Material 3 headlineMedium.copy(Medium) = 28sp/medium (ManagementPage.kt L82)
+                    .font(.system(size: 28, weight: .medium))
                     .foregroundColor(colors.onBackground)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityIdentifier("manage_page_title")
@@ -53,7 +54,8 @@ struct ManagementPage: View {
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(colors.primary)
                         Text(table.name)
-                            .font(.system(size: 20, weight: .semibold))
+                            // ← Material 3 titleLarge.copy(SemiBold) = 22sp/semibold (ManagementPage.kt L105)
+                            .font(.system(size: 22, weight: .semibold))
                             .foregroundColor(colors.onSurface)
                         Text(L10n.format("table_info", table.startDate, state.currentWeek, state.courses.count))
                             .font(.system(size: 12))

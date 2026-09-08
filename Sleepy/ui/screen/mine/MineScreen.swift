@@ -23,7 +23,8 @@ struct MineScreen: View {
                 // Header: "我的" + 副标题
                 VStack(alignment: .leading, spacing: 4) {
                     Text(L10n.format("tab_mine"))
-                        .font(.system(size: 22))
+                        // ← Material 3 headlineMedium = 28sp (MineScreen.kt)
+                        .font(.system(size: 28))
                         .foregroundColor(colors.onBackground)
                     Text(L10n.format("mine_subtitle"))
                         .font(.system(size: 14))
