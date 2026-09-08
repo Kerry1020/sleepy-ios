@@ -23,7 +23,7 @@ Status values: `pending` means source comparison is still required; `in-progress
 | P2 | Holiday / reminder | `HolidaySettingsScreen.swift`, `ReminderScreen.swift` | matching `*.kt` | verified | toggles, date/location controls, permission states |
 | P2 | Export/share | `ExportScreen.swift`, `ShareScheduleSheet.swift` | matching `*.kt` | verified | format selection, share actions, empty/error states; sleepy-v1 native export row documented as a data-layer gap pending `SleepyNativeExporter` port |
 | P2 | About/license | `AboutScreen.swift`, `LicenseScreen.swift` | matching `*.kt` | verified | version/about content, feedback entries (GitHub Issue + email), two-tier acknowledgements with expandable per-school cards, localization; UpdateNotifier banner + auto-check toggle documented as a behavior-layer gap (new preference + launch-time network check outside the UI contract) |
-| P2 | Shared sheets/editors | `CourseDetailSheet.swift`, `DateTimePickers.swift`, `SmartPeriodEditor.swift`, `TimeSlotEditor.swift`, `SettingsCards.swift` | matching component sources | pending | sheet detents, controls, spacing, typography |
+| P2 | Shared sheets/editors | `CourseDetailSheet.swift`, `DateTimePickers.swift`, `SmartPeriodEditor.swift`, `TimeSlotEditor.swift`, `SettingsCards.swift` | matching component sources | verified | sheet detents, controls, spacing, typography; SettingsCards no-drift confirmed, whole-card tap documented as iOS adaptation, M3 56dp field height documented as app-wide iOS field height |
 | P3 | Localization/layout stress | all user-visible SwiftUI strings | Android locale resources | pending | zh-Hans/zh-Hant/en/es/ja wrapping, truncation, accessibility labels |
 
 ## Rules
