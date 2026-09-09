@@ -33,7 +33,7 @@ struct EditTableScreen: View {
     @State private var loadedTableId: Int64? = nil
     @State private var name = ""
     @State private var startDate = ""
-    @State private var maxWeekText = ""
+    @State private var maxWeek = 20
     @State private var timeSlotsExpanded = false
     @State private var error: String? = nil
     @State private var showDeleteConfirm = false
@@ -87,10 +87,21 @@ struct EditTableScreen: View {
                             FieldTextField(text: $name, label: L10n.format("edit_table_name"))
                             FieldTextField(text: $startDate, label: L10n.format("edit_table_start_date"),
                                            placeholder: L10n.format("edit_table_start_date_hint"))
-                            FieldTextField(text: Binding(
-                                get: { maxWeekText },
-                                set: { maxWeekText = String($0.filter { $0.isNumber }) }
-                            ), label: L10n.format("edit_table_max_week"))
+                            // 原生化: 周数 = Stepper(系统步进控件, 免键盘/免解析/免越界),
+                            // 替换 Android NumberField 式数字键盘 TextField
+                            HStack {
+                                Text(L10n.format("edit_table_max_week"))
+                                    .font(.system(size: 16))
+                                    .foregroundColor(colors.onSurfaceVariant)
+                                Spacer()
+                                Stepper(value: $maxWeek, in: 1...60) {
+                                    Text(L10n.format("schedule_current_week", maxWeek))
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(colors.onSurface)
+                                        .monospacedDigit()
+                                }
+                                .fixedSize()
+                            }
                         }
                     }
                     .onAppear { loadIfNeeded(table: table) }
@@ -207,7 +218,7 @@ struct EditTableScreen: View {
         loadedTableId = table.id
         name = table.name
         startDate = table.startDate
-        maxWeekText = "\(table.maxWeek)"
+        maxWeek = table.maxWeek
         slotRows = TimeTableUtils.parseTimeSlotRows(table.timeJson)
         // smartConfig: 已存 JSON 反序列化; 否则从 slotRows 推断
         if !table.smartConfigJson.isEmpty,
@@ -223,7 +234,6 @@ struct EditTableScreen: View {
 
     // ← 保存: 校验日期/时间格式 + start<end
     private func save(table: TimeTableEntity) {
-        let maxWeek = Int(maxWeekText) ?? 20
         let dateOK = startDate.range(of: #"^\d{4}-\d{2}-\d{2}$"#, options: .regularExpression) != nil
         let timeFmtOK = slotRows.allSatisfy {
             $0.start.range(of: #"^\d{2}:\d{2}$"#, options: .regularExpression) != nil &&
