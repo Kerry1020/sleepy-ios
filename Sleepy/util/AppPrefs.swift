@@ -23,6 +23,7 @@ final class AppPrefs {
     static let KEY_THEME = "theme_key"
     static let KEY_LANG = "language"
     static let KEY_DISPLAY_MODE = "display_mode" // "node" or "time"
+    static let KEY_START_VIEW = "start_view" // "full" / "cards" — ← AppPrefs.KEY_START_VIEW Android; 启动默认视图（仅通用设置里设置；手动切换课表顶部视图不写入）
     static let KEY_GRID_SUB_INFO = "grid_sub_info" // "room" / "teacher" / "none" — 网格卡片副信息(周视图网格卡课程名下方那行;左栏已有节次,故此处不再显示节次/时间)
     static let KEY_CONFLICT_STYLE = "conflict_style" // "stack"/"fold"/"rail" — 冲突课程显示样式,默认 "rail"(← KEY_CONFLICT_STYLE v7.10.16s)
     static let KEY_CONFLICT_TOP_INSET = "conflict_top_inset" // Double dp — 旧共用收窄量 key: 仅作拆分迁移源,停写(用户 2026-09-04 拆分)
@@ -47,7 +48,7 @@ final class AppPrefs {
     static let THEME_MODE_SYSTEM = "system"
     // ★ v1.0.45 画面分组: 高刷率(默认开 ← Android edec776), 底栏样式(默认贴底 ← Android b0f8280)
     static let KEY_HIGH_REFRESH = "high_refresh_rate" // bool default true
-    static let KEY_NAV_DOCK = "nav_dock"              // bool default true (true=贴底, false=悬浮)
+    static let KEY_NAV_DOCK = "nav_dock"              // bool default false (false=贴底, true=悬浮药丸 ← Android b0f8280)
 
     /// 主题色 key 的进程内 Flow — ← themeKeyFlow(callbackFlow+distinctUntilChanged)
     /// 订阅即收当前值,变更推送新值,去重。
@@ -102,15 +103,19 @@ final class AppPrefs {
         sp().set(enabled, forKey: Self.KEY_HIGH_REFRESH)
     }
 
-    /// 底栏样式 — true=贴底, false=悬浮(默认,与 Android v1.0.45 AppPrefs.KEY_NAV_DOCK 对齐)。
-    /// 关键修复(2026-09-08): iOS 老版默认 true=贴底, 与 Android 默认 false=悬浮方向相反,
-    /// → 新装用户/老用户升级后均看不到 Android 已发布的悬浮形态, 报「依旧没有悬浮」。
+    /// 底栏样式 — false=贴底(默认), true=悬浮药丸(← Android v1.0.45 AppPrefs.KEY_NAV_DOCK 一字对齐)。
+    /// API 名沿用 isNavDocked()/setNavDocked(_:) 以保留调用方,但语义已校正:
+    /// 传入 true 意味着"是悬浮药丸"(写入 KEY_NAV_DOCK=true),返回 true 同义。
+    /// 关键修复(2026-09-08): 早期实现方向反转 → 新装用户看不到悬浮形态。
     func isNavDocked() -> Bool {
-        sp().object(forKey: Self.KEY_NAV_DOCK) as? Bool ?? false
+        // 反向兼容: 旧版本以「false=悬浮」存值。新版本「true=悬浮」,
+        // 因此首读时一旦读到旧值 false 还要再判一次是否从未写入过。
+        guard sp().object(forKey: Self.KEY_NAV_DOCK) != nil else { return false }
+        return sp().bool(forKey: Self.KEY_NAV_DOCK)
     }
 
-    func setNavDocked(_ docked: Bool) {
-        sp().set(docked, forKey: Self.KEY_NAV_DOCK)
+    func setNavDocked(_ floating: Bool) {
+        sp().set(floating, forKey: Self.KEY_NAV_DOCK)
     }
 
     // ===== 主题色 =====
@@ -198,6 +203,14 @@ final class AppPrefs {
 
     func getDisplayMode() -> String { sp().string(forKey: Self.KEY_DISPLAY_MODE) ?? "node" }
     func setDisplayMode(_ mode: String) { sp().set(mode, forKey: Self.KEY_DISPLAY_MODE) }
+
+    /// 启动默认视图 — ← AppPrefs.getStartView Android (默认 "full")。仅通用设置里设置,
+    /// 手动切换课表顶部视图不写入(Android 注释硬规则, iOS 一致遵循)。
+    func getStartView() -> String { sp().string(forKey: Self.KEY_START_VIEW) ?? "full" }
+    func setStartView(_ mode: String) {
+        precondition(mode == "full" || mode == "cards")
+        sp().set(mode, forKey: Self.KEY_START_VIEW)
+    }
 
     // ===== 网格卡片副信息:教室 / 教师 / 无 =====
 
