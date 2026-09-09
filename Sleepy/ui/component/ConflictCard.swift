@@ -552,7 +552,7 @@ private struct ConflictCoursePickerSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(L10n.format("import_conflicts"))
-                .font(.system(size: 18, weight: .medium))
+                .font(.system(size: 24)) // ← Android AlertDialog headlineSmall 24
                 .foregroundColor(colors.onSurface)
                 .padding(.bottom, 8)
             ScrollView {
