@@ -363,6 +363,7 @@ struct AppRoot: View {
                 viewModel: root.scheduleViewModel,
                 onGoImport: { root.currentTab = .manage },
                 onManualAdd: { root.overlayScreen = .addCourse },
+                onCreateTable: { root.createNewTableThenEdit() },
                 onEditCourse: { course in root.editingCourse = course })
         case .today:
             TodayScreen(viewModel: root.scheduleViewModel,

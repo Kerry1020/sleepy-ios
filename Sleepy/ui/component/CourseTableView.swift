@@ -229,7 +229,20 @@ struct GridConflictLayer: View {
                 }
             }
         }
+        // v7.10.16r(评审#4): 详情弹窗 radio 落盘 → 本层会话态跟随 —
+        // 显式选默认置顶 = 会话 override 同步为 radio 值(同帧换层) + 同簇临时轮换让位。
+        // ← Android ScheduleScreen.onDefaultTopChanged
+        .onChange(of: defaultTopStore.map) { newMap in
+            for (k, v) in newMap where lastDefaultTopMap[k] != v {
+                if let id = v { topOverrides[k] = id } else { topOverrides.removeValue(forKey: k) }
+                rotationSteps[k] = nil
+            }
+            lastDefaultTopMap = newMap
+        }
     }
+
+    /// onChange 需要旧值对比 — 只处理真正被 radio 触碰的簇键
+    @State private var lastDefaultTopMap: [String: Int64] = [:]
 
     private func setTopOverride(_ key: String, _ courseId: Int64?) {
         if let id = courseId { topOverrides[key] = id } else { topOverrides.removeValue(forKey: key) }
@@ -237,7 +250,8 @@ struct GridConflictLayer: View {
 }
 
 // ← SingleTimeHeadCell
-private struct SingleTimeHeadCell: View {    @Environment(\.localWakeUpColors) private var colors
+private struct SingleTimeHeadCell: View {
+    @Environment(\.localWakeUpColors) private var colors
     let slot: TimeSlot
     var scale: Double = 1.0
     var cornerRatio: Double = 1.0

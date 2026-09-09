@@ -448,7 +448,7 @@ private struct FormatDetailDialog: View {
                                 .foregroundColor(colors.primary)
                                 .padding(.top, 2)
                             Text(item)
-                                .font(.system(size: 13))
+                                .font(.system(size: 12)) // ← Android bodySmall 12
                                 .foregroundColor(colors.onSurface)
                         }
                         .listRowBackground(colors.surfaceContainer)
@@ -536,11 +536,11 @@ private struct ImportPreviewDialog: View {
                         VStack(alignment: .leading, spacing: 6) {
                             if preview.targetTableId == 0 {
                                 Text(L10n.format("import_new_table_hint"))
-                                    .font(.system(size: 13))
+                                    .font(.system(size: 12)) // ← Android bodySmall 12
                                     .foregroundColor(colors.primary)
                             } else {
                                 Text(L10n.format("import_target_table", preview.targetTableName))
-                                    .font(.system(size: 13))
+                                    .font(.system(size: 12)) // ← Android bodySmall 12
                                     .foregroundColor(colors.onSurfaceVariant)
                             }
                         }

@@ -37,7 +37,7 @@ struct SegmentedSwitcher<T: Hashable>: View {
             // 层0: thumb — 弹簧滑到选中段(确定性几何,无状态)
             RoundedRectangle(cornerRadius: 12)
                 .fill(colors.secondaryContainer)
-                .frame(width: segW, height: 32)
+                .frame(width: segW, height: 34)
                 .offset(x: 4 + CGFloat(selectedIndex) * segW, y: 4)
                 .animation(.spring(response: 0.18, dampingFraction: 1.0), value: selectedIndex)
 
@@ -49,7 +49,7 @@ struct SegmentedSwitcher<T: Hashable>: View {
                         onSelect(pair.0)
                     } label: {
                         Text(pair.1)
-                            .font(.system(size: 13, weight: isSel ? .semibold : .medium))
+                            .font(.system(size: 14, weight: isSel ? .semibold : .medium))
                             .foregroundColor(isSel ? colors.onSecondaryContainer : colors.onSurfaceVariant)
                             .lineLimit(1)
                             .minimumScaleFactor(0.75)

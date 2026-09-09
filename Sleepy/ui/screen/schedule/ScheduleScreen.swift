@@ -14,6 +14,7 @@ struct ScheduleScreen: View {
     @ObservedObject var viewModel: ScheduleViewModel
     var onGoImport: () -> Void = {}
     var onManualAdd: () -> Void = {}
+    var onCreateTable: () -> Void = {}
     var onEditCourse: (CourseEntity) -> Void = { _ in }
 
     // ← AppPrefs.getStartView Android; 顶部手动切换仍只改本地页面状态,不写回启动偏好
@@ -38,7 +39,7 @@ struct ScheduleScreen: View {
         VStack(spacing: 0) {
             if !hasTable {
                 // 真的没表: 去创建
-                EmptyState(onGoImport: onGoImport, onManualAdd: onManualAdd)
+                EmptyState(onGoImport: onGoImport, onCreateTable: onCreateTable)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
             } else if !hasCourses {
@@ -110,7 +111,7 @@ struct ScheduleScreen: View {
         .overlay(alignment: .bottom) {
             if showUndoNoneToast {
                 Text(L10n.format("schedule_undo_none"))
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 14, weight: .medium)) // ← Android Snackbar bodyMedium 14
                     .foregroundColor(colors.onSurface)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
@@ -309,12 +310,12 @@ private struct ScheduleTopBar: View {
                 Text(semesterStatus == .inRange
                      ? L10n.format("schedule_current_week", currentWeek)
                      : "\(L10n.format(semesterStatus == .beforeStart ? "semester_not_started" : "semester_ended")) · \(L10n.format("schedule_week_prefix", currentWeek))")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(isOnActual ? colors.onPrimaryContainer : colors.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                     .allowsTightening(true)
-                    .padding(.horizontal, 12)
+                    .padding(.horizontal, 14)
                     .padding(.vertical, 4)
                     .background(isOnActual ? colors.primaryContainer
                                            : colors.primaryContainer.opacity(SleepyTheme.Alpha.inactive))
@@ -329,7 +330,7 @@ private struct ScheduleTopBar: View {
                 //   - sheetDetents .medium 自带下拉 dismiss,保持 iOS 16+ swipe 手势
                 VStack(spacing: 8) {
                     Text(L10n.format("schedule_jump_week"))
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: 12, weight: .medium)) // ← Android labelMedium 12
                         .foregroundColor(colors.onSurfaceVariant)
                     Picker("", selection: Binding(
                         get: { currentWeek },
@@ -368,7 +369,7 @@ private struct TableSwitcherSheet: View {
     var body: some View {
         VStack(spacing: 12) {
             Text(L10n.format("schedule_switch_table"))
-                .font(.system(size: 15, weight: .medium))
+                .font(.system(size: 24, weight: .medium))
                 .foregroundColor(colors.onSurface)
                 .padding(.top, 16)
             ScrollView {
@@ -449,7 +450,7 @@ private struct NoCourseState: View {
     var body: some View {
         VStack(spacing: 12) {
             Text(L10n.format("schedule_empty_name", tableName))
-                .font(.system(size: 20, weight: .semibold))
+                .font(.system(size: 22, weight: .semibold))
                 .foregroundColor(colors.onSurface)
             Text(L10n.format("schedule_empty_name_hint"))
                 .font(.system(size: 14))
@@ -482,22 +483,22 @@ private struct NoCourseState: View {
     }
 }
 
-// ← EmptyState
+// ← EmptyState — 主按钮=导入第一张课表, 副按钮=建表流(无表载体时"加课"无从谈起, ← Android)
 private struct EmptyState: View {
     @Environment(\.localWakeUpColors) private var colors
     let onGoImport: () -> Void
-    let onManualAdd: () -> Void
+    var onCreateTable: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 12) {
             Text(L10n.format("schedule_empty"))
-                .font(.system(size: 20, weight: .semibold))
+                .font(.system(size: 22, weight: .semibold))
                 .foregroundColor(colors.onSurface)
             Text(L10n.format("schedule_empty_hint"))
                 .font(.system(size: 14))
                 .foregroundColor(colors.onSurfaceVariant)
             Button(action: onGoImport) {
-                Text(L10n.format("schedule_go_manage"))
+                Text(L10n.format("schedule_empty_import"))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(colors.onPrimary)
                     .frame(maxWidth: .infinity)
@@ -506,8 +507,8 @@ private struct EmptyState: View {
                     .cornerRadius(SleepyShapes.large)
             }
             .buttonStyle(SleepyButtonStyle())
-            Button(action: onManualAdd) {
-                Text(L10n.format("schedule_manual_first"))
+            Button(action: onCreateTable) {
+                Text(L10n.format("schedule_empty_create_table"))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(colors.onSecondaryContainer)
                     .frame(maxWidth: .infinity)

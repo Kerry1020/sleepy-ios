@@ -303,7 +303,7 @@ struct FieldTextField: View {
                 if !placeholder.isEmpty {
                     // label 浮动到左上(M3 风格近似: 前缀标签)
                     Text(label)
-                        .font(.system(size: 10))
+                        .font(.system(size: 12)) // ← M3 floating label ≈ bodySmall 12
                         .foregroundColor(colors.onSurfaceVariant)
                         .padding(.leading, 12)
                         .frame(maxWidth: .infinity, alignment: .topLeading)

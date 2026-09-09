@@ -675,3 +675,6 @@
 "widget_week_grid_small_label" = "This Week (Grid) · Small";
 "widget_week_list_small_label" = "This Week (List) · Small";
 "widget_week_view_small_label" = "This Week (View) · Small";
+
+"schedule_empty_import" = "Import first timetable";
+"schedule_empty_create_table" = "Create first timetable";

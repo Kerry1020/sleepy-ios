@@ -227,7 +227,7 @@ struct AboutScreen: View {
         .overlay(alignment: .bottom) {
             if let msg = snackMessage {
                 Text(msg)
-                    .font(.system(size: 13))
+                    .font(.system(size: 14)) // ← Android Snackbar bodyMedium 14
                     .foregroundColor(colors.onSurface)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
@@ -386,7 +386,7 @@ private struct UpdateChangelogDialog: View {
 
         VStack(alignment: .leading, spacing: 14) {
             Text(dialogTitle(version: version))
-                .font(.system(size: 20, weight: .bold))
+                .font(.system(size: 24)) // ← Android AlertDialog headlineSmall 24
                 .foregroundColor(colors.onSurface)
                 .frame(maxWidth: .infinity, alignment: .leading)
 

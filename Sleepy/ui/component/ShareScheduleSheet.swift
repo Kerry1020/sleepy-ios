@@ -44,6 +44,18 @@ struct ShareScheduleSheet: View {
                     exportFile(ext: "ics", mime: "text/calendar",
                                content: ScheduleExporter.exportIcs(table, courses))
                 }
+                ShareRowDivider()
+                // v7.10.7 第 4 项: Sleepy 原生格式 — marker 包裹 + 无 chk(IM 场景最小体积)
+                ShareRow(icon: "star",
+                         title: L10n.format("export_native_title"),
+                         subtitle: L10n.format("export_native_subtitle")) {
+                    shareSheet = SharePayload(
+                        text: SleepyNativeExporter.exportShareText(
+                            tableName: table.name, startDate: table.startDate,
+                            maxWeek: table.maxWeek, nodesPerDay: table.nodesPerDay,
+                            timeJson: table.timeJson, courses: courses),
+                        subject: table.name, url: nil)
+                }
             }
         }
         .padding(.bottom, 24)

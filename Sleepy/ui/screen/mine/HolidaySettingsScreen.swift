@@ -530,7 +530,7 @@ private struct HolidayRangeEditDialog: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(L10n.format(isNew ? "holiday_add_title" : "holiday_edit_title"))
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(size: 24)) // ← Android AlertDialog headlineSmall 24
                 .foregroundColor(colors.onSurface)
                 .frame(maxWidth: .infinity, alignment: .leading)
 

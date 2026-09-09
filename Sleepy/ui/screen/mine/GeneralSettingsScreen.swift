@@ -443,7 +443,7 @@ private struct PillSliderRow: View {
                 .foregroundColor(colors.onSurface)
             HStack(spacing: 8) {
                 Text("\(Int((value * 100).rounded()))%")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 14, weight: .medium)) // ← Android labelLarge 14
                     .foregroundColor(colors.primary)
                     .frame(minWidth: 52, alignment: .leading)
                 Slider(value: $value, in: range, step: 0.05) { _ in
@@ -472,7 +472,7 @@ private struct ConflictSliderRow: View {
                 .foregroundColor(colors.onSurface)
             HStack(spacing: 8) {
                 Text("\(Int(value.rounded()))dp")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 14, weight: .medium)) // ← Android labelLarge 14
                     .foregroundColor(colors.primary)
                     .frame(minWidth: 52, alignment: .leading)
                 Slider(value: $value, in: range) { _ in

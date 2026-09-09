@@ -145,7 +145,7 @@ struct SettingsTopBar: View {
             // ← Android ArrowBack contentDescription = back
             .accessibilityLabel(L10n.format("back"))
             Text(title)
-                .font(.system(size: 20, weight: .medium))
+                .font(.system(size: 22, weight: .medium)) // ← Android TopAppBar titleLarge 22
                 .foregroundColor(colors.onBackground)
             Spacer()
         }

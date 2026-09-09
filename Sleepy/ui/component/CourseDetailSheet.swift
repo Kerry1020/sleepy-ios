@@ -121,7 +121,11 @@ private struct DefaultTopPickerSection: View {
         let clusterKey = ConflictLayoutEngine.conflictClusterKey(cluster)
         let savedRepId: Int64? = defaultTopStore.map[clusterKey]
 
-        VStack(alignment: .leading, spacing: 2) {
+        // v7.10.16p: 单图层(全部课并排无真重叠, 链组把它们串成一条链而已)没有"谁压谁",
+        // 选择置顶无意义 — ← Android `if (layers.size < 2) return`(用户报障「没有冲突的课也弹默认置顶」)
+        Group {
+            if layers.count >= 2 {
+                VStack(alignment: .leading, spacing: 2) {
             Text(L10n.format("conflict_default_top_title"))
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(colors.onSurface)
@@ -150,6 +154,8 @@ private struct DefaultTopPickerSection: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(SleepyButtonStyle())
+            }
+                }
             }
         }
     }

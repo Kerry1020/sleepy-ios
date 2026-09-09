@@ -52,6 +52,7 @@ struct DatePickerField: View {
                     .padding()
                 HStack {
                     Button(L10n.format("cancel")) { showPicker = false }
+                        .foregroundColor(colors.primary)
                         .frame(maxWidth: .infinity)
                     Button(L10n.format("ok")) {
                         onValueChange(formatISO(pickerDate))
@@ -129,15 +130,18 @@ struct TimePickerField: View {
         .sheet(isPresented: $showPicker) {
             VStack(spacing: 0) {
                 Text(L10n.format("select_time"))
-                    .font(.system(size: 16, weight: .medium))
+                    // ← Android AlertDialog title = headlineSmall 24
+                    .font(.system(size: 24, weight: .medium))
                     .foregroundColor(colors.onSurface)
                     .padding()
-                // 24h 转盘(← M3 TimePicker is24Hour=true)
+                // 24h 转盘(← M3 TimePicker is24Hour=true;en_GB 强制 24h,不随系统 12h 设置)
                 DatePicker("", selection: $pickerTime, displayedComponents: .hourAndMinute)
                     .datePickerStyle(.wheel)
                     .labelsHidden()
+                    .environment(\.locale, Locale(identifier: "en_GB"))
                 HStack {
                     Button(L10n.format("cancel")) { showPicker = false }
+                        .foregroundColor(colors.primary)
                         .frame(maxWidth: .infinity)
                     Button(L10n.format("ok")) {
                         let f = DateFormatter()

@@ -129,7 +129,7 @@ private struct TodayHeader: View {
             Spacer().frame(height: 6)
             HStack(alignment: .bottom, spacing: 8) {
                 Text(L10n.format("date_long_format", comps.month ?? 1, comps.day ?? 1))
-                    .font(.system(size: 22))
+                    .font(.system(size: 28))
                     .foregroundColor(colors.onSurface)
                 // ISO weekday (周一=1)
                 Text(DateUtils.localizedDay(((comps.weekday ?? 2) + 5) % 7 + 1))

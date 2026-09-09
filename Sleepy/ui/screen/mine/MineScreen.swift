@@ -82,7 +82,7 @@ struct MineScreen: View {
         .overlay(alignment: .bottom) {
             if let msg = snackMessage {
                 Text(msg)
-                    .font(.system(size: 13))
+                    .font(.system(size: 14)) // ← Android Snackbar bodyMedium 14
                     .foregroundColor(colors.onSurface)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
@@ -148,7 +148,7 @@ private struct StatItem: View {
     var body: some View {
         VStack(spacing: 2) {
             Text(value)
-                .font(.system(size: 22, weight: .bold))
+                .font(.system(size: 28, weight: .bold))   // ← Android headlineMedium
                 .foregroundColor(colors.primary)
                 .accessibilityIdentifier("\(identifier)_value")
             Text(label)

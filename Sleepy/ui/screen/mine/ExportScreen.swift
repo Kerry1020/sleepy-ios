@@ -106,7 +106,7 @@ struct ExportScreen: View {
         .overlay(alignment: .bottom) {
             if let msg = snackMessage {
                 Text(msg)
-                    .font(.system(size: 13))
+                    .font(.system(size: 14)) // ← Android Snackbar bodyMedium 14
                     .accessibilityIdentifier("export_snackbar")
                     .foregroundColor(colors.onSurface)
                     .padding(.horizontal, 16)
@@ -190,7 +190,7 @@ private struct ExportTablePickerSheet: View {
     var body: some View {
         VStack(spacing: 12) {
             Text(L10n.format("export_pick_table"))
-                .font(.system(size: 15, weight: .medium))
+                .font(.system(size: 24, weight: .medium)) // ← Android AlertDialog headlineSmall 24
                 .foregroundColor(colors.onSurface)
                 .padding(.top, 16)
             ScrollView {

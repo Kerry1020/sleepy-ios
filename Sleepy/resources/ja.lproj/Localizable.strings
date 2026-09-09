@@ -675,3 +675,6 @@
 "widget_week_grid_small_label" = "本周课表（网格）· 小";
 "widget_week_list_small_label" = "本周课表（列表）· 小";
 "widget_week_view_small_label" = "本周课表（周视图）· 小";
+
+"schedule_empty_import" = "最初の時間割をインポート";
+"schedule_empty_create_table" = "最初の時間割を作成";
