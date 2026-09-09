@@ -50,7 +50,6 @@
 		2AE7F207B86347354D0810CC /* TwoDayWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D52AFD49A9FA76836199F06A /* TwoDayWidgetView.swift */; };
 		2EB4CF9ED460D4C07268DB91 /* SheetDetentsCompat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F69E175915A92D0DDA63EC6 /* SheetDetentsCompat.swift */; };
 		2F2DDD9BFBF2170D7B68A4CF /* JwChaoxingParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88A0C2BDE5E35B78392B4C54 /* JwChaoxingParser.swift */; };
-		3241463441E50C4CE578B5F8 /* HighRefreshRate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF021FEC7510E4A4C870D201 /* HighRefreshRate.swift */; };
 		32C7A0EB4224644590EA4AB5 /* JwQzCrazyParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3D445F86E00820411E38285 /* JwQzCrazyParser.swift */; };
 		334E4375A4D51E4A269A969C /* ThemeAndPinyinTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCC4B67228CB7512A7890C3D /* ThemeAndPinyinTests.swift */; };
 		34C421D4351930ECCD846982 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C19106B8995541FFB0F73DB6 /* LaunchScreen.storyboard */; };
@@ -440,7 +439,6 @@
 		B9C22DE3433DD8BF4069C158 /* SleepyUITests.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SleepyUITests.entitlements; sourceTree = "<group>"; };
 		BC2745AD826F30FABAEB0D32 /* SwipeBackGestureUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeBackGestureUITests.swift; sourceTree = "<group>"; };
 		BCC4B67228CB7512A7890C3D /* ThemeAndPinyinTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeAndPinyinTests.swift; sourceTree = "<group>"; };
-		BF021FEC7510E4A4C870D201 /* HighRefreshRate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HighRefreshRate.swift; sourceTree = "<group>"; };
 		C0892BA3B202EE76234C0CC9 /* VersionUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionUtils.swift; sourceTree = "<group>"; };
 		C159F940014161B3F4498898 /* ShareScheduleSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareScheduleSheet.swift; sourceTree = "<group>"; };
 		C19106B8995541FFB0F73DB6 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -618,14 +616,6 @@
 				90B4ADA3F4D0F22AB81E78C4 /* SchoolSelectScreen.swift */,
 			);
 			path = imports;
-			sourceTree = "<group>";
-		};
-		4E4355D7EDB983A34F1F085E /* app */ = {
-			isa = PBXGroup;
-			children = (
-				BF021FEC7510E4A4C870D201 /* HighRefreshRate.swift */,
-			);
-			path = app;
 			sourceTree = "<group>";
 		};
 		5A3245F82EB9D2E262383DB0 /* SleepyWidget */ = {
@@ -815,7 +805,6 @@
 		C2BDE01138A338D45CA57003 /* Sleepy */ = {
 			isa = PBXGroup;
 			children = (
-				4E4355D7EDB983A34F1F085E /* app */,
 				D47227BDA96D57A9ADAC2549 /* data */,
 				D2E90D2BDE85053EAAD43B10 /* resources */,
 				0E1D705B83DE0E5F648C69BE /* theme */,
@@ -1100,7 +1089,6 @@
 				C7E1B6270651CCFDB000813D /* ExportScreen.swift in Sources */,
 				990AB2AAF76FD0526908555A /* FeedbackComposer.swift in Sources */,
 				A573D8081A5FC8074012C42A /* GeneralSettingsScreen.swift in Sources */,
-				3241463441E50C4CE578B5F8 /* HighRefreshRate.swift in Sources */,
 				BD8246AD64E1E8441C3550BC /* HolidayManager.swift in Sources */,
 				D1561E237C27584E025A0131 /* HolidaySettingsScreen.swift in Sources */,
 				CD777F7A41318DA863A267CD /* ImportSheet.swift in Sources */,

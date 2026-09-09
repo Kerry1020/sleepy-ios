@@ -55,11 +55,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         // ← onCreate: 首启刷新小组件(WidgetUpdater.notifyDataChanged)
         WidgetCenter.shared.reloadAllTimelines()
-        // ★ v1.0.45 高刷新率: 启动时按用户偏好(默认开)钉 CALayer.preferredFramesPerSecond
-        //   ← Android edec776 onCreate / attachBaseContext 同位;无 ProMotion 屏自然维持设备上限
-        Task { @MainActor in
-            _ = HighRefreshRate.apply(enabled: AppPrefs.shared.isHighRefreshEnabled())
-        }
+        // 高刷新率:iOS 无公开刷率 API(原 HighRefreshRate 桩已删),ProMotion 上
+        // 系统自动调度 120Hz,无需 app 侧动作(2026-09-10 原生化审计)。
         return true
     }
 }
@@ -108,7 +105,6 @@ final class AppRootViewModel: ObservableObject {
         }
         // ★ v1.0.45: 用户在设置页改 nav dock 偏好 → AppPrefs 写盘 → UserDefaults 发 .didChange →
         //   这里刷新 navFloating → PillNavigationBar 下一帧切 dockStyle 重建。
-        //   高刷新率开关不需要反向同步(开关自身直接调 HighRefreshRate.apply, 不经 root)。
         prefsObserver = NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification, object: UserDefaults.standard, queue: .main
         ) { [weak self] _ in

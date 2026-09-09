@@ -28,7 +28,6 @@ struct GeneralSettingsScreen: View {
     @State private var conflictStackInset: Double = AppPrefs.shared.getConflictStackInset()
     @State private var conflictRailInset: Double = AppPrefs.shared.getConflictRailInset()
     @State private var conflictFoldSize: Double = AppPrefs.shared.getConflictFoldSize()
-    @State private var highRefresh: Bool = AppPrefs.shared.isHighRefreshEnabled()
     /// 底栏样式 — false=贴底(默认), true=悬浮药丸(与 Android v1.0.45 b0f8280 对齐)
     @State private var navFloating: Bool = AppPrefs.shared.isNavDocked()
     // ★ v7.10.18: HolidaySettings 在本屏内 sheet 弹出,无需走 root enum
@@ -71,9 +70,9 @@ struct GeneralSettingsScreen: View {
 
                             MajorDivider()
 
-                            // ── 分组② 画面(高刷率 + 底栏样式) — ← Android v1.0.45 edec776/b0f8280 ──
+                            // ── 分组② 画面(底栏样式) — ← Android v1.0.45 b0f8280;
+                            //    高刷新率行已删:iOS 无公开刷率 API,系统自动调度,纯对齐开关=无效 placebo ──
                             DisplaySection(
-                                highRefresh: $highRefresh,
                                 navFloating: $navFloating,
                                 onNavFloatingChange: { on in
                                     navFloating = on
@@ -510,10 +509,9 @@ private struct LanguageSection: View {
     }
 }
 
-// ── 分组② 画面: 高刷新率 + 底栏样式 ──
+// ── 分组② 画面: 底栏样式 ──
 private struct DisplaySection: View {
     @Environment(\.localWakeUpColors) private var colors
-    @Binding var highRefresh: Bool
     @Binding var navFloating: Bool
     let onNavFloatingChange: (Bool) -> Void
 
@@ -521,21 +519,6 @@ private struct DisplaySection: View {
         VStack(spacing: 16) {
             SectionHeader(title: L10n.format("settings_section_display"))
             VStack(spacing: 0) {
-                SettingToggleRow(
-                    label: L10n.format("settings_high_refresh"),
-                    subtitle: "",
-                    checked: highRefresh
-                ) { enabled in
-                    highRefresh = enabled
-                    AppPrefs.shared.setHighRefreshEnabled(enabled)
-                    Task { @MainActor in
-                        _ = HighRefreshRate.apply(enabled: enabled)
-                    }
-                }
-                .accessibilityIdentifier("settings_high_refresh")
-
-                SubDivider()
-
                 VStack(alignment: .leading, spacing: 8) {
                     Text(L10n.format("settings_nav_style"))
                         .font(.system(size: 16, weight: .semibold))

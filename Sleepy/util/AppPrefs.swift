@@ -46,8 +46,8 @@ final class AppPrefs {
     static let THEME_MODE_LIGHT = "light"
     static let THEME_MODE_DARK = "dark"
     static let THEME_MODE_SYSTEM = "system"
-    // ★ v1.0.45 画面分组: 高刷率(默认开 ← Android edec776), 底栏样式(默认贴底 ← Android b0f8280)
-    static let KEY_HIGH_REFRESH = "high_refresh_rate" // bool default true
+    // ★ v1.0.45 画面分组: 底栏样式(默认贴底 ← Android b0f8280)
+    // (KEY_HIGH_REFRESH 已随 no-op 桩删除 — iOS 无公开刷率 API,2026-09-10 原生化审计)
     static let KEY_NAV_DOCK = "nav_dock"              // bool default false (false=贴底, true=悬浮药丸 ← Android b0f8280)
 
     /// 主题色 key 的进程内 Flow — ← themeKeyFlow(callbackFlow+distinctUntilChanged)
@@ -93,15 +93,6 @@ final class AppPrefs {
     }
 
     // ===== 画面 =====
-
-    /// 高刷新率开关 — 默认开启;无 ProMotion 屏时系统自然维持设备上限。
-    func isHighRefreshEnabled() -> Bool {
-        sp().object(forKey: Self.KEY_HIGH_REFRESH) as? Bool ?? true
-    }
-
-    func setHighRefreshEnabled(_ enabled: Bool) {
-        sp().set(enabled, forKey: Self.KEY_HIGH_REFRESH)
-    }
 
     /// 底栏样式 — false=贴底(默认), true=悬浮药丸(← Android v1.0.45 AppPrefs.KEY_NAV_DOCK 一字对齐)。
     /// API 名沿用 isNavDocked()/setNavDocked(_:) 以保留调用方,但语义已校正:
