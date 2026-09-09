@@ -638,6 +638,28 @@ private struct ImportPreviewDialog: View {
                         }
                     }
 
+                    // sleepy-v1 (§7.3): 表级提示(非行级) — T行钳制/节点抬升/chk不符/n=不符/二次表头
+                    if !preview.parseResult.warnings.isEmpty {
+                        Section {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(L10n.format("import_warnings_title"))
+                                    .font(.system(size: 14, weight: .medium))   // ← titleSmall
+                                    .foregroundColor(colors.onSecondaryContainer)
+                                ForEach(preview.parseResult.warnings.prefix(4), id: \.self) { line in
+                                    Text("• \(line)")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(colors.onSecondaryContainer)
+                                }
+                                if preview.parseResult.warnings.count > 4 {
+                                    Text(L10n.format("import_conflict_more", preview.parseResult.warnings.count - 4))
+                                        .font(.system(size: 11))
+                                        .foregroundColor(colors.onSecondaryContainer)
+                                }
+                            }
+                            .listRowBackground(colors.secondaryContainer)
+                        }
+                    }
+
                     // 留出底部按钮区空间
                     Section {
                         Color.clear.frame(height: 100)
@@ -992,7 +1014,12 @@ extension ImportSheet {
                 copy.nodesPerDay = preview.parseResult.nodesPerDay > 0 ? preview.parseResult.nodesPerDay : existing.nodesPerDay
                 try? repo.updateTable(copy)
             }
-            try? repo.replaceCourses(preview.targetTableId, preview.parseResult.courses)
+            // sleepy-v1 (§3.4 契约一): 解析端权威 groupId → 绕过 assignGroupIds 再分配
+            if preview.parseResult.groupIdsAuthoritative {
+                try? repo.replaceCoursesKeepingGroups(preview.targetTableId, preview.parseResult.courses)
+            } else {
+                try? repo.replaceCourses(preview.targetTableId, preview.parseResult.courses)
+            }
             onImported()
             return preview.targetTableId
         case .importAsNew:
@@ -1001,7 +1028,7 @@ extension ImportSheet {
             var newTable = TimeTableEntity(
                 name: uniqueImportedTableName(confirmedTableName, existingNames),
                 startDate: confirmedStartDate,
-                maxWeek: base?.maxWeek ?? 20,
+                maxWeek: preview.parseResult.maxWeek > 0 ? preview.parseResult.maxWeek : (base?.maxWeek ?? 20),
                 nodesPerDay: preview.parseResult.nodesPerDay > 0 ? preview.parseResult.nodesPerDay : base?.nodesPerDay ?? 12,
                 timeJson: confirmedTimeJson,
                 isDefault: false)
@@ -1012,7 +1039,12 @@ extension ImportSheet {
                 courses[i].id = 0
                 courses[i].tableId = newTableId
             }
-            _ = try? repo.insertCourses(courses)
+            // sleepy-v1: groupId 权威时保留分区(ImportAsNew 全量落新课表, 等价 replace 语义)
+            if preview.parseResult.groupIdsAuthoritative {
+                _ = try? repo.insertCoursesKeepingGroups(courses)
+            } else {
+                _ = try? repo.insertCourses(courses)
+            }
             try? repo.setDefault(newTableId)
             onImported()
             return newTableId
@@ -1029,7 +1061,11 @@ extension ImportSheet {
                 courses[i].id = 0
                 courses[i].tableId = preview.targetTableId
             }
-            _ = try? repo.insertCourses(courses)
+            if preview.parseResult.groupIdsAuthoritative {
+                _ = try? repo.insertCoursesKeepingGroups(courses)
+            } else {
+                _ = try? repo.insertCourses(courses)
+            }
             onImported()
             return preview.targetTableId
         case .appendAsNew:
@@ -1039,7 +1075,7 @@ extension ImportSheet {
             var newTable = TimeTableEntity(
                 name: uniqueImportedTableName(confirmedTableName, existingNames),
                 startDate: confirmedStartDate,
-                maxWeek: base?.maxWeek ?? 20,
+                maxWeek: preview.parseResult.maxWeek > 0 ? preview.parseResult.maxWeek : (base?.maxWeek ?? 20),
                 nodesPerDay: preview.parseResult.nodesPerDay > 0 ? preview.parseResult.nodesPerDay : base?.nodesPerDay ?? 12,
                 timeJson: confirmedTimeJson,
                 isDefault: false)
@@ -1050,7 +1086,11 @@ extension ImportSheet {
                 courses[i].id = 0
                 courses[i].tableId = newTableId
             }
-            _ = try? repo.insertCourses(courses)
+            if preview.parseResult.groupIdsAuthoritative {
+                _ = try? repo.insertCoursesKeepingGroups(courses)
+            } else {
+                _ = try? repo.insertCourses(courses)
+            }
             onImported()
             return newTableId
         case .appendAll:
@@ -1060,7 +1100,11 @@ extension ImportSheet {
                 courses[i].id = 0
                 courses[i].tableId = preview.targetTableId
             }
-            _ = try? repo.insertCourses(courses)
+            if preview.parseResult.groupIdsAuthoritative {
+                _ = try? repo.insertCoursesKeepingGroups(courses)
+            } else {
+                _ = try? repo.insertCourses(courses)
+            }
             onImported()
             return preview.targetTableId
         }
