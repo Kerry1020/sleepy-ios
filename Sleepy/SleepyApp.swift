@@ -195,6 +195,7 @@ struct AppRoot: View {
         // ← Activity.recreate(): 语言切换 → L10n.didChange → languageReload+1 → 全树重建
         .id(root.languageReload)
         .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
+        .preferredColorScheme(schemeOverride)
         .onOpenURL { url in
             handleDeepLink(url)
         }
@@ -230,7 +231,7 @@ struct AppRoot: View {
             }
             // Sheet 是独立 presentation tree；显式注入主题，避免自定义颜色环境回落到 lightScheme。
             .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
-            .preferredColorScheme(isDark ? .dark : .light)
+            .preferredColorScheme(schemeOverride)
         }
         // ★ sheet 冲突修复续: ImportSheet dismiss 完成后(0.45s 动画)再 present JW 流程
         .onChange(of: jwImportRequested) { req in
@@ -247,6 +248,13 @@ struct AppRoot: View {
     // ← AppPrefs.isDarkMode(context, systemDark)
     private var isDark: Bool {
         AppPrefs.shared.isDarkMode(isSystemDark: systemScheme == .dark)
+    }
+
+    // ← Android isSystemInDarkTheme() 真跟随: system 模式传 nil(不强制覆盖)。
+    //   preferredColorScheme 非 nil 会把 @Environment(\.colorScheme) 锁成被覆盖的值,
+    //   导致控制中心切换深浅色时 app 永远不跟 → "跟随系统"是假的。nil = 原生跟随。
+    private var schemeOverride: ColorScheme? {
+        themeMode == AppPrefs.THEME_MODE_SYSTEM ? nil : (isDark ? .dark : .light)
     }
 
     @ViewBuilder
@@ -296,6 +304,11 @@ struct AppRoot: View {
                 },
                 onThemeModeChange: { mode in
                     themeMode = mode
+                    themeKey = AppPrefs.shared.getThemeKey()
+                },
+                // ← Android themeKeyFlow.collectAsState: 选主题色即时下发全树,
+                //   不再等重进页面/重启(AppRoot.themeKey 是一次性 @State,必须回写)
+                onThemeKeyChange: {
                     themeKey = AppPrefs.shared.getThemeKey()
                 },
                 onOpenLicense: { root.overlayScreen = .license }))
@@ -471,7 +484,13 @@ private struct PresentOverlay: ViewModifier {
     let onCreateNewTable: () -> Void
     let onOpenEditTable: (Int64) -> Void
     let onThemeModeChange: (String) -> Void
+    let onThemeKeyChange: () -> Void
     let onOpenLicense: () -> Void
+
+    // ← AppRoot.schemeOverride 同源: system 模式 nil = 真跟随系统
+    private var schemeOverride: ColorScheme? {
+        themeMode == AppPrefs.THEME_MODE_SYSTEM ? nil : (isDark ? .dark : .light)
+    }
 
     func body(content: Content) -> some View {
         content.fullScreenCover(item: Binding<AppRootViewModel.OverlayScreen?>(
@@ -496,7 +515,7 @@ private struct PresentOverlay: ViewModifier {
                 onDismiss: onDismiss,
                 onSaved: onSavedAdd,
                 editingCourse: editingCourse)
-                .themedOverlay(isDark: isDark, themeKey: themeKey)
+                .themedOverlay(isDark: isDark, themeKey: themeKey, schemeOverride: schemeOverride)
                 .interactiveEdgeBack(onBack: onDismiss)
         case .allTables:
             AllTablesScreen(
@@ -504,7 +523,7 @@ private struct PresentOverlay: ViewModifier {
                 onDismiss: onDismiss,
                 onCreateNewTable: onCreateNewTable,
                 onOpenEditTable: onOpenEditTable)
-                .themedOverlay(isDark: isDark, themeKey: themeKey)
+                .themedOverlay(isDark: isDark, themeKey: themeKey, schemeOverride: schemeOverride)
                 .interactiveEdgeBack(onBack: onDismiss)
         case .editTable:
             EditTableScreen(
@@ -515,241 +534,44 @@ private struct PresentOverlay: ViewModifier {
                 onDiscardPending: onBack,
                 onSaved: onSavedTable,
                 onDeleted: onDeletedTable)
-                .themedOverlay(isDark: isDark, themeKey: themeKey)
+                .themedOverlay(isDark: isDark, themeKey: themeKey, schemeOverride: schemeOverride)
                 .interactiveEdgeBack(onBack: onBack)
         case .general:
             GeneralSettingsScreen(onDismiss: onDismiss)
-                .themedOverlay(isDark: isDark, themeKey: themeKey)
+                .themedOverlay(isDark: isDark, themeKey: themeKey, schemeOverride: schemeOverride)
                 .interactiveEdgeBack(onBack: onDismiss)
         case .theme:
             AppearanceScreen(
                 onDismiss: onDismiss,
                 themeMode: themeMode,
-                onThemeModeChange: onThemeModeChange)
-                .themedOverlay(isDark: isDark, themeKey: themeKey)
+                onThemeModeChange: onThemeModeChange,
+                onThemeKeyChange: onThemeKeyChange)
+                .themedOverlay(isDark: isDark, themeKey: themeKey, schemeOverride: schemeOverride)
                 .interactiveEdgeBack(onBack: onDismiss)
         case .export:
             ExportScreen(viewModel: scheduleViewModel, onDismiss: onDismiss)
-                .themedOverlay(isDark: isDark, themeKey: themeKey)
+                .themedOverlay(isDark: isDark, themeKey: themeKey, schemeOverride: schemeOverride)
                 .interactiveEdgeBack(onBack: onDismiss)
         case .reminder:
             ReminderScreen(onDismiss: onDismiss)
-                .themedOverlay(isDark: isDark, themeKey: themeKey)
+                .themedOverlay(isDark: isDark, themeKey: themeKey, schemeOverride: schemeOverride)
                 .interactiveEdgeBack(onBack: onDismiss)
         case .about:
             AboutScreen(onDismiss: onDismiss, onOpenLicense: onOpenLicense)
-                .themedOverlay(isDark: isDark, themeKey: themeKey)
+                .themedOverlay(isDark: isDark, themeKey: themeKey, schemeOverride: schemeOverride)
                 .interactiveEdgeBack(onBack: onDismiss)
         case .license:
             LicenseScreen(onDismiss: onDismiss)
-                .themedOverlay(isDark: isDark, themeKey: themeKey)
+                .themedOverlay(isDark: isDark, themeKey: themeKey, schemeOverride: schemeOverride)
                 .interactiveEdgeBack(onBack: onDismiss)
         }
     }
 }
 
 private extension View {
-    func themedOverlay(isDark: Bool, themeKey: String) -> some View {
+    func themedOverlay(isDark: Bool, themeKey: String, schemeOverride: ColorScheme?) -> some View {
         modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
-            .preferredColorScheme(isDark ? .dark : .light)
-    }
-}
-
-private struct PresentAddCourse: ViewModifier {
-    let isDark: Bool
-    let themeKey: String
-    let overlayScreen: AppRootViewModel.OverlayScreen?
-    let editingCourse: CourseEntity?
-    let scheduleViewModel: ScheduleViewModel
-    let onDismissAdd: () -> Void
-    let onSavedAdd: () -> Void
-    func body(content: Content) -> some View {
-        content.fullScreenCover(item: Binding<AppRootViewModel.OverlayScreen?>(
-            get: { (overlayScreen == .addCourse || editingCourse != nil) ? .addCourse : nil },
-            set: { newVal in if newVal == nil { onDismissAdd() } }
-        )) { _ in
-            AddCourseScreen(
-                viewModel: scheduleViewModel,
-                onDismiss: onDismissAdd,
-                onSaved: onSavedAdd,
-                editingCourse: editingCourse)
-            .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
-            .preferredColorScheme(isDark ? .dark : .light)
-                .interactiveEdgeBack(onBack: onDismissAdd)
-        }
-    }
-}
-
-private struct PresentEditTable: ViewModifier {
-    let isDark: Bool
-    let themeKey: String
-    let overlayScreen: AppRootViewModel.OverlayScreen?
-    let editTableId: Int64?
-    let pendingNewTableId: Int64?
-    let scheduleViewModel: ScheduleViewModel
-    let onBack: () -> Void
-    let onDiscardPending: () -> Void
-    let onSavedTable: () -> Void
-    let onDeletedTable: () -> Void
-    func body(content: Content) -> some View {
-        content.fullScreenCover(item: Binding<AppRootViewModel.OverlayScreen?>(
-            get: { overlayScreen == .editTable ? .editTable : nil },
-            set: { newVal in if newVal == nil { onBack() } }
-        )) { _ in
-            EditTableScreen(
-                viewModel: scheduleViewModel,
-                tableId: editTableId,
-                pendingNewTableId: pendingNewTableId,
-                onDismiss: onBack,
-                onDiscardPending: onDiscardPending,
-                onSaved: onSavedTable,
-                onDeleted: onDeletedTable)
-            .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
-            .preferredColorScheme(isDark ? .dark : .light)
-            .interactiveEdgeBack(onBack: onBack)
-        }
-    }
-}
-
-private struct PresentAllTables: ViewModifier {
-    let isDark: Bool
-    let themeKey: String
-    let overlayScreen: AppRootViewModel.OverlayScreen?
-    let scheduleViewModel: ScheduleViewModel
-    let onDismissOverlay: () -> Void
-    let onCreateNewTable: () -> Void
-    let onOpenEditTable: (Int64) -> Void
-    func body(content: Content) -> some View {
-        content.fullScreenCover(item: Binding<AppRootViewModel.OverlayScreen?>(
-            get: { overlayScreen == .allTables ? .allTables : nil },
-            set: { newVal in if newVal == nil { onDismissOverlay() } }
-        )) { _ in
-            AllTablesScreen(
-                viewModel: scheduleViewModel,
-                onDismiss: onDismissOverlay,
-                onCreateNewTable: onCreateNewTable,
-                onOpenEditTable: onOpenEditTable)
-            .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
-            .preferredColorScheme(isDark ? .dark : .light)
-            .interactiveEdgeBack(onBack: onDismissOverlay)
-        }
-    }
-}
-
-private struct PresentGeneral: ViewModifier {
-    let isDark: Bool
-    let themeKey: String
-    let overlayScreen: AppRootViewModel.OverlayScreen?
-    let onDismissOverlay: () -> Void
-    func body(content: Content) -> some View {
-        content.fullScreenCover(item: Binding<AppRootViewModel.OverlayScreen?>(
-            get: { overlayScreen == .general ? .general : nil },
-            set: { newVal in if newVal == nil { onDismissOverlay() } }
-        )) { _ in
-            GeneralSettingsScreen(onDismiss: onDismissOverlay)
-                .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
-                .preferredColorScheme(isDark ? .dark : .light)
-                .interactiveEdgeBack(onBack: onDismissOverlay)
-        }
-    }
-}
-
-private struct PresentTheme: ViewModifier {
-    let isDark: Bool
-    let themeKey: String
-    let overlayScreen: AppRootViewModel.OverlayScreen?
-    let themeMode: String
-    let onDismissOverlay: () -> Void
-    let onThemeModeChange: (String) -> Void
-    func body(content: Content) -> some View {
-        content.sheet(item: Binding<AppRootViewModel.OverlayScreen?>(
-            get: { overlayScreen == .theme ? .theme : nil },
-            set: { newVal in if newVal == nil { onDismissOverlay() } }
-        )) { _ in
-            AppearanceScreen(
-                onDismiss: onDismissOverlay,
-                themeMode: themeMode,
-                onThemeModeChange: onThemeModeChange)
-            .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
-            .preferredColorScheme(isDark ? .dark : .light)
-            .interactiveEdgeBack(onBack: onDismissOverlay)
-        }
-    }
-}
-
-private struct PresentExport: ViewModifier {
-    let isDark: Bool
-    let themeKey: String
-    let overlayScreen: AppRootViewModel.OverlayScreen?
-    let scheduleViewModel: ScheduleViewModel
-    let onDismissOverlay: () -> Void
-    func body(content: Content) -> some View {
-        content.fullScreenCover(item: Binding<AppRootViewModel.OverlayScreen?>(
-            get: { overlayScreen == .export ? .export : nil },
-            set: { newVal in if newVal == nil { onDismissOverlay() } }
-        )) { _ in
-            ExportScreen(viewModel: scheduleViewModel, onDismiss: onDismissOverlay)
-                .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
-                .preferredColorScheme(isDark ? .dark : .light)
-                .interactiveEdgeBack(onBack: onDismissOverlay)
-        }
-    }
-}
-
-private struct PresentReminder: ViewModifier {
-    let isDark: Bool
-    let themeKey: String
-    let overlayScreen: AppRootViewModel.OverlayScreen?
-    let onDismissOverlay: () -> Void
-    func body(content: Content) -> some View {
-        content.fullScreenCover(item: Binding<AppRootViewModel.OverlayScreen?>(
-            get: { overlayScreen == .reminder ? .reminder : nil },
-            set: { newVal in if newVal == nil { onDismissOverlay() } }
-        )) { _ in
-            ReminderScreen(onDismiss: onDismissOverlay)
-                .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
-                .preferredColorScheme(isDark ? .dark : .light)
-                .interactiveEdgeBack(onBack: onDismissOverlay)
-        }
-    }
-}
-
-private struct PresentAbout: ViewModifier {
-    let isDark: Bool
-    let themeKey: String
-    let overlayScreen: AppRootViewModel.OverlayScreen?
-    let onDismissOverlay: () -> Void
-    let onOpenLicense: () -> Void
-    func body(content: Content) -> some View {
-        content.fullScreenCover(item: Binding<AppRootViewModel.OverlayScreen?>(
-            get: { overlayScreen == .about ? .about : nil },
-            set: { newVal in if newVal == nil { onDismissOverlay() } }
-        )) { _ in
-            AboutScreen(
-                onDismiss: onDismissOverlay,
-                onOpenLicense: onOpenLicense)
-            .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
-            .preferredColorScheme(isDark ? .dark : .light)
-            .interactiveEdgeBack(onBack: onDismissOverlay)
-        }
-    }
-}
-
-private struct PresentLicense: ViewModifier {
-    let isDark: Bool
-    let themeKey: String
-    let overlayScreen: AppRootViewModel.OverlayScreen?
-    let onDismissOverlay: () -> Void
-    func body(content: Content) -> some View {
-        content.fullScreenCover(item: Binding<AppRootViewModel.OverlayScreen?>(
-            get: { overlayScreen == .license ? .license : nil },
-            set: { newVal in if newVal == nil { onDismissOverlay() } }
-        )) { _ in
-            LicenseScreen(onDismiss: onDismissOverlay)
-                .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
-                .preferredColorScheme(isDark ? .dark : .light)
-                .interactiveEdgeBack(onBack: onDismissOverlay)
-        }
+            .preferredColorScheme(schemeOverride)
     }
 }
 
