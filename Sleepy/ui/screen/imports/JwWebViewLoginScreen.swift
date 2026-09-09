@@ -107,10 +107,10 @@ struct JwWebViewLoginScreen: View {
                     .background(colors.surfaceContainerHighest)
                     .cornerRadius(8)
                     .padding(.bottom, 80)
-                    .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                            withAnimation { snackMessage = nil }
-                        }
+                    .task(id: msg) {
+                        try? await Task.sleep(nanoseconds: 2_500_000_000)
+                        guard !Task.isCancelled else { return }
+                        withAnimation { snackMessage = nil }
                     }
             }
         }

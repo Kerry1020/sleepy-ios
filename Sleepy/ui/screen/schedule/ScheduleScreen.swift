@@ -118,10 +118,11 @@ struct ScheduleScreen: View {
                     .cornerRadius(SleepyShapes.large)
                     .padding(.bottom, 24)
                     .transition(.opacity)
-                    .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
-                            withAnimation { showUndoNoneToast = false }
-                        }
+                    // 原生并发取消语义: id 变化自动取消旧计时,连发不误杀(← asyncAfter)
+                    .task(id: showUndoNoneToast) {
+                        try? await Task.sleep(nanoseconds: 1_800_000_000)
+                        guard !Task.isCancelled else { return }
+                        withAnimation { showUndoNoneToast = false }
                     }
             }
         }

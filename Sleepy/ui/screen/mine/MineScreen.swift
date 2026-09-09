@@ -90,10 +90,10 @@ struct MineScreen: View {
                     .cornerRadius(8)
                     .padding(.bottom, 12)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                            withAnimation { snackMessage = nil }
-                        }
+                    .task(id: msg) {
+                        try? await Task.sleep(nanoseconds: 2_000_000_000)
+                        guard !Task.isCancelled else { return }
+                        withAnimation { snackMessage = nil }
                     }
             }
         }

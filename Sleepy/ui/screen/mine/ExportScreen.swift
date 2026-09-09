@@ -114,15 +114,15 @@ struct ExportScreen: View {
                     .background(colors.surfaceContainerHighest)
                     .cornerRadius(8)
                     .padding(.bottom, 12)
-                    .onAppear {
+                    .task(id: msg) {
                         // snackbar 2s(← Android LENGTH_SHORT)。UI 测试态延到 6s:
                         // 批量跑套件时模拟器负载高, 单次 XCUITest 快照可能 >2s,
                         // 负载尖峰会错过 snackbar 存活窗口造成批量 flake(单跑全绿)。
                         let life: Double = ProcessInfo.processInfo.arguments
                             .contains("-SLEEPY_UI_TEST_SEED") ? 6 : 2
-                        DispatchQueue.main.asyncAfter(deadline: .now() + life) {
-                            withAnimation { snackMessage = nil }
-                        }
+                        try? await Task.sleep(nanoseconds: UInt64(life * 1_000_000_000))
+                        guard !Task.isCancelled else { return }
+                        withAnimation { snackMessage = nil }
                     }
             }
         }
