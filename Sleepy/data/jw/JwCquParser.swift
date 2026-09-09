@@ -21,7 +21,7 @@
 
 import Foundation
 
-final class JwCquParser: JwParser {
+final class JwCquParser: JwParser, JwParserConfidenceReporting {
 
     let source: String
 
@@ -29,7 +29,7 @@ final class JwCquParser: JwParser {
         self.source = source
     }
 
-    func generateCourseList() -> [JwCourse] {
+    func generateCourseList() throws -> [JwCourse] {
         guard let data = source.data(using: .utf8),
               let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
               let rows = root["classTimetableVOList"] as? [Any] else { return [] }
@@ -109,13 +109,13 @@ final class JwCquParser: JwParser {
     }
 
     /// my-table-detail = 100; classTimetableVOList = 90(← confidence 覆盖)
-    func confidence() -> Int {
+    var confidenceValue: Int {
         if source.contains("classTimetableVOList") { return 90 }
         if source.contains("my-table-detail") { return 80 }
         return 0
     }
 
-    func matchedFeatures() -> [String] {
+    var matchedFeatureList: [String] {
         var out: [String] = []
         if source.contains("classTimetableVOList") { out.append("classTimetableVOList.rows") }
         if source.contains("my-table-detail") { out.append("my-table-detail") }

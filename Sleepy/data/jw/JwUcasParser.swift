@@ -4,7 +4,7 @@
 import Foundation
 import SwiftSoup
 
-final class JwUcasParser: JwParser {
+final class JwUcasParser: JwParser, JwParserConfidenceReporting {
 
     let source: String
 
@@ -27,18 +27,18 @@ final class JwUcasParser: JwParser {
     static let TYPE_ODD = 1
     static let TYPE_EVEN = 2
 
-    func generateCourseList() -> [JwCourse] {
+    func generateCourseList() throws -> [JwCourse] {
         return parseJson() ?? parseHtml()
     }
 
     /// ← confidence(): JSON 命中 95 / HTML 命中 90 (iOS 检测层不消费, 保留供对齐)
-    func confidence() -> Int {
+    var confidenceValue: Int {
         if source.contains("\"courseTimeList\"") && source.contains("\"selectedCourse\"") { return 95 }
         if source.contains("个人课表") && source.contains("/course/coursetime/") { return 90 }
         return 0
     }
 
-    func matchedFeatures() -> [String] {
+    var matchedFeatureList: [String] {
         var f: [String] = []
         if source.contains("\"courseTimeList\"") { f.append("json:courseTimeList") }
         if source.contains("\"selectedCourse\"") { f.append("json:selectedCourse") }

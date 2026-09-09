@@ -14,7 +14,7 @@
 import Foundation
 import SwiftSoup
 
-final class JwNewZfParser: JwParser {
+final class JwNewZfParser: JwParser, JwParserConfidenceReporting {
 
     let source: String
 
@@ -22,13 +22,13 @@ final class JwNewZfParser: JwParser {
         self.source = source
     }
 
-    func generateCourseList() -> [JwCourse] {
+    func generateCourseList() throws -> [JwCourse] {
         // 1. 尝试从页面提取嵌入的 JSON
         let embedded = parseEmbeddedJson()
         if !embedded.isEmpty { return embedded }
 
         // 2. HTML 表格解析
-        return parseHtmlTable()
+        return try parseHtmlTable()
     }
 
     // ─── JSON 提取 ────────────────────────────────────────────
@@ -249,8 +249,8 @@ final class JwNewZfParser: JwParser {
 
     /// 正方新版渲染后的 HTML 与强智类似但容器 ID 可能不同。
     /// 尝试 "kbtable" / "kbgrid" / class 选择器。
-    private func parseHtmlTable() -> [JwCourse] {
-        guard let doc = try? SwiftSoup.parse(source) else { return parseHtmlTableFromQz() }
+    private func parseHtmlTable() throws -> [JwCourse] {
+        guard let doc = try? SwiftSoup.parse(source) else { return try parseHtmlTableFromQz() }
 
         // 多种容器选择器
         // (SwiftSoup 2.7.3 无 selectFirst → select().first();Jsoup 侧 selectFirst 语义等价)
@@ -262,7 +262,7 @@ final class JwNewZfParser: JwParser {
             if let el = (try? doc.select("[id*=kb]"))?.first() { return el }
             return nil
         }()
-        guard let container else { return parseHtmlTableFromQz() }  // 完全 fallback 到 QZ 逻辑
+        guard let container else { return try parseHtmlTableFromQz() }  // 完全 fallback 到 QZ 逻辑
 
         var result: [JwCourse] = []
         let trs = (try? container.getElementsByTag("tr")) ?? Elements()
@@ -298,7 +298,7 @@ final class JwNewZfParser: JwParser {
             }
         }
 
-        return result.isEmpty ? parseHtmlTableFromQz() : result
+        return result.isEmpty ? try parseHtmlTableFromQz() : result
     }
 
     private func parseCell(_ html: String, day: Int, nodeCount: Int) -> [JwCourse] {
@@ -333,7 +333,27 @@ final class JwNewZfParser: JwParser {
     }
 
     /// 完全 fallback 到 QZ 解析逻辑
-    private func parseHtmlTableFromQz() -> [JwCourse] {
-        JwQzParser(source).generateCourseList()
+    private func parseHtmlTableFromQz() throws -> [JwCourse] {
+        try JwQzParser(source).generateCourseList()
+    }
+
+    // MARK: - T8 置信度
+
+    /// zftal-ui- / "kbList" = 100; kblist_table = 80; kbtable/kbgrid = 70
+    var confidenceValue: Int {
+        let lower = source.lowercased()
+        if lower.contains("zftal-ui-") || lower.contains("\"kblist\"") { return 100 }
+        if lower.contains("kblist_table") { return 80 }
+        if lower.contains("kbtable") || lower.contains("kbgrid") { return 70 }
+        return 0
+    }
+
+    var matchedFeatureList: [String] {
+        let lower = source.lowercased()
+        var out: [String] = []
+        if lower.contains("\"kblist\"") { out.append("kbList") }
+        if lower.contains("kbgrid_table_0") { out.append("kbgrid_table_0") }
+        if lower.contains("kblist_table") { out.append("kblist_table") }
+        return out
     }
 }

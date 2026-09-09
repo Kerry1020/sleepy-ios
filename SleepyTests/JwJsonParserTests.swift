@@ -21,13 +21,13 @@ final class JwJsonParserTests: XCTestCase {
     // MARK: - SEU(东南大学)
 
     func testSeuTotalCount() throws {  // ← parses SEU courses - total count is correct
-        let courses = JwSeuParser(try loadFixture("seu_courses")).generateCourseList()
+        let courses = try JwSeuParser(try loadFixture("seu_courses")).generateCourseList()
         // 4 示例课程: 1-16周 1 + 2-15单 1 + 2,4,6周 3 + 1-16双 1 = 6
         XCTAssertEqual(courses.count, 6)
     }
 
     func testSeuMathFields() throws {  // ← 高等数学 maps to correct fields
-        let courses = JwSeuParser(try loadFixture("seu_courses")).generateCourseList()
+        let courses = try JwSeuParser(try loadFixture("seu_courses")).generateCourseList()
         let c = try XCTUnwrap(courses.first { $0.name == "高等数学" })
         XCTAssertEqual(c.day, 1)
         XCTAssertEqual(c.startNode, 1)
@@ -40,7 +40,7 @@ final class JwJsonParserTests: XCTestCase {
     }
 
     func testSeuPhysicsOddWeekStartCorrection() throws {  // ← 大学物理 weekday 3 nodes 5-6
-        let courses = JwSeuParser(try loadFixture("seu_courses")).generateCourseList()
+        let courses = try JwSeuParser(try loadFixture("seu_courses")).generateCourseList()
         let c = try XCTUnwrap(courses.first { $0.name == "大学物理" })
         XCTAssertEqual(c.day, 3)
         XCTAssertEqual(c.startNode, 5)
@@ -51,7 +51,7 @@ final class JwJsonParserTests: XCTestCase {
     }
 
     func testSeuDiscreteWeeksExpand() throws {  // ← 离散周 2,4,6 expands to three entries
-        let courses = JwSeuParser(try loadFixture("seu_courses")).generateCourseList()
+        let courses = try JwSeuParser(try loadFixture("seu_courses")).generateCourseList()
         let lab = courses.filter { $0.name == "数据结构实验" }
         XCTAssertEqual(lab.count, 3)
         XCTAssertEqual(lab[0].startWeek, 2)
@@ -65,45 +65,45 @@ final class JwJsonParserTests: XCTestCase {
     }
 
     func testSeuEvenWeekType2() throws {  // ← 双周课 type 2
-        let courses = JwSeuParser(try loadFixture("seu_courses")).generateCourseList()
+        let courses = try JwSeuParser(try loadFixture("seu_courses")).generateCourseList()
         let c = try XCTUnwrap(courses.first { $0.name == "英语口语" })
         XCTAssertEqual(c.type, 2)
         XCTAssertEqual(c.startWeek, 2)  // 1 奇 → 双周首校正为 2
         XCTAssertEqual(c.endWeek, 16)
     }
 
-    func testSeuNullFieldsTolerated() {  // ← null or missing fields tolerate
+    func testSeuNullFieldsTolerated() throws {  // ← null or missing fields tolerate
         let parser = JwSeuParser("""
         [
           {"KCM": "测试课", "SKXQ": 4, "KSJC": 3, "JSJC": 4, "ZCMC": "1-8周", "SKJS": null, "JASMC": "null"}
         ]
         """)
-        let courses = parser.generateCourseList()
+        let courses = try parser.generateCourseList()
         XCTAssertEqual(courses.count, 1)
         XCTAssertEqual(courses.first?.teacher, "")
         XCTAssertEqual(courses.first?.room, "")
     }
 
     func testSeuConfidence() {
-        XCTAssertTrue(JwSeuParser("{\"KCM\":\"x\",\"ZCMC\":\"1周\"}").confidence() >= 80)
-        XCTAssertEqual(JwSeuParser("no json").confidence(), 0)
+        XCTAssertTrue(JwSeuParser("{\"KCM\":\"x\",\"ZCMC\":\"1周\"}").confidenceValue >= 80)
+        XCTAssertEqual(JwSeuParser("no json").confidenceValue, 0)
     }
 
     func testSeuMatchedFeatures() throws {
-        let features = JwSeuParser(try loadFixture("seu_courses")).matchedFeatures()
+        let features = JwSeuParser(try loadFixture("seu_courses")).matchedFeatureList
         XCTAssertTrue(features.contains { $0.contains("KCM") })
     }
 
     // MARK: - ZJU(浙江大学)
 
     func testZjuTotalCount() throws {  // ← total count is correct
-        let courses = JwZjuParser(try loadFixture("zju_courses")).generateCourseList()
+        let courses = try JwZjuParser(try loadFixture("zju_courses")).generateCourseList()
         // 4 rows: 1-16周(全)1 + 2-15周(单)1 + 离散8 + 1-16周(双)1 = 11
         XCTAssertEqual(courses.count, 11)
     }
 
     func testZjuMathFields() throws {
-        let courses = JwZjuParser(try loadFixture("zju_courses")).generateCourseList()
+        let courses = try JwZjuParser(try loadFixture("zju_courses")).generateCourseList()
         let math = try XCTUnwrap(courses.first { $0.name == "高等数学" })
         XCTAssertEqual(math.teacher, "王教授")
         XCTAssertEqual(math.room, "紫金港东1A-301")
@@ -112,7 +112,7 @@ final class JwJsonParserTests: XCTestCase {
     }
 
     func testZjuPhysicsOddWeek() throws {
-        let courses = JwZjuParser(try loadFixture("zju_courses")).generateCourseList()
+        let courses = try JwZjuParser(try loadFixture("zju_courses")).generateCourseList()
         let phys = try XCTUnwrap(courses.first { $0.name == "大学物理" })
         XCTAssertEqual(phys.day, 3)
         XCTAssertEqual(phys.startNode, 5)
@@ -123,7 +123,7 @@ final class JwJsonParserTests: XCTestCase {
     }
 
     func testZjuDiscreteWeeksExpand() throws {
-        let courses = JwZjuParser(try loadFixture("zju_courses")).generateCourseList()
+        let courses = try JwZjuParser(try loadFixture("zju_courses")).generateCourseList()
         let lab = courses.filter { $0.name == "数据结构实验" }
         XCTAssertEqual(lab.count, 8)
         XCTAssertEqual(lab.first?.day, 5)
@@ -131,7 +131,7 @@ final class JwJsonParserTests: XCTestCase {
     }
 
     func testZjuEvenWeekType2() throws {
-        let courses = JwZjuParser(try loadFixture("zju_courses")).generateCourseList()
+        let courses = try JwZjuParser(try loadFixture("zju_courses")).generateCourseList()
         let eng = try XCTUnwrap(courses.first { $0.name == "英语口语" })
         XCTAssertEqual(eng.day, 2)
         XCTAssertEqual(eng.startNode, 9)
@@ -141,38 +141,38 @@ final class JwJsonParserTests: XCTestCase {
         XCTAssertEqual(eng.endWeek, 16)
     }
 
-    func testZjuShortKcbTolerated() {  // ← teacher falls back when missing in kcb
+    func testZjuShortKcbTolerated() throws {  // ← teacher falls back when missing in kcb
         // kcb 长度不足 4 段时不应崩; teacher 段空 → 兜底空字符串
         let json = """
         {"kbList": [{"xkkh": "TEST0000000000000001", "xqj": "4", "dsz": "2", "djj": "1",
                      "skcd": "2", "kcb": "微积分<br>1-8周<br> ", "xxq": "秋冬"}]}
         """
-        let courses = JwZjuParser(json).generateCourseList()
+        let courses = try try JwZjuParser(json).generateCourseList()
         XCTAssertEqual(courses.count, 1)
         XCTAssertEqual(courses.first?.name, "微积分")
         XCTAssertEqual(courses.first?.teacher, "")
     }
 
     func testZjuConfidence() throws {
-        XCTAssertTrue(JwZjuParser(try loadFixture("zju_courses")).confidence() >= 80)
-        XCTAssertEqual(JwZjuParser("{\"other\":[]}").confidence(), 0)
+        XCTAssertTrue(JwZjuParser(try loadFixture("zju_courses")).confidenceValue >= 80)
+        XCTAssertEqual(JwZjuParser("{\"other\":[]}").confidenceValue, 0)
     }
 
     func testZjuMatchedFeatures() throws {
-        let features = JwZjuParser(try loadFixture("zju_courses")).matchedFeatures()
+        let features = JwZjuParser(try loadFixture("zju_courses")).matchedFeatureList
         XCTAssertTrue(features.contains { $0.lowercased().contains("kblist") })
     }
 
     // MARK: - USTC(中国科学技术大学)
 
     func testUstcTotalCount() throws {
-        let courses = JwUstcParser(try loadFixture("ustc_courses")).generateCourseList()
+        let courses = try JwUstcParser(try loadFixture("ustc_courses")).generateCourseList()
         // 4 activities: 1-16 全周 1 + 2-15单 1 + 离散 8 + 1-16双 1 = 11
         XCTAssertEqual(courses.count, 11)
     }
 
     func testUstcMathFields() throws {
-        let courses = JwUstcParser(try loadFixture("ustc_courses")).generateCourseList()
+        let courses = try JwUstcParser(try loadFixture("ustc_courses")).generateCourseList()
         let math = try XCTUnwrap(courses.first { $0.name == "高等数学A" })
         XCTAssertEqual(math.teacher, "王教授")
         XCTAssertEqual(math.room, "教二楼301")
@@ -182,7 +182,7 @@ final class JwJsonParserTests: XCTestCase {
     }
 
     func testUstcPhysicsOddWeek() throws {
-        let courses = JwUstcParser(try loadFixture("ustc_courses")).generateCourseList()
+        let courses = try JwUstcParser(try loadFixture("ustc_courses")).generateCourseList()
         let phys = try XCTUnwrap(courses.first { $0.name == "大学物理B" })
         XCTAssertEqual(phys.day, 3)
         XCTAssertEqual(phys.startNode, 5)
@@ -192,7 +192,7 @@ final class JwJsonParserTests: XCTestCase {
     }
 
     func testUstcDiscreteWeeksExpand() throws {
-        let courses = JwUstcParser(try loadFixture("ustc_courses")).generateCourseList()
+        let courses = try JwUstcParser(try loadFixture("ustc_courses")).generateCourseList()
         let lab = courses.filter { $0.name == "数据结构实验" }
         XCTAssertEqual(lab.count, 8)
         let weeks = lab.map { $0.startWeek }.sorted()
@@ -200,7 +200,7 @@ final class JwJsonParserTests: XCTestCase {
     }
 
     func testUstcEvenWeekType2() throws {
-        let courses = JwUstcParser(try loadFixture("ustc_courses")).generateCourseList()
+        let courses = try JwUstcParser(try loadFixture("ustc_courses")).generateCourseList()
         let eng = try XCTUnwrap(courses.first { $0.name == "英语口语" })
         XCTAssertEqual(eng.day, 2)
         XCTAssertEqual(eng.startNode, 9)
@@ -211,42 +211,42 @@ final class JwJsonParserTests: XCTestCase {
 
     func testUstcRoomFallbackToCustomPlace() throws {
         // 英语口语 room=null, customPlace="在线" → 兜底为 customPlace
-        let courses = JwUstcParser(try loadFixture("ustc_courses")).generateCourseList()
+        let courses = try JwUstcParser(try loadFixture("ustc_courses")).generateCourseList()
         let eng = try XCTUnwrap(courses.first { $0.name == "英语口语" })
         XCTAssertEqual(eng.room, "在线")
     }
 
-    func testUstcTeachersJoinWithSpace() {
+    func testUstcTeachersJoinWithSpace() throws {
         let json = """
         {"studentTableVm": {"activities": [
           {"courseName": "组合数学", "teachers": ["李四", "王五"], "room": "教室1",
            "weeksStr": "1-10", "weekday": "2", "lessonCode": "0304"}
         ]}}
         """
-        let courses = JwUstcParser(json).generateCourseList()
+        let courses = try try JwUstcParser(json).generateCourseList()
         XCTAssertEqual(courses.first?.teacher, "李四 王五")
     }
 
     func testUstcConfidence() throws {
-        XCTAssertTrue(JwUstcParser(try loadFixture("ustc_courses")).confidence() >= 80)
-        XCTAssertEqual(JwUstcParser("{\"other\":{}}").confidence(), 0)
+        XCTAssertTrue(JwUstcParser(try loadFixture("ustc_courses")).confidenceValue >= 80)
+        XCTAssertEqual(JwUstcParser("{\"other\":{}}").confidenceValue, 0)
     }
 
     func testUstcMatchedFeatures() throws {
-        let features = JwUstcParser(try loadFixture("ustc_courses")).matchedFeatures()
+        let features = JwUstcParser(try loadFixture("ustc_courses")).matchedFeatureList
         XCTAssertTrue(features.contains { $0.lowercased().contains("studenttablevm") })
     }
 
     // MARK: - SCU(四川大学)
 
     func testScuTotalCount() throws {
-        let courses = JwScuParser(try loadFixture("scu_courses")).generateCourseList()
+        let courses = try JwScuParser(try loadFixture("scu_courses")).generateCourseList()
         // 1-16周 1 + 2-15周 1 + 离散 8 + 1-16周 1 = 11
         XCTAssertEqual(courses.count, 11)
     }
 
     func testScuMathFields() throws {
-        let courses = JwScuParser(try loadFixture("scu_courses")).generateCourseList()
+        let courses = try JwScuParser(try loadFixture("scu_courses")).generateCourseList()
         let math = try XCTUnwrap(courses.first { $0.name == "高等数学" })
         XCTAssertEqual(math.day, 1)  // raw classDay=0 → day=1
         XCTAssertEqual(math.startNode, 1)
@@ -256,7 +256,7 @@ final class JwJsonParserTests: XCTestCase {
     }
 
     func testScuPhysicsDayMapping() throws {
-        let courses = JwScuParser(try loadFixture("scu_courses")).generateCourseList()
+        let courses = try JwScuParser(try loadFixture("scu_courses")).generateCourseList()
         let phys = try XCTUnwrap(courses.first { $0.name == "大学物理" })
         XCTAssertEqual(phys.day, 3)
         XCTAssertEqual(phys.startNode, 5)
@@ -266,7 +266,7 @@ final class JwJsonParserTests: XCTestCase {
     }
 
     func testScuDiscreteWeeksExpand() throws {
-        let courses = JwScuParser(try loadFixture("scu_courses")).generateCourseList()
+        let courses = try JwScuParser(try loadFixture("scu_courses")).generateCourseList()
         let lab = courses.filter { $0.name == "数据结构实验" }
         XCTAssertEqual(lab.count, 8)
         let weeks = lab.map { $0.startWeek }.sorted()
@@ -275,7 +275,7 @@ final class JwJsonParserTests: XCTestCase {
     }
 
     func testScuEnglishFields() throws {
-        let courses = JwScuParser(try loadFixture("scu_courses")).generateCourseList()
+        let courses = try JwScuParser(try loadFixture("scu_courses")).generateCourseList()
         let eng = try XCTUnwrap(courses.first { $0.name == "英语口语" })
         XCTAssertEqual(eng.day, 2)  // raw 1 → 2
         XCTAssertEqual(eng.startNode, 9)
@@ -283,7 +283,7 @@ final class JwJsonParserTests: XCTestCase {
         XCTAssertEqual(eng.room, "望江校区外语楼501")
     }
 
-    func testScuWeekDescriptionStripsNonDigit() {
+    func testScuWeekDescriptionStripsNonDigit() throws {
         // "1-15周(单)" 走 replaceAll([^\d\-,]) 语义: 单/双丢失, type=0
         let json = """
         {"dateList": [{"selectCourseList": [{
@@ -293,7 +293,7 @@ final class JwJsonParserTests: XCTestCase {
                                   "teachingBuildingName": "", "classroomName": "A"}]
         }]}]}
         """
-        let courses = JwScuParser(json).generateCourseList()
+        let courses = try try JwScuParser(json).generateCourseList()
         XCTAssertEqual(courses.count, 1)
         XCTAssertEqual(courses.first?.startWeek, 1)
         XCTAssertEqual(courses.first?.endWeek, 15)
@@ -301,25 +301,25 @@ final class JwJsonParserTests: XCTestCase {
     }
 
     func testScuConfidence() throws {
-        XCTAssertTrue(JwScuParser(try loadFixture("scu_courses")).confidence() >= 80)
-        XCTAssertEqual(JwScuParser("{\"other\":[]}").confidence(), 0)
+        XCTAssertTrue(JwScuParser(try loadFixture("scu_courses")).confidenceValue >= 80)
+        XCTAssertEqual(JwScuParser("{\"other\":[]}").confidenceValue, 0)
     }
 
     func testScuMatchedFeatures() throws {
-        let features = JwScuParser(try loadFixture("scu_courses")).matchedFeatures()
+        let features = JwScuParser(try loadFixture("scu_courses")).matchedFeatureList
         XCTAssertTrue(features.contains { $0.contains("selectCourseList") })
     }
 
     // MARK: - NEU(东北大学)
 
     func testNeuTotalCount() throws {
-        let courses = JwNeuParser(try loadFixture("neu_courses")).generateCourseList()
+        let courses = try JwNeuParser(try loadFixture("neu_courses")).generateCourseList()
         // 1-16周 1 + 2-15周 1 + 离散 8 + 1-16双周 1(type=0) = 11
         XCTAssertEqual(courses.count, 11)
     }
 
     func testNeuMathFields() throws {
-        let courses = JwNeuParser(try loadFixture("neu_courses")).generateCourseList()
+        let courses = try JwNeuParser(try loadFixture("neu_courses")).generateCourseList()
         let math = try XCTUnwrap(courses.first { $0.name == "高等数学" })
         XCTAssertEqual(math.day, 1)
         XCTAssertEqual(math.startNode, 1)
@@ -331,7 +331,7 @@ final class JwJsonParserTests: XCTestCase {
     }
 
     func testNeuPhysicsFields() throws {
-        let courses = JwNeuParser(try loadFixture("neu_courses")).generateCourseList()
+        let courses = try JwNeuParser(try loadFixture("neu_courses")).generateCourseList()
         let phys = try XCTUnwrap(courses.first { $0.name == "大学物理" })
         XCTAssertEqual(phys.day, 3)
         XCTAssertEqual(phys.startNode, 5)
@@ -341,7 +341,7 @@ final class JwJsonParserTests: XCTestCase {
     }
 
     func testNeuDiscreteWeeksExpand() throws {
-        let courses = JwNeuParser(try loadFixture("neu_courses")).generateCourseList()
+        let courses = try JwNeuParser(try loadFixture("neu_courses")).generateCourseList()
         let lab = courses.filter { $0.name == "数据结构实验" }
         XCTAssertEqual(lab.count, 8)
         let weeks = lab.map { $0.startWeek }.sorted()
@@ -351,7 +351,7 @@ final class JwJsonParserTests: XCTestCase {
 
     func testNeuEvenWeekType0() throws {
         // 1-16双周: 上游协议剥"(双)", Sleepy 按 weekly 0 处理, 无端点修正
-        let courses = JwNeuParser(try loadFixture("neu_courses")).generateCourseList()
+        let courses = try JwNeuParser(try loadFixture("neu_courses")).generateCourseList()
         let eng = try XCTUnwrap(courses.first { $0.name == "英语口语" })
         XCTAssertEqual(eng.day, 2)
         XCTAssertEqual(eng.startNode, 9)
@@ -363,12 +363,12 @@ final class JwJsonParserTests: XCTestCase {
 
     func testNeuTeacherExtraction() throws {
         // teacher 从 "1-16周/王教授[主讲]" 末段 "/" 后取, 剥 [主讲]
-        let courses = JwNeuParser(try loadFixture("neu_courses")).generateCourseList()
+        let courses = try JwNeuParser(try loadFixture("neu_courses")).generateCourseList()
         let math = try XCTUnwrap(courses.first { $0.name == "高等数学" })
         XCTAssertEqual(math.teacher, "王教授")
     }
 
-    func testNeuTitleDetailFallbackWhenOnlySummary() {
+    func testNeuTitleDetailFallbackWhenOnlySummary() throws {
         // titleDetail 只有 summary → 回退 weeksAndTeachers "/" 前段取 week, room 空串
         let json = """
         {"datas": {"arrangedList": [{
@@ -376,7 +376,7 @@ final class JwJsonParserTests: XCTestCase {
             "weeksAndTeachers": "1-16周/测试教师[主讲]", "titleDetail": ["汇总信息"]
         }]}}
         """
-        let courses = JwNeuParser(json).generateCourseList()
+        let courses = try try JwNeuParser(json).generateCourseList()
         XCTAssertEqual(courses.count, 1)
         XCTAssertEqual(courses.first?.room, "")
         XCTAssertEqual(courses.first?.startWeek, 1)
@@ -384,19 +384,19 @@ final class JwJsonParserTests: XCTestCase {
     }
 
     func testNeuConfidence() throws {
-        XCTAssertTrue(JwNeuParser(try loadFixture("neu_courses")).confidence() >= 80)
-        XCTAssertEqual(JwNeuParser("{\"other\":{}}").confidence(), 0)
+        XCTAssertTrue(JwNeuParser(try loadFixture("neu_courses")).confidenceValue >= 80)
+        XCTAssertEqual(JwNeuParser("{\"other\":{}}").confidenceValue, 0)
     }
 
     func testNeuMatchedFeatures() throws {
-        let features = JwNeuParser(try loadFixture("neu_courses")).matchedFeatures()
+        let features = JwNeuParser(try loadFixture("neu_courses")).matchedFeatureList
         XCTAssertTrue(features.contains { $0.contains("arrangedList") })
     }
 
     // MARK: - CQU(重庆大学)
 
     private func parseCqu() throws -> [JwCourse] {
-        JwCquParser(try loadFixture("my_table_cqu")).generateCourseList()
+        try JwCquParser(try loadFixture("my_table_cqu")).generateCourseList()
     }
 
     func testCquTotalCount() throws {
@@ -462,15 +462,15 @@ final class JwJsonParserTests: XCTestCase {
 
     func testCquConfidenceAnchors() throws {
         let p = JwCquParser(try loadFixture("my_table_cqu"))
-        XCTAssertTrue(p.confidence() >= 80)
-        XCTAssertTrue(!p.matchedFeatures().isEmpty)
-        XCTAssertEqual(JwCquParser("random text").confidence(), 0)
+        XCTAssertTrue(p.confidenceValue >= 80)
+        XCTAssertTrue(!p.matchedFeatureList.isEmpty)
+        XCTAssertEqual(JwCquParser("random text").confidenceValue, 0)
     }
 
-    func testCquMalformedInputGraceful() {
-        XCTAssertEqual(JwCquParser("").generateCourseList().count, 0)
-        XCTAssertEqual(JwCquParser("not json").generateCourseList().count, 0)
-        XCTAssertEqual(JwCquParser("{\"classTimetableVOList\":null}").generateCourseList().count, 0)
+    func testCquMalformedInputGraceful() throws {
+        XCTAssertEqual(try try JwCquParser("").generateCourseList().count, 0)
+        XCTAssertEqual(try try JwCquParser("not json").generateCourseList().count, 0)
+        XCTAssertEqual(try try JwCquParser("{\"classTimetableVOList\":null}").generateCourseList().count, 0)
     }
 
     func testCquUrlDetection() {  // ← detectProtocolFromUrl routes my.cqu.edu.cn

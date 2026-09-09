@@ -14,7 +14,7 @@
 import Foundation
 import SwiftSoup
 
-final class JwQzIeasParser: JwParser {
+final class JwQzIeasParser: JwParser, JwParserConfidenceReporting {
 
     let source: String
 
@@ -22,7 +22,7 @@ final class JwQzIeasParser: JwParser {
         self.source = source
     }
 
-    func generateCourseList() -> [JwCourse] {
+    func generateCourseList() throws -> [JwCourse] {
         guard let doc = try? SwiftSoup.parse(source) else { return [] }
         let table: Element?
         do {
@@ -40,12 +40,12 @@ final class JwQzIeasParser: JwParser {
     }
 
     /// ← confidence() (iOS 检测层不消费, 保留供对齐): table#queryGrkb 命中 = 90
-    func confidence() -> Int {
+    var confidenceValue: Int {
         guard let doc = try? SwiftSoup.parse(source) else { return 0 }
         return (((try? doc.select("table#queryGrkb")) ?? nil)?.array().isEmpty == false) ? 90 : 0
     }
 
-    func matchedFeatures() -> [String] {
+    var matchedFeatureList: [String] {
         var f: [String] = []
         if let doc = try? SwiftSoup.parse(source),
            ((try? doc.select("table#queryGrkb")) ?? nil)?.array().isEmpty == false {

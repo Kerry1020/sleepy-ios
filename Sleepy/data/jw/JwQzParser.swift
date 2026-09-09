@@ -16,7 +16,7 @@
 import Foundation
 import SwiftSoup
 
-class JwQzParser: JwParser {
+class JwQzParser: JwParser, JwParserConfidenceReporting {
 
     let source: String
 
@@ -44,7 +44,15 @@ class JwQzParser: JwParser {
         let node = nodeCount * 2 - 1
         let courseHtml = try! SwiftSoup.parse(infoStr)  // Jsoup.parse 不抛,Kotlin 侧同
         let courseName = parseCourseName(infoStr)
-        let teacher = (try? courseHtml.getElementsByAttributeValue("title", "老师").text().trimmingCharacters(in: .whitespacesAndNewlines)) ?? ""
+        let teacher = ((try? courseHtml.getElementsByAttributeValue("title", "老师").text()) ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        // T2 修复：上游 wakeup QzParser.kt 只认 "老师"，但 JSNU/UPC/CSUFT 等学校
+        // 使用 "教师" 属性名（fixture: edge_teacher_attr.html 已锁现状）。fallback
+        // 顺序：老师 → 教师。仅当两者都空才返回空串，不修改 SwiftSoup 大小写行为。
+        let teacherFinal = teacher.isEmpty
+            ? ((try? courseHtml.getElementsByAttributeValue("title", "教师").text()) ?? "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            : teacher
         let room = ((try? courseHtml.getElementsByAttributeValue("title", "教室").text()) ?? "") +
             ((try? courseHtml.getElementsByAttributeValue("title", "分组").text()) ?? "")
         let weekRaw = (try? courseHtml.getElementsByAttributeValue("title", "周次(节次)").text()) ?? ""
@@ -72,12 +80,22 @@ class JwQzParser: JwParser {
                         .replacingOccurrences(of: "周", with: "")
                         .replacingOccurrences(of: "(", with: "")
                         .replacingOccurrences(of: ")", with: "")
-                        .trimmingCharacters(in: .whitespaces)) ?? startWeek
+                        .replacingOccurrences(of: "单", with: "")
+                        .replacingOccurrences(of: "双", with: "")
+                        .trimmingCharacters(in: .whitespaces)
+                        .filter { $0.isNumber }) ?? startWeek
                 }
             } else {
+                type = {
+                    if weekItem.contains("单") { return 1 }
+                    if weekItem.contains("双") { return 2 }
+                    return 0
+                }()
                 let cleaned = weekItem.replacingOccurrences(of: "周", with: "")
+                    .replacingOccurrences(of: "单", with: "")
+                    .replacingOccurrences(of: "双", with: "")
                     .components(separatedBy: "(").first ?? ""
-                let v = Int(cleaned.trimmingCharacters(in: .whitespaces)) ?? 1
+                let v = Int(cleaned.trimmingCharacters(in: .whitespaces).filter { $0.isNumber }) ?? 1
                 startWeek = v
                 endWeek = v
             }
@@ -85,7 +103,7 @@ class JwQzParser: JwParser {
                 JwCourse(
                     name: courseName,
                     room: room,
-                    teacher: teacher,
+                    teacher: teacherFinal,
                     day: day,
                     startNode: node,
                     endNode: node + 1,
@@ -97,10 +115,22 @@ class JwQzParser: JwParser {
         }
     }
 
-    func generateCourseList() -> [JwCourse] {
+    func generateCourseList() throws -> [JwCourse] {
         var courseList: [JwCourse] = []
         guard let doc = try? SwiftSoup.parse(source) else { return courseList }
-        guard let kbTable = try? doc.getElementById("kbtable") else { return courseList }
+        // T8: 找不到 #kbtable 抛 JwParseError(NO_TABLE_CONTAINER_MARKER)
+        //   而不是静默 return courseList. 让 T9 区分"协议选错"和"课表页为空".
+        guard let kbTable = (try? doc.getElementById("kbtable")) ?? nil else {
+            throw JwParseError(
+                message: "页面缺少 #kbtable，可能未到达课表页/选错教务类型",
+                attempts: [ParserAttemptSnapshot(
+                    parserName: "JwQzParser",
+                    type: JwProtocol.TYPE_QZ,
+                    courseCount: 0,
+                    confidence: (self as? JwParserConfidenceReporting)?.confidenceValue ?? 0,
+                    matchedFeatures: (self as? JwParserConfidenceReporting)?.matchedFeatureList ?? [],
+                    exception: JwParseError.NO_TABLE_CONTAINER_MARKER)])
+        }
         let trs = (try? kbTable.getElementsByTag("tr")) ?? Elements()
 
         var nodeCount = 0
@@ -143,5 +173,33 @@ class JwQzParser: JwParser {
             }
         }
         return courseList
+    }
+
+    // MARK: - T8 置信度
+
+    /// 命中 #kbtable 与 font[title=老师/教室/周次(节次)] 三件套 = 100；
+    /// 仅命中 kbtable+kbcontent = 70；仅命中 kbtable = 30。
+    var confidenceValue: Int {
+        guard let doc = try? SwiftSoup.parse(source) else { return 0 }
+        guard let kbtable = (try? doc.getElementById("kbtable")) ?? nil else { return 0 }
+        let fontCount = ((try? doc.getElementsByAttributeValue("title", "老师").size()) ?? 0)
+            + ((try? doc.getElementsByAttributeValue("title", "教师").size()) ?? 0)
+            + ((try? doc.getElementsByAttributeValue("title", "教室").size()) ?? 0)
+            + ((try? doc.getElementsByAttributeValue("title", "周次(节次)").size()) ?? 0)
+        if fontCount >= 3 { return 100 }
+        if ((try? kbtable.getElementsByClass(tableName)) ?? Elements()).isEmpty() == false { return 70 }
+        return 30
+    }
+
+    var matchedFeatureList: [String] {
+        guard let doc = try? SwiftSoup.parse(source) else { return [] }
+        var out: [String] = []
+        if ((try? doc.getElementById("kbtable")) ?? nil) != nil { out.append("id=kbtable") }
+        if ((try? doc.getElementsByClass(tableName)) ?? Elements()).isEmpty() == false { out.append("class=\(tableName)") }
+        if ((try? doc.getElementsByAttributeValue("title", "老师")) ?? Elements()).isEmpty() == false { out.append("title=老师") }
+        if ((try? doc.getElementsByAttributeValue("title", "教师")) ?? Elements()).isEmpty() == false { out.append("title=教师") }
+        if ((try? doc.getElementsByAttributeValue("title", "教室")) ?? Elements()).isEmpty() == false { out.append("title=教室") }
+        if ((try? doc.getElementsByAttributeValue("title", "周次(节次)")) ?? Elements()).isEmpty() == false { out.append("title=周次(节次)") }
+        return out
     }
 }

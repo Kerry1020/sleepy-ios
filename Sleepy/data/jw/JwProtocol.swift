@@ -1,5 +1,5 @@
 // JwProtocol.swift — ← JwProtocol.kt
-// 教务系统协议类型枚举。
+// 教务系统协议类型常量表(33 个, 与 Android 1:1)。
 //
 // 基于 dIT8Zv/WakeupSchedule_BUPT (Apache-2.0) 的 Common.kt 协议类型常量
 // 简化而来,保留 sleepy v1.0.8 实际用到的子集:
@@ -38,6 +38,44 @@ enum JwProtocol {
     /// 外部佐证:时光课程表 cqu.js 适配器(茵符草)、321CQU/pymycqu。
     static let TYPE_CQU = "cqu"
 
+    /// T3: 湖南科大 HNUST 老正方变体(kdjw/xxjw.hnust.edu.cn)。
+    /// 使 displayName/category 不落入 else 分支。
+    static let TYPE_HNUST = "hnust"
+
+    /// T8 新加：upstream Common.kt 历史常量；HNIU 湖南信息职业技术学院。
+    static let TYPE_HNIU = "hniu"
+
+    /// 强智 iEAS 网络版 (`/ieas2.1/...`) — ASP.NET MVC 框架, 课表 endpoint = `/ieas2.1/kbcx/queryGrkb` 返回 HTML (非 JSON)。
+    /// 学校样本: 北京航空航天大学 jwxt.buaa.edu.cn:7001/ieas2.1。
+    /// 与 TYPE_QZ (`/jsxsd/` 强智 jxb) 同源, 但 URL 路径不同, 需独立锚点。
+    static let TYPE_QZ_IEAS = "qz_ieas"
+
+    /// 强智移动教务 SPA（qzdatasoft 移动端，`/dist/#/login` 单页应用 + `/njwhd` JSON API）。
+    /// 首校: 河北资源环境职业技术学院 (jwpt.hebzyhj.edu.cn:1233, schoolCode 50139,
+    /// 2026-09-09 学生回传采集包实锤)。登录态 = sessionStorage.Token (JWT)，请求头
+    /// `token: <JWT>`；课表 POST /njwhd/student/curriculum?week=&kbjcmsid= 一次性返回
+    /// 全学期 courses[]: classTime = 星期+起止节 (WDDSS EE, 如 "10304"=周一3-4节)、
+    /// classWeek "1-4,6-19" 区间串、classWeekDetails 逗号位图串、ktmc 班级名。
+    /// API 前缀 (/njwhd) 各校部署可不同 → fetch JS 先 GET /dist/serverconfig.json
+    /// (免鉴权) 发现 ApiUrl，禁止硬编码。同 host 常并存经典强智 /jsxsd/ (serverconfig
+    /// SelectUrl)，但移动端账号体系独立，不走经典 HTML 网格。
+    /// 上游协议形态: 时光课程表 qz 移动端适配器形态（仅字段形态参考，算法自写）。
+    static let TYPE_QZ_APP = "qz_app"
+
+    /// 中国科学院大学选课系统：personSchedule 服务端 HTML 课表网格。
+    static let TYPE_UCAS = "ucas"
+
+    /// 北京交通大学教学支撑平台 (AA, aa.bjtu.edu.cn) — 自研 Django 系, CAS(cas.bjtu.edu.cn
+    /// 算式验证码) + MIS 门户(mis.bjtu.edu.cn module 桥) 后的教务主数据源。
+    /// 课表 = HTML 表格 (table.table, 节次行 x 星期列, 行首格含 [HH:MM-HH:MM]),
+    /// 周次文法: 第A-B周 / 第2,4,6周 / 第X周 + (单/双) 奇偶后缀 (分隔符 -~—–－至到)。
+    /// WebView 会话内同源 fetch 双端点:
+    ///   GET /course_selection/courseselect/stuschedule/        本学期课表
+    ///   GET /course_selection/courseselecttask/schedule/       选课任务课表 (全学期)
+    /// 协议证据: docs/bjtu-cross-verify-2026-09-09/ (24 仓 POSITIVE 12, issue #19)。
+    /// 上游协议形态: HFDLYS/BJTUselfService (MIT) + wan300/bjtu_mis_Android (MIT) — 算法自写。
+    static let TYPE_BJTU = "bjtu"
+
     /// 合肥工业大学教务(金智 EAMS5, eams5-student 系列, jxglstu.hfut.edu.cn)。
     /// 上游协议形态: Chiu-xaH/HFUT-Schedule (MIT) 全链路参考。
     static let TYPE_EAMS5 = "eams5"
@@ -68,23 +106,58 @@ enum JwProtocol {
     /// 上游协议形态: CreamPig233/neu_wisedu2wakeup (无 license) extract_schedule.js — 算法自写。
     static let TYPE_NEU = "neu"
 
-    /// 强智 iEAS 网络版 (/ieas2.1/...) — ASP.NET MVC, 课表 endpoint = /ieas2.1/kbcx/queryGrkb 返回 HTML(非 JSON)。
-    /// 学校样本: 北京航空航天大学 jwxt.buaa.edu.cn:7001/ieas2.1。
-    /// 与 TYPE_QZ (/jsxsd/ 强智 jxb) 同源, 但 URL 路径不同, 需独立锚点。
-    static let TYPE_QZ_IEAS = "qz_ieas"
+    /// 超星学习通「综合教务管理系统」(Powered by ChaoXing)。
+    /// 自建 REST: GET /pkgl/xskb/queryKbGrdb (个人课表, 无参按会话) +
+    /// GET /admin/api/getZclistByXnxq (节次时间/学期)。
+    /// 字段: kcmc/xjc/xingqi/rqxl/zcstr/tmc/croommc, 单节粒度行。
+    /// 首校: 吉林工商学院 (jwxt.jlbtc.edu.cn, 2026-09-05 采集包实锤)。
+    static let TYPE_CHAOXING = "chaoxing"
 
-    /// 中国科学院大学选课系统: personSchedule 服务端 HTML 课表网格 + JSON courseTimeList。
-    static let TYPE_UCAS = "ucas"
+    /// 武汉理工大学教务 (jwxt.whut.edu.cn, 金智 jwapp 变体)。
+    /// 课表走 kcbcxby 微应用 cxxskcb.do (响应 datas.cxxskcb.rows[], 字段与 HEU
+    /// xskcb 同名同义); 解析内核复用 JwWiseduParser。WHUT 特有: 节次 DM ≠
+    /// 物理节次 (6/7/13 缺位), JwWhutParser.SECTION_DM_TO_NODE 映射兜底。
+    /// 上游协议形态: shiguang_warehouse (MIT) whut_01.js + iwut (AGPL, 仅引形态)。
+    static let TYPE_WHUT = "whut"
+
+    /// 经典金智/树维 EAMS (courseTableForStd!courseTable.action 系列, HTML+内嵌 JS)。
+    /// 课表数据在页面内嵌脚本块: new TaskActivity(教师,课名,...,周次位图) + index=D*unitCount+P;
+    /// HTML 表格 #manualArrangeCourseTable 是空壳 (JS 端 fillTable 渲染), 禁走 DOM。
+    /// 周次位图下标 0 占位, 下标 i=1 即第 i 周; unitCount 每校不一 (12/13/11), 禁写死。
+    /// 适配 (2026-09 211 批量收录): 电子科大 / 上财 / 湖南师大 / 南航 (南航入口是
+    /// courseTableStudent!* 但脚本块同构)。
+    /// 上游协议形态: shiguang_warehouse (MIT) hunnu/uestc/hpu.js + WakeupSchedule_Kotlin
+    /// (Apache-2.0); 代码自写。
+    static let TYPE_CLASSIC_EAMS = "classic_eams"
+
+    /// T8 新增：所有协议族常量的有序列表（用于 Registry 兜底遍历顺序）。
+    /// 顺序按 TYPE_PRIORITY 优先级：wisedu > cqu > chaoxing > eams5 > classic_eams >
+    ///                            pku > bnuz > cf > hnust > hniu >
+    ///                            seu > zju > ustc > scu > neu > whut > bjtu >
+    ///                            zf > zf_1 > urp > urp_new > zf_new >
+    ///                            qz > qz_crazy > qz_br > qz_with_node > qz_ieas > qz_app > ucas > qz_old
+    static let ALL_TYPES: [String] = [
+        TYPE_WISEDU, TYPE_CQU, TYPE_CHAOXING, TYPE_EAMS5, TYPE_CLASSIC_EAMS, TYPE_PKU, TYPE_BNUZ,
+        TYPE_CF, TYPE_HNUST, TYPE_HNIU,
+        TYPE_SEU, TYPE_ZJU, TYPE_USTC, TYPE_SCU, TYPE_NEU, TYPE_WHUT,
+        TYPE_BJTU,
+        TYPE_ZF, TYPE_ZF_1, TYPE_URP, TYPE_URP_NEW, TYPE_ZF_NEW,
+        TYPE_QZ, TYPE_QZ_CRAZY, TYPE_QZ_BR, TYPE_QZ_WITH_NODE, TYPE_QZ_IEAS, TYPE_QZ_APP, TYPE_UCAS, TYPE_QZ_OLD,
+    ]
 
     /// 协议显示名(用于 UI 提示) ← displayName
     static func displayName(_ type: String?) -> String {
         switch type {
         case TYPE_QZ, TYPE_QZ_OLD, TYPE_QZ_CRAZY, TYPE_QZ_BR, TYPE_QZ_WITH_NODE:
             return "强智教务"
+        case TYPE_QZ_APP:
+            return "强智移动教务"
         case TYPE_QZ_IEAS:
             return "强智教务(iEAS 网络版)"
         case TYPE_UCAS:
             return "国科大选课系统"
+        case TYPE_BJTU:
+            return "北京交通大学"
         case TYPE_ZF, TYPE_ZF_1, TYPE_ZF_NEW:
             return "正方教务"
         case TYPE_URP, TYPE_URP_NEW:
@@ -99,8 +172,16 @@ enum JwProtocol {
             return "金智教务(直连)"
         case TYPE_CQU:
             return "重庆大学门户"
+        case TYPE_CHAOXING:
+            return "超星综合教务"
+        case TYPE_HNUST:
+            return "湖南科大教务"
+        case TYPE_HNIU:
+            return "湖南信息职业技术学院"
         case TYPE_EAMS5:
             return "合工大教务 (EAMS5)"
+        case TYPE_CLASSIC_EAMS:
+            return "金智教务(经典 EAMS)"
         case TYPE_SEU:
             return "东南大学"
         case TYPE_ZJU:
@@ -111,6 +192,8 @@ enum JwProtocol {
             return "四川大学"
         case TYPE_NEU:
             return "东北大学"
+        case TYPE_WHUT:
+            return "武汉理工大学"
         case TYPE_LOGIN:
             return "特殊登录(v1 暂不支持)"
         case TYPE_HELP:
@@ -125,8 +208,12 @@ enum JwProtocol {
     /// 协议大类,用于 WebViewLogin UI 上的提示文案分类 ← category
     static func category(_ type: String?) -> String {
         switch type {
-        case TYPE_QZ, TYPE_QZ_OLD, TYPE_QZ_CRAZY, TYPE_QZ_BR, TYPE_QZ_WITH_NODE, TYPE_QZ_IEAS:
+        case TYPE_QZ, TYPE_QZ_OLD, TYPE_QZ_CRAZY, TYPE_QZ_BR, TYPE_QZ_WITH_NODE, TYPE_QZ_APP:
             return "qz"
+        case TYPE_QZ_IEAS:
+            return "qz"
+        case TYPE_UCAS:
+            return "other"
         case TYPE_ZF, TYPE_ZF_1, TYPE_ZF_NEW:
             return "zf"
         case TYPE_URP, TYPE_URP_NEW:
@@ -135,9 +222,21 @@ enum JwProtocol {
             return "wisedu"
         case TYPE_CQU:
             return "cqu"
+        case TYPE_CHAOXING:
+            return "chaoxing"
         case TYPE_EAMS5:
             return "eams5"
-        case TYPE_SEU, TYPE_ZJU, TYPE_USTC, TYPE_SCU, TYPE_NEU:
+        case TYPE_CLASSIC_EAMS:
+            return "other"
+        case TYPE_SEU, TYPE_ZJU, TYPE_USTC, TYPE_SCU, TYPE_NEU, TYPE_WHUT:
+            return "other"
+        case TYPE_BJTU:
+            return "other"
+        case TYPE_HNUST, TYPE_HNIU:
+            return "hnust"
+        case TYPE_CF:
+            return "cf"
+        case TYPE_PKU, TYPE_BNUZ:
             return "other"
         default:
             return "other"

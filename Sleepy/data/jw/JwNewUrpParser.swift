@@ -36,7 +36,7 @@
 
 import Foundation
 
-final class JwNewUrpParser: JwParser {
+final class JwNewUrpParser: JwParser, JwParserConfidenceReporting {
 
     let source: String
 
@@ -44,7 +44,7 @@ final class JwNewUrpParser: JwParser {
         self.source = source
     }
 
-    func generateCourseList() -> [JwCourse] {
+    func generateCourseList() throws -> [JwCourse] {
         var result: [JwCourse] = []
 
         // 1. 从 HTML 里抠出 JSON 字符串
@@ -203,5 +203,27 @@ final class JwNewUrpParser: JwParser {
             }
         }
         return result
+    }
+
+    // MARK: - T8 置信度
+
+    /// dateList+selectCourseList+timeAndPlaceList = 100; dateList+selectCourseList = 80; 仅 dateList = 50
+    var confidenceValue: Int {
+        let hasDate = source.contains("dateList")
+        let hasSelect = source.contains("selectCourseList")
+        let hasTime = source.contains("timeAndPlaceList")
+        if hasDate && hasSelect && hasTime { return 100 }
+        if hasDate && hasSelect { return 80 }
+        if hasDate { return 50 }
+        return 0
+    }
+
+    var matchedFeatureList: [String] {
+        var out: [String] = []
+        if source.contains("dateList") { out.append("dateList") }
+        if source.contains("selectCourseList") { out.append("selectCourseList") }
+        if source.contains("timeAndPlaceList") { out.append("timeAndPlaceList") }
+        if source.contains("classWeek") { out.append("classWeek") }
+        return out
     }
 }
