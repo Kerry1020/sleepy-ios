@@ -215,6 +215,8 @@
 		D1DAE4F6D52A83D515D91744 /* AppearanceScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 779E427676157A13B322A5B5 /* AppearanceScreen.swift */; };
 		D289B54F535EFF1753F5AD4C /* SleepyPlaceholderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E82A553EBD1D0C8456D3011 /* SleepyPlaceholderTests.swift */; };
 		D2E92422ED2FA5E9F9645DE3 /* AppPrefs.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB174180E779B7796964E378 /* AppPrefs.swift */; };
+		AA01C0DE0000000000000001 /* CourseDisplayUtil.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA01C0DE0000000000000003 /* CourseDisplayUtil.swift */; };
+		AA01C0DE0000000000000002 /* CourseDisplayUtil.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA01C0DE0000000000000003 /* CourseDisplayUtil.swift */; };
 		D6770DDC7A4CB4206244FDD1 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1205376525F575AF970B7CD4 /* Localizable.strings */; };
 		D67D25E07B51C16543935000 /* JwHniuParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF61666211374C18CE1676CC /* JwHniuParser.swift */; };
 		D7FEDBA885B825B893C17A74 /* JwImportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413E30FAD9261068960FC5F /* JwImportViewModel.swift */; };
@@ -458,6 +460,7 @@
 		D651B0E8CCB723BAB435B4C8 /* UndoManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoManagerTests.swift; sourceTree = "<group>"; };
 		DA6CEF27A9C39504E09D3487 /* GeneralSettingsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsScreen.swift; sourceTree = "<group>"; };
 		DB174180E779B7796964E378 /* AppPrefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPrefs.swift; sourceTree = "<group>"; };
+		AA01C0DE0000000000000003 /* CourseDisplayUtil.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseDisplayUtil.swift; sourceTree = "<group>"; };
 		DBC7DB3DE13257F697784257 /* JwJsonParsers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwJsonParsers.swift; sourceTree = "<group>"; };
 		E6C202EA6E5DE4FC41312B62 /* JwHnustParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwHnustParser.swift; sourceTree = "<group>"; };
 		EAA351FA5E1B5313277092F1 /* WebViewNavigationPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewNavigationPolicyTests.swift; sourceTree = "<group>"; };
@@ -510,6 +513,7 @@
 			children = (
 				A3F73FAB76399721B954DF20 /* AppGroupResolver.swift */,
 				DB174180E779B7796964E378 /* AppPrefs.swift */,
+				AA01C0DE0000000000000003 /* CourseDisplayUtil.swift */,
 				D31FA03F7AF7A6E296C6B4BD /* ConflictDetailReporter.swift */,
 				D4045004893D9AB9C079A3CF /* ConflictLayoutEngine.swift */,
 				5F8589E7A5EA8C34355C1FFF /* CourseColorUtil.swift */,
@@ -1073,6 +1077,7 @@
 				65CF01F49FC04AD316F12BB6 /* AppDatabase.swift in Sources */,
 				52BF11E4543EFC2F7C4941BA /* AppGroupResolver.swift in Sources */,
 				D850C9512A65FE07DDC9556F /* AppPrefs.swift in Sources */,
+				AA01C0DE0000000000000001 /* CourseDisplayUtil.swift in Sources */,
 				D1DAE4F6D52A83D515D91744 /* AppearanceScreen.swift in Sources */,
 				DC5CE34D036E0C2093928DEE /* ConflictCard.swift in Sources */,
 				AD0511066366C95F452D312F /* ConflictDetailReporter.swift in Sources */,
@@ -1216,6 +1221,7 @@
 				92F5FBC94FF2A739A0980E4E /* AppDatabase.swift in Sources */,
 				0721F81C7C4D4E517D11B4D0 /* AppGroupResolver.swift in Sources */,
 				D2E92422ED2FA5E9F9645DE3 /* AppPrefs.swift in Sources */,
+				AA01C0DE0000000000000002 /* CourseDisplayUtil.swift in Sources */,
 				2504B261A1F9A94ABC2FA3F7 /* ConflictDetailReporter.swift in Sources */,
 				496DF2875E115783B5201D7F /* ConflictLayoutEngine.swift in Sources */,
 				BA5D6AE2D8A400A25159A6DE /* CourseColorUtil.swift in Sources */,

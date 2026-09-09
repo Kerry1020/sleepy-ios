@@ -28,6 +28,15 @@ struct GeneralSettingsScreen: View {
     @State private var conflictStackInset: Double = AppPrefs.shared.getConflictStackInset()
     @State private var conflictRailInset: Double = AppPrefs.shared.getConflictRailInset()
     @State private var conflictFoldSize: Double = AppPrefs.shared.getConflictFoldSize()
+    // ★ issue#8 主页显示 pill 组(← Android GeneralSettingsScreen 189-330)
+    @State private var weekUseAlias: Bool = AppPrefs.shared.isWeekUseAlias()
+    @State private var gridUseAlias: Bool = AppPrefs.shared.isGridUseAlias()
+    @State private var gridScale: Double = AppPrefs.shared.getGridScale()
+    @State private var weekScale: Double = AppPrefs.shared.getWeekScale()
+    @State private var gridCorner: Double = AppPrefs.shared.getGridCornerRatio()
+    @State private var weekTwoColumn: Bool = AppPrefs.shared.isWeekTwoColumn()
+    @State private var weekTwoColumnMode: String = AppPrefs.shared.getWeekTwoColumnMode()
+    @State private var weekHideEmptyDays: Bool = AppPrefs.shared.isWeekHideEmptyDays()
     /// 底栏样式 — false=贴底(默认), true=悬浮药丸(与 Android v1.0.45 b0f8280 对齐)
     @State private var navFloating: Bool = AppPrefs.shared.isNavDocked()
     // ★ v7.10.18: HolidaySettings 在本屏内 sheet 弹出,无需走 root enum
@@ -64,6 +73,9 @@ struct GeneralSettingsScreen: View {
                                 startViewCard
                                 showDateCard
                                 courseColorlessCard
+                                weekAliasCard
+                                gridAliasCard
+                                pillCard
                                 conflictStyleCard
                                 holidayEntryCard
                             }
@@ -288,6 +300,103 @@ struct GeneralSettingsScreen: View {
         }
     }
 
+    // ★ issue#26 课程别名: 周视图场景 原名/别名 二选一(← Android SettingsFlatCard)
+    private var weekAliasCard: some View {
+        SettingsFlatCard(
+            title: L10n.format("settings_week_alias"),
+            options: [
+                L10n.format("settings_name_original"),
+                L10n.format("settings_name_alias")
+            ],
+            selectedIndex: Binding(
+                get: { weekUseAlias ? 1 : 0 },
+                set: { idx in
+                    let v = idx == 1
+                    guard v != weekUseAlias else { return }
+                    weekUseAlias = v
+                    prefs.setWeekUseAlias(v)
+                }
+            ),
+            onSelect: { _ in }
+        )
+    }
+
+    // ★ issue#26 课程别名: 网格场景 原名/别名 二选一
+    private var gridAliasCard: some View {
+        SettingsFlatCard(
+            title: L10n.format("settings_grid_alias"),
+            options: [
+                L10n.format("settings_name_original"),
+                L10n.format("settings_name_alias")
+            ],
+            selectedIndex: Binding(
+                get: { gridUseAlias ? 1 : 0 },
+                set: { idx in
+                    let v = idx == 1
+                    guard v != gridUseAlias else { return }
+                    gridUseAlias = v
+                    prefs.setGridUseAlias(v)
+                }
+            ),
+            onSelect: { _ in }
+        )
+    }
+
+    // ★ issue#8 主页显示 pill 组: 网格/周视图缩放 + 圆角比例 + 周视图两栏 + 隐藏无课日
+    // (← Android SettingsCard "settings_pill"; 滑杆 5% 吸附, 拖完落盘)
+    private var pillCard: some View {
+        SettingsCard(title: L10n.format("settings_pill"),
+                     expanded: expandedSections.contains("gridScale"),
+                     onToggle: { toggleSection("gridScale") }) {
+            PillSliderRow(label: L10n.format("settings_pill_scale"),
+                          value: $gridScale, range: AppPrefs.GRID_SCALE_RANGE) {
+                prefs.setGridScale(gridScale)
+            }
+            SubDivider()
+            PillSliderRow(label: L10n.format("settings_pill_week_scale"),
+                          value: $weekScale, range: AppPrefs.GRID_SCALE_RANGE) {
+                prefs.setWeekScale(weekScale)
+            }
+            SubDivider()
+            PillSliderRow(label: L10n.format("settings_pill_corner"),
+                          value: $gridCorner, range: AppPrefs.CORNER_RATIO_RANGE) {
+                prefs.setGridCornerRatio(gridCorner)
+            }
+            SubDivider()
+            SettingToggleRow(label: L10n.format("settings_week_two_column"),
+                             subtitle: "",
+                             checked: weekTwoColumn) {
+                weekTwoColumn = $0
+                prefs.setWeekTwoColumn($0)
+            }
+            // 分栏标准 — 两栏开启时才需要选
+            if weekTwoColumn {
+                SubDivider()
+                DisplayModeOption(label: L10n.format("settings_week_two_column_days"),
+                                  subtitle: "",
+                                  selected: weekTwoColumnMode == "days") {
+                    weekTwoColumnMode = "days"
+                    prefs.setWeekTwoColumnMode("days")
+                }
+                SubDivider()
+                DisplayModeOption(label: L10n.format("settings_week_two_column_balance"),
+                                  subtitle: "",
+                                  selected: weekTwoColumnMode == "balance") {
+                    weekTwoColumnMode = "balance"
+                    prefs.setWeekTwoColumnMode("balance")
+                }
+            }
+            // 隐藏无课日 — 与两栏无关, 单栏/两栏都生效(单栏按安卓语义不分栏不过滤)
+            SubDivider()
+            SettingToggleRow(label: L10n.format("settings_week_hide_empty"),
+                             subtitle: "",
+                             checked: weekHideEmptyDays) {
+                weekHideEmptyDays = $0
+                prefs.setWeekHideEmptyDays($0)
+            }
+        }
+    }
+
     // ← 节假日课程灰显: 点击进入二级页(Android General 页同款入口卡)
     private var holidayEntryCard: some View {
         Button { holidaySettingsItem = HolidaySettingsItem() } label: {
@@ -316,6 +425,35 @@ struct GeneralSettingsScreen: View {
         .sheet(item: $holidaySettingsItem) { _ in
             HolidaySettingsScreen(onDismiss: { holidaySettingsItem = nil })
         }
+    }
+}
+
+// issue#8 pill 拖杆行: 左侧百分比标签, 5% 吸附, 拖完落盘 — ← Android (it*20).roundToInt()/20f
+private struct PillSliderRow: View {
+    @Environment(\.localWakeUpColors) private var colors
+    let label: String
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+    let onFinished: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(label)
+                .font(.system(size: 16))
+                .foregroundColor(colors.onSurface)
+            HStack(spacing: 8) {
+                Text("\(Int((value * 100).rounded()))%")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(colors.primary)
+                    .frame(minWidth: 52, alignment: .leading)
+                Slider(value: $value, in: range, step: 0.05) { _ in
+                    onFinished()
+                }
+                .tint(colors.primary)
+            }
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 4)
     }
 }
 

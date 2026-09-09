@@ -49,6 +49,17 @@ final class AppPrefs {
     // ★ v1.0.45 画面分组: 底栏样式(默认贴底 ← Android b0f8280)
     // (KEY_HIGH_REFRESH 已随 no-op 桩删除 — iOS 无公开刷率 API,2026-09-10 原生化审计)
     static let KEY_NAV_DOCK = "nav_dock"              // bool default false (false=贴底, true=悬浮药丸 ← Android b0f8280)
+    // ★ issue#8 主页显示 pill 组: 网格/周视图缩放 + 圆角比例 + 周视图两栏 (← Android AppPrefs.kt 65-72)
+    static let KEY_GRID_SCALE = "grid_scale"          // Float 0.7~1.3 default 1.0 — 网格整体缩放(字号/行高/间距/圆角联动)
+    static let KEY_WEEK_SCALE = "week_scale"          // Float 0.7~1.3 default 1.0 — 周视图整体缩放
+    static let KEY_GRID_CORNER_RATIO = "grid_corner_ratio" // Float 0.0~2.0 default 1.0 — 圆角比例(乘基准圆角)
+    static let KEY_WEEK_TWO_COLUMN = "week_two_column" // bool default false — 周视图两栏
+    static let KEY_WEEK_TWO_COLUMN_MODE = "week_two_column_mode" // "days"/"balance" default "days"
+    static let KEY_WEEK_HIDE_EMPTY_DAYS = "week_hide_empty_days" // bool default false — 隐藏无课日
+    static let KEY_WEEK_USE_ALIAS = "week_use_alias"  // bool default false — 周视图显示别名 (issue#26)
+    static let KEY_GRID_USE_ALIAS = "grid_use_alias"  // bool default false — 网格视图显示别名 (issue#26)
+    static let GRID_SCALE_RANGE: ClosedRange<Double> = 0.7...1.3
+    static let CORNER_RATIO_RANGE: ClosedRange<Double> = 0.0...2.0
 
     /// 主题色 key 的进程内 Flow — ← themeKeyFlow(callbackFlow+distinctUntilChanged)
     /// 订阅即收当前值,变更推送新值,去重。
@@ -273,6 +284,56 @@ final class AppPrefs {
         precondition(Self.CONFLICT_FOLD_SIZE_RANGE.contains(value))
         sp().set(value, forKey: Self.KEY_CONFLICT_FOLD_SIZE)
     }
+
+    // ===== issue#8 主页显示 pill 组(← Android AppPrefs.kt get/set + changeBus) =====
+    // iOS 无 changeBus:渲染层在 body 内直读(靠设置页关闭触发父级重建重算),与冲突滑杆同模式。
+
+    func getGridScale() -> Double {
+        let v = sp().double(forKey: Self.KEY_GRID_SCALE)
+        return v == 0 ? 1.0 : v
+    }
+
+    func setGridScale(_ value: Double) {
+        precondition(Self.GRID_SCALE_RANGE.contains(value))
+        sp().set(value, forKey: Self.KEY_GRID_SCALE)
+    }
+
+    func getWeekScale() -> Double {
+        let v = sp().double(forKey: Self.KEY_WEEK_SCALE)
+        return v == 0 ? 1.0 : v
+    }
+
+    func setWeekScale(_ value: Double) {
+        precondition(Self.GRID_SCALE_RANGE.contains(value))
+        sp().set(value, forKey: Self.KEY_WEEK_SCALE)
+    }
+
+    func getGridCornerRatio() -> Double {
+        let v = sp().double(forKey: Self.KEY_GRID_CORNER_RATIO)
+        return v == 0 ? 1.0 : v
+    }
+
+    func setGridCornerRatio(_ value: Double) {
+        precondition(Self.CORNER_RATIO_RANGE.contains(value))
+        sp().set(value, forKey: Self.KEY_GRID_CORNER_RATIO)
+    }
+
+    func isWeekTwoColumn() -> Bool { sp().bool(forKey: Self.KEY_WEEK_TWO_COLUMN) }
+    func setWeekTwoColumn(_ v: Bool) { sp().set(v, forKey: Self.KEY_WEEK_TWO_COLUMN) }
+
+    func getWeekTwoColumnMode() -> String {
+        sp().string(forKey: Self.KEY_WEEK_TWO_COLUMN_MODE) ?? "days"
+    }
+    func setWeekTwoColumnMode(_ v: String) { sp().set(v, forKey: Self.KEY_WEEK_TWO_COLUMN_MODE) }
+
+    func isWeekHideEmptyDays() -> Bool { sp().bool(forKey: Self.KEY_WEEK_HIDE_EMPTY_DAYS) }
+    func setWeekHideEmptyDays(_ v: Bool) { sp().set(v, forKey: Self.KEY_WEEK_HIDE_EMPTY_DAYS) }
+
+    func isWeekUseAlias() -> Bool { sp().bool(forKey: Self.KEY_WEEK_USE_ALIAS) }
+    func setWeekUseAlias(_ v: Bool) { sp().set(v, forKey: Self.KEY_WEEK_USE_ALIAS) }
+
+    func isGridUseAlias() -> Bool { sp().bool(forKey: Self.KEY_GRID_USE_ALIAS) }
+    func setGridUseAlias(_ v: Bool) { sp().set(v, forKey: Self.KEY_GRID_USE_ALIAS) }
 
     // ===== 冲突簇默认置顶图层 =====
     // JSON Map<clusterKey, layerRepId>;内存真相源(@Published)保瞬时更新 —

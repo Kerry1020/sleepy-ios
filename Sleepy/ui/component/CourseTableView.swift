@@ -50,19 +50,21 @@ struct CardsGridView: View {
             timeSlots.firstIndex { $0.nodeStart == node } ?? -1
         }
 
-        // 布局常量(全 dp)
-        let headH: CGFloat = 52
-        let timeW: CGFloat = 68
-        let slotH: CGFloat = 52
-        let gapH: CGFloat = 4
-        let gapW: CGFloat = 5
-        let rowH: CGFloat = slotH + gapH   // 56
+        // 布局常量(全 dp) — issue#8: 整体缩放(0.7~1.3) 字号/行高/间距/圆角/内边距等比联动
+        // (← Android CourseTableView.kt d(v) = v*scale)
+        let gridScale = CGFloat(AppPrefs.shared.getGridScale())
+        let gridCornerRatio = CGFloat(AppPrefs.shared.getGridCornerRatio())
+        let d: (CGFloat) -> CGFloat = { $0 * gridScale }
+        let headH = d(52)
+        let slotH = d(52)
+        let gapH = d(4)
+        let rowH = slotH + gapH
 
         GeometryReader { geo in
-            // 根据容器宽度计算列宽；窄屏优先压缩时间栏和间距，避免卡片向右溢出。
+            // 根据容器宽度计算列宽；窄屏优先压缩时间栏和间距，避免卡片向右溢出。(× scale)
             let sideInset: CGFloat = 16
-            let timeW = min(68, max(52, geo.size.width * 0.16))
-            let gapW = min(5, max(3, geo.size.width * 0.012))
+            let timeW = min(68, max(52, geo.size.width * 0.16)) * gridScale
+            let gapW = min(5, max(3, geo.size.width * 0.012)) * gridScale
             let contentW = max(geo.size.width - sideInset - timeW - gapW * CGFloat(dayCount), 0)
             let colW = max(contentW / CGFloat(dayCount), 28)
             // issue#23: grid 高度按 timeSlots 行数算(maxNode 已不反映边缘节点总数)
@@ -84,12 +86,13 @@ struct CardsGridView: View {
                             DayHeadCell(day: day, isToday: day == today,
                                         isGrey: greyDays.contains(day),
                                         courseCount: courses.filter { $0.day == day }.count,
-                                        dateStr: dateStr)
+                                        dateStr: dateStr,
+                                        scale: gridScale, cornerRatio: gridCornerRatio)
                                 .frame(width: colW)
                                 .frame(maxHeight: .infinity)
                         }
                     }
-                    .frame(height: hasDateRow ? 56 : headH)
+                    .frame(height: hasDateRow ? d(56) : headH)
 
                     Spacer().frame(height: gapH)
 
@@ -97,7 +100,7 @@ struct CardsGridView: View {
                     ZStack(alignment: .topLeading) {
                         // 时间栏
                         ForEach(Array(timeSlots.enumerated()), id: \.element.nodeStart) { i, slot in
-                            SingleTimeHeadCell(slot: slot)
+                            SingleTimeHeadCell(slot: slot, scale: gridScale, cornerRatio: gridCornerRatio)
                                 .frame(width: timeW, height: slotH)
                                 .offset(y: rowH * CGFloat(i))
                         }
@@ -108,6 +111,7 @@ struct CardsGridView: View {
                             maxNode: maxNode, timeSlots: timeSlots,
                             timeW: timeW, colW: colW, rowH: rowH,
                             gapW: gapW, gapH: gapH, greyDays: greyDays,
+                            scale: gridScale, cornerRatio: gridCornerRatio,
                             isDark: CourseColorUtil.isPaletteDark(palette),
                             onCourseClick: onCourseClick)
                     }
@@ -118,7 +122,7 @@ struct CardsGridView: View {
                     //   网格内最末一行课不被悬浮药丸遮住。
                     Color.clear.frame(height: navExtra)
                 }
-                .padding(8)
+                .padding(8 * gridScale)
             }
         }
         .background(colors.surfaceContainerHigh)
@@ -145,6 +149,9 @@ struct GridConflictLayer: View {
     let gapW: CGFloat
     let gapH: CGFloat
     let greyDays: Set<Int>
+    /// issue#8: 网格缩放/圆角比例 — 透传给单卡路径(簇卡内部几何已由缩放后的 colW/rowH 驱动)
+    var scale: Double = 1.0
+    var cornerRatio: Double = 1.0
     /// 深色判定(GridConflictLayer 无 palette 环境注入,由 CardsGridView 传入)
     let isDark: Bool
     let onCourseClick: (CourseEntity) -> Void
@@ -213,6 +220,7 @@ struct GridConflictLayer: View {
                     CourseOverlayCard(course: course, cardHeight: cardH,
                                       isDark: isDark,
                                       isGrey: greyDays.contains(course.day),
+                                      scale: scale, cornerRatio: cornerRatio,
                                       groupRows: courses.filter { $0.groupId == course.groupId }) {
                         onCourseClick(course)
                     }
@@ -231,27 +239,29 @@ struct GridConflictLayer: View {
 // ← SingleTimeHeadCell
 private struct SingleTimeHeadCell: View {    @Environment(\.localWakeUpColors) private var colors
     let slot: TimeSlot
+    var scale: Double = 1.0
+    var cornerRatio: Double = 1.0
 
     var body: some View {
-        VStack(spacing: 1) {
+        VStack(spacing: 1 * scale) {
             Text(L10n.format("period_format_node", slot.label))
-                .font(.system(size: 10, weight: .semibold))
+                .font(.system(size: 10 * scale, weight: .semibold))
                 .foregroundColor(colors.onSurface)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
                 .allowsTightening(true)
             Text(slot.timeString)
-                .font(SleepyTextStyle.micro())
+                .font(.system(size: 9 * scale))
                 .foregroundColor(colors.onSurfaceVariant)
                 .lineLimit(1)
                 .minimumScaleFactor(0.65)
                 .allowsTightening(true)
         }
-        .padding(4)
+        .padding(4 * scale)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(colors.surfaceContainerLow)
-        .cornerRadius(SleepyShapes.medium)
-        .padding(2)
+        .cornerRadius(12 * scale * cornerRatio)
+        .padding(2 * scale)
     }
 }
 
@@ -264,6 +274,9 @@ private struct CourseOverlayCard: View {
     var isGrey: Bool = false      // 节假日灰显
     /// issue#22: 同 groupId 全行(AUTO 模式按行序算 hue; 不传 = 退化为单行 groupRows)
     var groupRows: [CourseEntity] = []
+    /// issue#8: 网格缩放/圆角比例
+    var scale: Double = 1.0
+    var cornerRatio: Double = 1.0
     let onClick: () -> Void
 
     var body: some View {
@@ -278,8 +291,11 @@ private struct CourseOverlayCard: View {
         let effectiveFg = isGrey ? fg.opacity(SleepyTheme.Alpha.inactive) : fg
         let strikethrough = isGrey && AppPrefs.shared.getHolidayStyle() == "strikethrough"
         // 副信息(教室/教师/无) — grid_sub_info 设置决定
-        let bodyFont = cardHeight >= 110 ? 10.0 : 11.0
+        // issue#8: 卡高阈值与字号随 scale 联动(← Android fontSize = 10*scale/11*scale)
+        let bodyFont = (cardHeight >= 110 * scale ? 10.0 : 11.0) * scale
         let subInfo = AppPrefs.shared.getGridSubInfo()
+        // issue#26: 网格场景别名 — 网格设置开且别名非空才显示别名, 否则原名
+        let name = CourseDisplayUtil.displayName(course, AppPrefs.shared.isGridUseAlias())
         let subText: String = {
             switch subInfo {
             case "room": return course.room
@@ -292,7 +308,7 @@ private struct CourseOverlayCard: View {
             Group {
                 if subText.isEmpty {
                     // 无副信息: 课程名整体居中(原行为); 名字长时压缩字体防横向溢出
-                    Text(course.courseName)
+                    Text(name)
                         .font(.system(size: bodyFont, weight: .semibold))
                         .foregroundColor(effectiveFg)
                         .strikethrough(strikethrough)
@@ -302,8 +318,8 @@ private struct CourseOverlayCard: View {
                         .multilineTextAlignment(.center)
                 } else {
                     // 有副信息: 课程名在上半区居中, 副信息贴卡底; 两者都允许缩放
-                    VStack(spacing: 2) {
-                        Text(course.courseName)
+                    VStack(spacing: 2 * scale) {
+                        Text(name)
                             .font(.system(size: bodyFont, weight: .semibold))
                             .foregroundColor(effectiveFg)
                             .strikethrough(strikethrough)
@@ -313,7 +329,7 @@ private struct CourseOverlayCard: View {
                             .multilineTextAlignment(.center)
                             .frame(maxHeight: .infinity)
                         Text(subText)
-                            .font(SleepyTextStyle.micro())
+                            .font(.system(size: 9 * scale))
                             .foregroundColor(effectiveFg.opacity(SleepyTheme.Alpha.highContent))
                             .strikethrough(strikethrough)
                             .lineLimit(2)
@@ -327,10 +343,10 @@ private struct CourseOverlayCard: View {
         }
         .buttonStyle(SleepyButtonStyle())
         .accessibilityIdentifier("gridcell_\(course.id)")
-        .padding(4)
+        .padding(4 * scale)
         .background(effectiveBg)
-        .cornerRadius(SleepyShapes.medium)
-        .padding(2)
+        .cornerRadius(12 * scale * cornerRatio)
+        .padding(2 * scale)
     }
 }
 
@@ -342,6 +358,9 @@ private struct DayHeadCell: View {
     var isGrey: Bool = false
     let courseCount: Int
     var dateStr: String? = nil
+    /// issue#8: 缩放(字号/内边距联动) + 圆角比例(← Android 16*scale*cornerRatio)
+    var scale: Double = 1.0
+    var cornerRatio: Double = 1.0
 
     var body: some View {
         let bg = isToday ? colors.primaryContainer : colors.surface
@@ -351,16 +370,17 @@ private struct DayHeadCell: View {
                            : (isToday ? colors.onPrimaryContainer.opacity(SleepyTheme.Alpha.highContent)
                                       : colors.onSurfaceVariant)
 
-        VStack(spacing: 1) {
+        VStack(spacing: 1 * scale) {
+            // ← Android fontSize = (14*scale).sp(dayLabel 13→14 与安卓对齐)
             Text(DateUtils.localizedDay(day))
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 14 * scale, weight: .semibold))
                 .foregroundColor(fg)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
                 .allowsTightening(true)
             if let dateStr = dateStr {
                 Text(dateStr)
-                    .font(.system(size: 10))
+                    .font(.system(size: 10 * scale))
                     .foregroundColor(subFg)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
@@ -368,7 +388,7 @@ private struct DayHeadCell: View {
             } else {
                 Text(courseCount == 0 ? L10n.format("no_course")
                                       : L10n.format("course_count_format", courseCount))
-                    .font(SleepyTextStyle.micro())
+                    .font(.system(size: 9 * scale))
                     .foregroundColor(subFg)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
@@ -377,9 +397,9 @@ private struct DayHeadCell: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(bg)
-        .cornerRadius(SleepyShapes.large)
+        .cornerRadius(16 * scale * cornerRatio)
         .padding(.horizontal, 1)
-        .padding(.vertical, 6)
+        .padding(.vertical, 6 * scale)
     }
 }
 
@@ -401,14 +421,23 @@ struct FullWeekView: View {
 
     var body: some View {
         let byDay = Dictionary(grouping: courses, by: { $0.day })
+        // ← Android FullWeekView: 设置页改 weekScale/cornerRatio/twoColumn/hideEmptyDays/别名后即时生效
+        let weekScale = AppPrefs.shared.getWeekScale()
+        let cornerRatio = AppPrefs.shared.getGridCornerRatio()
+        let useAlias = AppPrefs.shared.isWeekUseAlias()
 
         ScrollView(.vertical) {
             VStack(spacing: 0) {
-                WeekStrip(byDay: byDay, visibleDays: visibleDays, today: today, greyDays: greyDays)
+                WeekStrip(byDay: byDay, visibleDays: visibleDays, today: today, greyDays: greyDays,
+                          scale: weekScale, cornerRatio: cornerRatio, useAlias: useAlias)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 6)
                 DetailPanel(byDay: byDay, visibleDays: visibleDays, displayMode: displayMode,
                             timeJson: timeJson, today: today, greyDays: greyDays,
+                            scale: weekScale, cornerRatio: cornerRatio, useAlias: useAlias,
+                            twoColumn: AppPrefs.shared.isWeekTwoColumn(),
+                            twoColumnMode: AppPrefs.shared.getWeekTwoColumnMode(),
+                            hideEmptyDays: AppPrefs.shared.isWeekHideEmptyDays(),
                             onCourseClick: onCourseClick)
                 // (参数顺序: byDay/visibleDays/displayMode/timeJson/today/onCourseClick)
                 // 悬浮底栏额外余量(→ Android LocalNavExtraBottomPadding Spacer):
@@ -427,12 +456,16 @@ private struct WeekStrip: View {
     let visibleDays: Set<Int>
     let today: Int
     var greyDays: Set<Int> = []
+    var scale: Double = 1.0
+    var cornerRatio: Double = 1.0
+    var useAlias: Bool = false
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 6 * scale) {
             ForEach(visibleDays.sorted(), id: \.self) { day in
                 DaySummaryCell(day: day, courses: byDay[day] ?? [], isToday: day == today,
-                               isGrey: greyDays.contains(day))
+                               isGrey: greyDays.contains(day),
+                               scale: scale, cornerRatio: cornerRatio, useAlias: useAlias)
             }
         }
     }
@@ -445,19 +478,22 @@ private struct DaySummaryCell: View {
     let courses: [CourseEntity]
     let isToday: Bool
     var isGrey: Bool = false
+    var scale: Double = 1.0
+    var cornerRatio: Double = 1.0
+    var useAlias: Bool = false
 
     var body: some View {
         let bg = isToday ? colors.primaryContainer : colors.surfaceContainer
         let fg = isGrey ? colors.onSurfaceVariant.opacity(SleepyTheme.Alpha.inactive)
                         : (isToday ? colors.onPrimaryContainer : colors.onSurface)
 
-        VStack(spacing: 4) {
+        VStack(spacing: 4 * scale) {
             // 日期
             Text(DateUtils.localizedDay(day))
-                .font(SleepyTextStyle.dayLabel())
+                .font(.system(size: 13 * scale, weight: .semibold))
                 .foregroundColor(fg)
 
-            Spacer().frame(height: 6)
+            Spacer().frame(height: 6 * scale)
 
             // Chip: 课程数 — "N 门" 完整文字, 列宽放不下退化为纯数字。
             // ← Android textMeasurer: fullText 在列宽内换行(lineCount>1) → 只显数字。
@@ -466,29 +502,29 @@ private struct DaySummaryCell: View {
             let chipFg = isGrey ? colors.onSurfaceVariant.opacity(SleepyTheme.Alpha.inactive)
                                 : colors.onSurfaceVariant
             if courses.isEmpty {
-                Spacer().frame(height: 14)
+                Spacer().frame(height: 14 * scale)
             } else {
                 // iOS 15 兼容:ViewThatFits 是 iOS16+ API。原语义 = fullText 放不下
                 // 回退纯数字;minimumScaleFactor 缩到 0.6 下限近似该意图(列宽极窄时
                 // 缩字号仍可读,不再二选一),iOS 16+ 视觉行为不变。
                 Text(L10n.format("course_count_format", courses.count))
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: 10 * scale, weight: .semibold))
                     .foregroundColor(chipFg)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 2)
+                .padding(.horizontal, 7 * scale)
+                .padding(.vertical, 2 * scale)
                 .background(colors.surfaceVariant)
                 .cornerRadius(50)
             }
 
-            Spacer().frame(height: 4)
+            Spacer().frame(height: 4 * scale)
 
-            // Mini-list: 前 5 门课名
-            VStack(spacing: 2) {
+            // Mini-list: 前 5 门课名(别名开启时显示别名 ← issue#26)
+            VStack(spacing: 2 * scale) {
                 ForEach(courses.prefix(5)) { c in
-                    Text(c.courseName)
-                        .font(SleepyTextStyle.micro())
+                    Text(CourseDisplayUtil.displayName(c, useAlias))
+                        .font(.system(size: 9 * scale))
                         .foregroundColor(isToday
                             ? colors.onPrimaryContainer.opacity(SleepyTheme.Alpha.highContent)
                             : colors.onSurfaceVariant)
@@ -499,11 +535,11 @@ private struct DaySummaryCell: View {
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 132)
-        .padding(.horizontal, 6)
-        .padding(.vertical, 8)
+        .frame(height: 132 * scale)
+        .padding(.horizontal, 6 * scale)
+        .padding(.vertical, 8 * scale)
         .background(bg)
-        .cornerRadius(SleepyShapes.medium)
+        .cornerRadius(12 * scale * cornerRatio)
     }
 }
 
@@ -516,21 +552,100 @@ private struct DetailPanel: View {
     let timeJson: String
     let today: Int
     var greyDays: Set<Int> = []
+    var scale: Double = 1.0
+    var cornerRatio: Double = 1.0
+    var useAlias: Bool = false
+    /// issue#8 周视图两栏 + 分栏标准(days=按天对半 / balance=按课程数动态平衡) + 隐藏无课日
+    var twoColumn: Bool = false
+    var twoColumnMode: String = "days"
+    var hideEmptyDays: Bool = false
     let onCourseClick: (CourseEntity) -> Void
 
     var body: some View {
-        VStack(spacing: 10) {
-            ForEach(visibleDays.sorted(), id: \.self) { day in
+        let sd: (Double) -> CGFloat = { CGFloat($0 * scale) }
+        // issue#8 隐藏无课日 — 两栏分栏前先过滤(Android single-column 不吃过滤: 全空周仍显示全部所选星期)
+        let sortedDays = visibleDays.sorted().filter { hideEmptyDays ? !(byDay[$0] ?? []).isEmpty : true }
+
+        // issue#8 周视图两栏, 省纵向滚动:
+        //   days    = 按天对半分 — 前半周左/后半周右, 天数固定
+        //   balance = 按课程数动态平衡 — 逐天放进当天卡片(约)更矮的栏, 两栏高度接近
+        if twoColumn && sortedDays.count >= 2 {
+            let split: ([Int], [Int]) = {
+                if twoColumnMode == "balance" {
+                    // 贪心: 按天序遍历, 权重 = 课程数(空天也有卡头记 1), 每天放进更矮的栏
+                    var l = 0, r = 0
+                    var left: [Int] = [], right: [Int] = []
+                    for day in sortedDays {
+                        let w = max((byDay[day] ?? []).count, 1)
+                        if l <= r { left.append(day); l += w } else { right.append(day); r += w }
+                    }
+                    return (left, right)
+                }
+                let splitIdx = (sortedDays.count + 1) / 2
+                return (Array(sortedDays[..<splitIdx]), Array(sortedDays[splitIdx...]))
+            }()
+            HStack(alignment: .top, spacing: sd(10)) {
+                DetailDayColumn(days: split.0, byDay: byDay, today: today,
+                                displayMode: displayMode, timeJson: timeJson,
+                                greyDays: greyDays, scale: scale, cornerRatio: cornerRatio,
+                                useAlias: useAlias, onCourseClick: onCourseClick)
+                    .frame(maxWidth: .infinity)
+                if !split.1.isEmpty {
+                    DetailDayColumn(days: split.1, byDay: byDay, today: today,
+                                    displayMode: displayMode, timeJson: timeJson,
+                                    greyDays: greyDays, scale: scale, cornerRatio: cornerRatio,
+                                    useAlias: useAlias, onCourseClick: onCourseClick)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .padding(sd(12))
+        } else {
+            // 单栏(或两栏下过滤后不足 2 天) — 显示剩余星期(全空周时=全部所选星期, 不吃掉无课日)
+            VStack(spacing: sd(10)) {
+                ForEach(visibleDays.sorted(), id: \.self) { day in
+                    let dayCourses = (byDay[day] ?? []).sorted { $0.startNode < $1.startNode }
+                    DetailDayCard(day: day, courses: dayCourses, isToday: day == today,
+                                  displayMode: displayMode, timeJson: timeJson,
+                                  isGrey: greyDays.contains(day),
+                                  scale: scale, cornerRatio: cornerRatio, useAlias: useAlias,
+                                  onCourseClick: onCourseClick)
+                }
+            }
+            .padding(sd(12))
+            .background(colors.surfaceContainerHigh)
+            .cornerRadius(16 * scale * cornerRatio)
+        }
+    }
+}
+
+// ← DayColumn: 两栏模式的单侧栏 — 半周的天卡片竖排在一个独立面板里
+private struct DetailDayColumn: View {
+    @Environment(\.localWakeUpColors) private var colors
+    let days: [Int]
+    let byDay: [Int: [CourseEntity]]
+    let today: Int
+    let displayMode: String
+    let timeJson: String
+    var greyDays: Set<Int> = []
+    var scale: Double = 1.0
+    var cornerRatio: Double = 1.0
+    var useAlias: Bool = false
+    let onCourseClick: (CourseEntity) -> Void
+
+    var body: some View {
+        VStack(spacing: 10 * scale) {
+            ForEach(days, id: \.self) { day in
                 let dayCourses = (byDay[day] ?? []).sorted { $0.startNode < $1.startNode }
                 DetailDayCard(day: day, courses: dayCourses, isToday: day == today,
                               displayMode: displayMode, timeJson: timeJson,
                               isGrey: greyDays.contains(day),
+                              scale: scale, cornerRatio: cornerRatio, useAlias: useAlias,
                               onCourseClick: onCourseClick)
             }
         }
-        .padding(12)
+        .padding(10 * scale)
         .background(colors.surfaceContainerHigh)
-        .cornerRadius(SleepyShapes.large)
+        .cornerRadius(16 * scale * cornerRatio)
     }
 }
 
@@ -543,22 +658,28 @@ private struct DetailDayCard: View {
     var displayMode: String = "node"
     var timeJson: String = ""
     var isGrey: Bool = false
+    var scale: Double = 1.0
+    var cornerRatio: Double = 1.0
+    var useAlias: Bool = false
     let onCourseClick: (CourseEntity) -> Void
+
+    // v7.10.4 冲突栏字体压缩: lane 实宽按内容区宽算(行满宽 → 与卡内边距对齐)
+    @State private var contentW: CGFloat = 0
 
     var body: some View {
         let greyFg = colors.onSurfaceVariant.opacity(SleepyTheme.Alpha.inactive)
-        VStack(spacing: 8) {
+        VStack(spacing: 8 * scale) {
             // 头部: 星期 + 今天标记
             HStack {
                 Text(DateUtils.localizedDay(day) + (isToday ? L10n.format("today_suffix") : ""))
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 14 * scale, weight: .semibold))
                     .foregroundColor(isGrey ? greyFg : colors.onSurface)
                 Spacer()
             }
 
             if courses.isEmpty {
                 Text(DateUtils.localizedDay(day) + L10n.format("no_course_today"))
-                    .font(.system(size: 12))
+                    .font(.system(size: 12 * scale))
                     .foregroundColor(isGrey ? greyFg : colors.onSurfaceVariant)
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else {
@@ -566,18 +687,26 @@ private struct DetailDayCard: View {
                 // mergeOverlapping 区域是划分(每课恰属一区域), 冲突区域整区域一行
                 // (横向 laneCount 栏,同栏多门课纵向堆叠), 无冲突课一行一门全宽。
                 let rows = ConflictLayoutEngine.weekLaneRows(courses)
-                VStack(spacing: 7) {
+                VStack(spacing: 7 * scale) {
                     ForEach(rows, id: \.courses.first!.id) { row in
                         if row.laneCount == 1, let only = row.courses.first {
                             LessonRow(course: only, displayMode: displayMode, timeJson: timeJson,
-                                      isGrey: isGrey,
+                                      isGrey: isGrey, scale: scale, cornerRatio: cornerRatio,
+                                      useAlias: useAlias,
                                       groupRows: courses.filter { $0.groupId == only.groupId }) {
                                 onCourseClick(only)
                             }
                         } else {
                             // 冲突行: 按 lane 并排(每栏均分), 同栏课程纵向堆叠
                             // (栏内课互不重叠——chainGroups 独立集保证,堆叠即正确时序)
-                            HStack(alignment: .top, spacing: 6) {
+                            // v7.10.4: 栏实宽 → 字体线性压缩(两栏模式下 lane 半宽不缩则字挤)
+                            let laneGap = 6 * scale
+                            let laneW = contentW > 0
+                                ? (contentW - laneGap * CGFloat(row.laneCount - 1)) / CGFloat(row.laneCount)
+                                : 0
+                            let laneScale = laneW >= 150 ? 1.0 : (laneW > 0 ? max(laneW / 150, 0.6) : 1.0)
+                            let hideSide = laneW > 0 && laneW < 110
+                            HStack(alignment: .top, spacing: laneGap) {
                                 ForEach(0..<row.laneCount, id: \.self) { li in
                                     if li > 0 {
                                         // 栏间浅细竖线: 0.5dp 宽, onSurface hairline, 高度随行
@@ -586,10 +715,13 @@ private struct DetailDayCard: View {
                                             .frame(width: 0.5)
                                     }
                                     let laneCourses = row.courses.filter { row.laneOf[$0.id] == li }
-                                    VStack(spacing: 5) {
+                                    VStack(spacing: 5 * scale) {
                                         ForEach(laneCourses) { laneCourse in
                                             LessonRow(course: laneCourse, displayMode: displayMode,
                                                       timeJson: timeJson, isGrey: isGrey,
+                                                      scale: scale, cornerRatio: cornerRatio,
+                                                      laneScale: laneScale, hideSideLabel: hideSide,
+                                                      useAlias: useAlias,
                                                       groupRows: courses.filter { $0.groupId == laneCourse.groupId }) {
                                                 onCourseClick(laneCourse)
                                             }
@@ -603,12 +735,24 @@ private struct DetailDayCard: View {
                 }
             }
         }
-        .padding(10)
+        .padding(10 * scale)
         .frame(maxWidth: .infinity, alignment: .leading)
         // 空课 surfaceContainerLow(← DetailDayCard L597), 无描边
         .background(courses.isEmpty ? colors.surfaceContainerLow : colors.surface)
-        .cornerRadius(SleepyShapes.medium)
+        .cornerRadius(12 * scale * cornerRatio)
+        .background(
+            // 内容区宽测量 → 冲突 lane 压缩比(一次测量, 卡内全部冲突行共用)
+            GeometryReader { g in
+                Color.clear.preference(key: DetailDayCardWidthKey.self, value: g.size.width)
+            }
+        )
+        .onPreferenceChange(DetailDayCardWidthKey.self) { contentW = $0 - 20 * scale }
     }
+}
+
+private struct DetailDayCardWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 
 // ← LessonRow
@@ -621,6 +765,14 @@ private struct LessonRow: View {
     var isGrey: Bool = false
     /// issue#22: 同 groupId 全行(AUTO 模式按行序算 hue; 不传 = 退化为单行 groupRows)
     var groupRows: [CourseEntity] = []
+    /// issue#8: 周视图缩放 + 冲突栏压缩(v7.10.4: effScale = scale × laneScale)
+    var scale: Double = 1.0
+    var cornerRatio: Double = 1.0
+    var laneScale: Double = 1.0
+    /// 极窄 lane: 侧栏节次/时间标签(42+8)挤占正文 → 隐藏(← weekLaneHideSideLabel)
+    var hideSideLabel: Bool = false
+    /// issue#26: 周视图别名
+    var useAlias: Bool = false
     let onClick: () -> Void
 
     var body: some View {
@@ -635,6 +787,8 @@ private struct LessonRow: View {
         let effectiveBg = isGrey ? bg.opacity(SleepyTheme.Alpha.inactive) : bg
         let effectiveFg = isGrey ? fg.opacity(SleepyTheme.Alpha.inactive) : fg
         let strikethrough = isGrey && AppPrefs.shared.getHolidayStyle() == "strikethrough"
+        let effScale = scale * laneScale
+        let name = CourseDisplayUtil.displayName(course, useAlias)
 
         // time 模式: 时间段在连字符后折行; node 模式: 节次标签
         let timeParts: (String, String)? = displayMode == "time" && !timeJson.isEmpty
@@ -656,31 +810,33 @@ private struct LessonRow: View {
         }()
 
         Button(action: onClick) {
-            HStack(alignment: .top, spacing: 8) {
-                if let parts = timeParts {
-                    Text("\(parts.0)-\n\(parts.1)")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(effectiveFg)
-                        .strikethrough(strikethrough)
-                        .frame(width: 42, alignment: .leading)
-                } else {
-                    Text(nodeLabel)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(effectiveFg)
-                        .strikethrough(strikethrough)
-                        .frame(width: 42, alignment: .leading)
-                        .lineLimit(1)
+            HStack(alignment: .top, spacing: 8 * scale) {
+                if !hideSideLabel {
+                    if let parts = timeParts {
+                        Text("\(parts.0)-\n\(parts.1)")
+                            .font(.system(size: 12 * effScale, weight: .semibold))
+                            .foregroundColor(effectiveFg)
+                            .strikethrough(strikethrough)
+                            .frame(width: 42 * scale, alignment: .leading)
+                    } else {
+                        Text(nodeLabel)
+                            .font(.system(size: 12 * effScale, weight: .semibold))
+                            .foregroundColor(effectiveFg)
+                            .strikethrough(strikethrough)
+                            .frame(width: 42 * scale, alignment: .leading)
+                            .lineLimit(1)
+                    }
                 }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(course.courseName)
-                        .font(.system(size: 12, weight: .semibold))
+                VStack(alignment: .leading, spacing: 2 * scale) {
+                    Text(name)
+                        .font(.system(size: 12 * effScale, weight: .semibold))
                         .foregroundColor(effectiveFg)
                         .strikethrough(strikethrough)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                     if !meta.isEmpty {
                         Text(meta)
-                            .font(SleepyTextStyle.smallMeta())
+                            .font(.system(size: 10 * effScale))
                             .foregroundColor(effectiveFg.opacity(SleepyTheme.Alpha.highContent))
                             .strikethrough(strikethrough)
                             .lineLimit(2)
@@ -689,10 +845,10 @@ private struct LessonRow: View {
                 }
                 Spacer(minLength: 0)
             }
-            .padding(9)
+            .padding(9 * scale)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(effectiveBg)
-            .cornerRadius(SleepyShapes.medium)
+            .cornerRadius(12 * scale * cornerRatio)
         }
         .buttonStyle(SleepyButtonStyle())
         .accessibilityIdentifier("lesson_\(course.id)")   // ← G5: 详情锚点
