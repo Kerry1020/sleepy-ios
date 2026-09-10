@@ -220,8 +220,8 @@ struct GridConflictLayer: View {
                     CourseOverlayCard(course: course, cardHeight: cardH,
                                       isDark: isDark,
                                       isGrey: greyDays.contains(course.day),
-                                      scale: scale, cornerRatio: cornerRatio,
-                                      groupRows: courses.filter { $0.groupId == course.groupId }) {
+                                      groupRows: courses.filter { $0.groupId == course.groupId },
+                                      scale: scale, cornerRatio: cornerRatio) {
                         onCourseClick(course)
                     }
                     .frame(width: colW, height: cardH)
@@ -233,8 +233,14 @@ struct GridConflictLayer: View {
         // 显式选默认置顶 = 会话 override 同步为 radio 值(同帧换层) + 同簇临时轮换让位。
         // ← Android ScheduleScreen.onDefaultTopChanged
         .onChange(of: defaultTopStore.map) { newMap in
+            // radio 落盘新值/改值 → 会话 override 同步 + 同簇临时轮换让位
             for (k, v) in newMap where lastDefaultTopMap[k] != v {
-                if let id = v { topOverrides[k] = id } else { topOverrides.removeValue(forKey: k) }
+                topOverrides[k] = v
+                rotationSteps[k] = nil
+            }
+            // radio 清除默认置顶(map 移除键) → 会话 override 同步清除
+            for k in lastDefaultTopMap.keys where newMap[k] == nil {
+                topOverrides.removeValue(forKey: k)
                 rotationSteps[k] = nil
             }
             lastDefaultTopMap = newMap
@@ -705,9 +711,9 @@ private struct DetailDayCard: View {
                     ForEach(rows, id: \.courses.first!.id) { row in
                         if row.laneCount == 1, let only = row.courses.first {
                             LessonRow(course: only, displayMode: displayMode, timeJson: timeJson,
-                                      isGrey: isGrey, scale: scale, cornerRatio: cornerRatio,
-                                      useAlias: useAlias,
-                                      groupRows: courses.filter { $0.groupId == only.groupId }) {
+                                      isGrey: isGrey, groupRows: courses.filter { $0.groupId == only.groupId },
+                                      scale: scale, cornerRatio: cornerRatio,
+                                      useAlias: useAlias) {
                                 onCourseClick(only)
                             }
                         } else {
@@ -733,10 +739,10 @@ private struct DetailDayCard: View {
                                         ForEach(laneCourses) { laneCourse in
                                             LessonRow(course: laneCourse, displayMode: displayMode,
                                                       timeJson: timeJson, isGrey: isGrey,
+                                                      groupRows: courses.filter { $0.groupId == laneCourse.groupId },
                                                       scale: scale, cornerRatio: cornerRatio,
                                                       laneScale: laneScale, hideSideLabel: hideSide,
-                                                      useAlias: useAlias,
-                                                      groupRows: courses.filter { $0.groupId == laneCourse.groupId }) {
+                                                      useAlias: useAlias) {
                                                 onCourseClick(laneCourse)
                                             }
                                         }

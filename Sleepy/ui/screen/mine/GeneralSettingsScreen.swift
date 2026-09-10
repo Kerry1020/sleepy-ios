@@ -63,21 +63,25 @@ struct GeneralSettingsScreen: View {
                     SettingsTopBar(title: L10n.format("mine_general"), onBack: onDismiss)
                     ScrollView {
                         VStack(spacing: 16) {
-                            // ── 分组① 课程显示(11 子视图超 ViewBuilder 上限, 拆 Group) ──
+                            // ── 分组① 课程显示 — 嵌套 Group(单个 builder 上限 10 子视图) ──
                             Group {
-                                SectionHeader(title: L10n.format("appearance_section_display"))
+                                Group {
+                                    SectionHeader(title: L10n.format("appearance_section_display"))
 
-                                displayModeCard
-                                gridSubInfoCard
-                                visibleDaysCard
-                                startViewCard
-                                showDateCard
-                                courseColorlessCard
-                                weekAliasCard
-                                gridAliasCard
-                                pillCard
-                                conflictStyleCard
-                                holidayEntryCard
+                                    displayModeCard
+                                    gridSubInfoCard
+                                    visibleDaysCard
+                                    startViewCard
+                                    showDateCard
+                                }
+                                Group {
+                                    courseColorlessCard
+                                    weekAliasCard
+                                    gridAliasCard
+                                    pillCard
+                                    conflictStyleCard
+                                    holidayEntryCard
+                                }
                             }
 
                             MajorDivider()
