@@ -62,13 +62,13 @@ struct ScheduleScreen: View {
                         viewModel.changeWeek(DateUtils.currentWeek(startDate: start))
                     },
                     onSelectWeek: { week in viewModel.changeWeek(week) },
-                    onOpenWeekJump: { showWeekJumpMenu = true },
                     onUndo: {
                         // v7.10.16: 任何课表数据改动可一键撤销一次
                         if !viewModel.undoLastChange() {
                             showUndoNoneToast = true
                         }
                     },
+                    onOpenWeekJump: { showWeekJumpMenu = true },
                     onSwitchTable: { showTableSwitcher = true },
                     onAddCourse: onManualAdd,
                     onShare: { showShareSheet = true },
