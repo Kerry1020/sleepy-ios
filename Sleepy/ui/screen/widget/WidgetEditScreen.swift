@@ -71,7 +71,7 @@ struct WidgetEditScreen: View {
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 16)
+                // ← Android WidgetEditScreen.kt L92 仅 horizontal 16, 无纵向 padding
             }
         }
         .background(colors.background)
@@ -134,7 +134,8 @@ private struct WidgetEditScheduleSection: View {
                 if selected {
                     Spacer().frame(width: 8)
                     Image(systemName: "checkmark")
-                        .font(.system(size: 20))
+                        // ← Android Check 无 size 修饰符 = 默认 24dp (ScheduleSection L91/L121, AliasSection L91)
+                        .font(.system(size: 24))
                         .foregroundColor(colors.primary)
                         .accessibilityLabel(L10n.format("selected"))
                 }
