@@ -63,23 +63,23 @@ struct GeneralSettingsScreen: View {
                     SettingsTopBar(title: L10n.format("mine_general"), onBack: onDismiss)
                     ScrollView {
                         VStack(spacing: 16) {
-                            // ── 分组① 课程显示 — 嵌套 Group(单个 builder 上限 10 子视图) ──
+                            // ── 分组① 课程显示 — 嵌套 Group(单个 builder 上限 10 子视图);
+                            //    卡片顺序对齐 Android LazyColumn: 别名→pill→冲突→显示星期→启动页→统一底色 ──
                             Group {
                                 Group {
                                     SectionHeader(title: L10n.format("appearance_section_display"))
 
                                     displayModeCard
                                     gridSubInfoCard
-                                    visibleDaysCard
-                                    startViewCard
-                                    showDateCard
-                                }
-                                Group {
-                                    courseColorlessCard
                                     weekAliasCard
                                     gridAliasCard
                                     pillCard
                                     conflictStyleCard
+                                    visibleDaysCard
+                                    startViewCard
+                                    courseColorlessCard
+                                }
+                                Group {
                                     holidayEntryCard
                                 }
                             }
@@ -210,21 +210,6 @@ struct GeneralSettingsScreen: View {
         )
     }
 
-    // 课表显示日期: 开关
-    private var showDateCard: some View {
-        SettingsCard(title: L10n.format("settings_show_date"),
-                     expanded: expandedSections.contains("showDate"),
-                     onToggle: { toggleSection("showDate") }) {
-            SettingToggleRow(label: L10n.format("settings_show_date"),
-                             subtitle: L10n.format("settings_show_date_sub"),
-                             checked: showDate) {
-                showDate = $0
-                prefs.setShowDate($0)
-                refreshWidgets()
-            }
-        }
-    }
-
     // 课程胶囊统一底色: 标题行开关 — ← Android flat title-plus-switch row
     private var courseColorlessCard: some View {
         HStack {
@@ -352,67 +337,75 @@ struct GeneralSettingsScreen: View {
         SettingsCard(title: L10n.format("settings_pill"),
                      expanded: expandedSections.contains("gridScale"),
                      onToggle: { toggleSection("gridScale") }) {
-            PillSliderRow(label: L10n.format("settings_pill_scale"),
-                          value: $gridScale, range: AppPrefs.GRID_SCALE_RANGE) {
-                prefs.setGridScale(gridScale)
-            }
-            SubDivider()
-            PillSliderRow(label: L10n.format("settings_pill_week_scale"),
-                          value: $weekScale, range: AppPrefs.GRID_SCALE_RANGE) {
-                prefs.setWeekScale(weekScale)
-            }
-            SubDivider()
-            PillSliderRow(label: L10n.format("settings_pill_corner"),
-                          value: $gridCorner, range: AppPrefs.CORNER_RATIO_RANGE) {
-                prefs.setGridCornerRatio(gridCorner)
-            }
-            SubDivider()
-            SettingToggleRow(label: L10n.format("settings_week_two_column"),
-                             subtitle: "",
-                             checked: weekTwoColumn) {
-                weekTwoColumn = $0
-                prefs.setWeekTwoColumn($0)
-            }
-            // 分栏标准 — 两栏开启时才需要选
-            if weekTwoColumn {
-                SubDivider()
-                DisplayModeOption(label: L10n.format("settings_week_two_column_days"),
-                                  subtitle: "",
-                                  selected: weekTwoColumnMode == "days") {
-                    weekTwoColumnMode = "days"
-                    prefs.setWeekTwoColumnMode("days")
+            // 内容 10 条 — 包 Group(builder 上限);行间距对齐 Android(标签 bottom 8/8/4)
+            Group {
+                PillSliderRow(label: L10n.format("settings_pill_scale"),
+                              value: $gridScale, range: AppPrefs.GRID_SCALE_RANGE) {
+                    prefs.setGridScale(gridScale)
                 }
                 SubDivider()
-                DisplayModeOption(label: L10n.format("settings_week_two_column_balance"),
-                                  subtitle: "",
-                                  selected: weekTwoColumnMode == "balance") {
-                    weekTwoColumnMode = "balance"
-                    prefs.setWeekTwoColumnMode("balance")
+                PillSliderRow(label: L10n.format("settings_pill_week_scale"),
+                              value: $weekScale, range: AppPrefs.GRID_SCALE_RANGE) {
+                    prefs.setWeekScale(weekScale)
+                }
+                SubDivider()
+                PillSliderRow(label: L10n.format("settings_pill_corner"),
+                              value: $gridCorner, range: AppPrefs.CORNER_RATIO_RANGE,
+                              labelSpacing: 4) {
+                    prefs.setGridCornerRatio(gridCorner)
+                }
+                SubDivider()
+                SettingToggleRow(label: L10n.format("settings_week_two_column"),
+                                 subtitle: "",
+                                 checked: weekTwoColumn) {
+                    weekTwoColumn = $0
+                    prefs.setWeekTwoColumn($0)
+                }
+                // 分栏标准 — 两栏开启时才需要选
+                if weekTwoColumn {
+                    SubDivider()
+                    DisplayModeOption(label: L10n.format("settings_week_two_column_days"),
+                                      subtitle: "",
+                                      selected: weekTwoColumnMode == "days") {
+                        weekTwoColumnMode = "days"
+                        prefs.setWeekTwoColumnMode("days")
+                    }
+                    SubDivider()
+                    DisplayModeOption(label: L10n.format("settings_week_two_column_balance"),
+                                      subtitle: "",
+                                      selected: weekTwoColumnMode == "balance") {
+                        weekTwoColumnMode = "balance"
+                        prefs.setWeekTwoColumnMode("balance")
+                    }
+                }
+                // 隐藏无课日 — 与两栏无关, 单栏/两栏都生效(单栏按安卓语义不分栏不过滤)
+                SubDivider()
+                SettingToggleRow(label: L10n.format("settings_week_hide_empty"),
+                                 subtitle: "",
+                                 checked: weekHideEmptyDays) {
+                    weekHideEmptyDays = $0
+                    prefs.setWeekHideEmptyDays($0)
                 }
             }
-            // 隐藏无课日 — 与两栏无关, 单栏/两栏都生效(单栏按安卓语义不分栏不过滤)
             SubDivider()
-            SettingToggleRow(label: L10n.format("settings_week_hide_empty"),
+            // 课表显示日期 — Android 此开关位于 pill 卡末尾, 无副标题
+            SettingToggleRow(label: L10n.format("settings_show_date"),
                              subtitle: "",
-                             checked: weekHideEmptyDays) {
-                weekHideEmptyDays = $0
-                prefs.setWeekHideEmptyDays($0)
+                             checked: showDate) {
+                showDate = $0
+                prefs.setShowDate($0)
+                refreshWidgets()
             }
         }
     }
 
-    // ← 节假日课程灰显: 点击进入二级页(Android General 页同款入口卡)
+    // ← 节假日课程灰显: 点击进入二级页 — ← Android GeneralSettingsScreen.kt: titleSmall 单行, 无副标题
     private var holidayEntryCard: some View {
         Button { holidaySettingsItem = HolidaySettingsItem() } label: {
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(L10n.format("settings_holiday_title"))
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(colors.onSurface)
-                    Text(L10n.format("settings_holiday_entry_sub"))
-                        .font(.system(size: 12))
-                        .foregroundColor(colors.onSurfaceVariant)
-                }
+                Text(L10n.format("settings_holiday_title"))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(colors.onSurface)
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.system(size: 20))
@@ -438,10 +431,12 @@ private struct PillSliderRow: View {
     let label: String
     @Binding var value: Double
     let range: ClosedRange<Double>
+    /// 标签与滑杆间距 — Android 三行 label bottomPadding 8/8/4(圆角行为 4)
+    var labelSpacing: CGFloat = 8
     let onFinished: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: labelSpacing) {
             Text(label)
                 .font(.system(size: 16))
                 .foregroundColor(colors.onSurface)
@@ -456,8 +451,6 @@ private struct PillSliderRow: View {
                 .tint(colors.primary)
             }
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 4)
     }
 }
 
@@ -485,8 +478,6 @@ private struct ConflictSliderRow: View {
                 .tint(colors.primary)
             }
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 4)
     }
 }
 
@@ -579,7 +570,7 @@ private struct WidgetSection: View {
             Button { showManage = true } label: {
                 HStack {
                     Text(L10n.format("widget_manage_entry"))
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 14, weight: .medium)) // ← Android titleSmall 14sp Medium
                         .foregroundColor(colors.onSurface)
                     Spacer()
                     Image(systemName: "chevron.right")
@@ -660,28 +651,27 @@ private struct DisplaySection: View {
     var body: some View {
         VStack(spacing: 16) {
             SectionHeader(title: L10n.format("settings_section_display"))
-            VStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(L10n.format("settings_nav_style"))
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(colors.onSurface)
-                    Picker("", selection: Binding(
-                        get: { navFloating },
-                        set: { onNavFloatingChange($0) }
-                    )) {
-                        // 标签顺序: 贴底(默认) → 悬浮;Picker 用 Bool tag 配 (false, true)
-                        // (← Android GeneralSettingsScreen.kt selectedKey = if (navDock) 1 else 0:
-                        //  选项索引 0=docked, 1=floating;navDock=true 即悬浮药丸)
-                        Text(L10n.format("settings_nav_style_docked")).tag(false)
-                        Text(L10n.format("settings_nav_style_floating")).tag(true)
-                    }
-                    .pickerStyle(.segmented)
-                    .accessibilityIdentifier("settings_nav_style")
+            // ← Android SettingsFlatCard(padding h16/v14, Column spacedBy(4), 标题 titleSmall 14sp SemiBold)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L10n.format("settings_nav_style"))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(colors.onSurface)
+                Picker("", selection: Binding(
+                    get: { navFloating },
+                    set: { onNavFloatingChange($0) }
+                )) {
+                    // 标签顺序: 贴底(默认) → 悬浮;Picker 用 Bool tag 配 (false, true)
+                    // (← Android GeneralSettingsScreen.kt selectedKey = if (navDock) 1 else 0:
+                    //  选项索引 0=docked, 1=floating;navDock=true 即悬浮药丸)
+                    Text(L10n.format("settings_nav_style_docked")).tag(false)
+                    Text(L10n.format("settings_nav_style_floating")).tag(true)
                 }
-                .padding(.vertical, 10)
-                .padding(.horizontal, 4)
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("settings_nav_style")
             }
-            .padding(16)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(colors.surfaceContainer)
             .cornerRadius(SleepyShapes.large)
         }

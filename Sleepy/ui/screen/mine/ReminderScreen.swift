@@ -50,7 +50,7 @@ struct ReminderScreen: View {
         .sheet(isPresented: $showTimePicker) {
             VStack(spacing: 0) {
                 Text(L10n.format("reminder_pick_time"))
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(size: 24)) // ← Android AlertDialog title headlineSmall 24sp Normal
                     .foregroundColor(colors.onSurface)
                     .padding()
                 DatePicker("", selection: $pickerTime, displayedComponents: .hourAndMinute)
@@ -58,6 +58,7 @@ struct ReminderScreen: View {
                     .labelsHidden()
                 HStack {
                     Button(L10n.format("action_cancel")) { showTimePicker = false }
+                        .font(.system(size: 14, weight: .medium)) // ← Android TextButton labelLarge 14sp Medium
                         .frame(maxWidth: .infinity)
                         .accessibilityIdentifier("reminder_time_cancel")
                     Button(L10n.format("action_confirm")) {
@@ -69,6 +70,7 @@ struct ReminderScreen: View {
                         showTimePicker = false
                     }
                     .accessibilityIdentifier("reminder_time_confirm")
+                    .font(.system(size: 14, weight: .medium)) // ← Android TextButton labelLarge 14sp Medium
                     .foregroundColor(colors.primary)
                     .frame(maxWidth: .infinity)
                 }
@@ -166,7 +168,7 @@ struct ReminderScreen: View {
                         Text(L10n.format("reminder_before_minutes_unit"))
                             .font(.system(size: 14))
                             .foregroundColor(colors.onSurfaceVariant)
-                            .padding(.trailing, 12)
+                            .padding(.trailing, 16) // ← Android TextField end padding 16dp(suffix 位置)
                     }
                     .frame(width: 120)
                     .padding(.vertical, 8)
@@ -234,11 +236,11 @@ struct ReminderScreen: View {
                                         .foregroundColor(colors.onSurface)
                                     Spacer()
                                     Image(systemName: "chevron.down")
-                                        .font(.system(size: 13))
+                                        .font(.system(size: 24)) // ← Android trailingIcon ExpandMore 默认 24dp
                                         .foregroundColor(colors.onSurfaceVariant)
                                 }
                             }
-                            .padding(.horizontal, 12)
+                            .padding(.horizontal, 16) // ← M3 TextField content padding 16dp
                             .padding(.vertical, 8)
                             .background(colors.surfaceContainerLowest)
                             .cornerRadius(SleepyTheme.fieldShape)

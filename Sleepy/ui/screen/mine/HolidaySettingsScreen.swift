@@ -406,7 +406,7 @@ private struct HolidayRangeListCard: View {
                         Spacer()
                         if userRangeIds.contains(segment.id) {
                             Text(L10n.format("holiday_custom_badge"))
-                                .font(.system(size: 11))
+                                .font(.system(size: 11, weight: .medium)) // ← Android labelSmall 11sp Medium
                                 .foregroundColor(colors.onSurfaceVariant)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 2)
@@ -416,7 +416,7 @@ private struct HolidayRangeListCard: View {
                         }
                         if showWorkdayBadge {
                             Text(L10n.format("holiday_workday_badge"))
-                                .font(.system(size: 11))
+                                .font(.system(size: 11, weight: .medium)) // ← Android labelSmall 11sp Medium
                                 .foregroundColor(colors.primary)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 2)
@@ -431,7 +431,12 @@ private struct HolidayRangeListCard: View {
                     .padding(.vertical, 10)
                 }
                 .buttonStyle(SleepyButtonStyle())
-                if index != segments.count - 1 { Divider() }
+                // ← Android HorizontalDivider: outlineVariant @ hairline
+                if index != segments.count - 1 {
+                    Rectangle()
+                        .fill(colors.outlineVariant.opacity(SleepyTheme.Alpha.hairline))
+                        .frame(height: 1)
+                }
             }
         }
         .padding(.horizontal, 16)
@@ -475,7 +480,12 @@ private struct HolidayRemovedCard: View {
                     .buttonStyle(SleepyButtonStyle())
                 }
                 .padding(.vertical, 6)
-                if index != segments.count - 1 { Divider() }
+                // ← Android HorizontalDivider: outlineVariant @ hairline
+                if index != segments.count - 1 {
+                    Rectangle()
+                        .fill(colors.outlineVariant.opacity(SleepyTheme.Alpha.hairline))
+                        .frame(height: 1)
+                }
             }
         }
         .padding(.horizontal, 16)
@@ -528,7 +538,8 @@ private struct HolidayRangeEditDialog: View {
     private var datesValid: Bool { endDate >= startDate }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        // ← Android AlertDialog text Column spacedBy(12)
+        VStack(alignment: .leading, spacing: 12) {
             Text(L10n.format(isNew ? "holiday_add_title" : "holiday_edit_title"))
                 .font(.system(size: 24)) // ← Android AlertDialog headlineSmall 24
                 .foregroundColor(colors.onSurface)
@@ -601,7 +612,7 @@ private struct HolidayRangeEditDialog: View {
             HStack(spacing: 8) {
                 Button(action: onDismiss) {
                     Text(L10n.format("cancel"))
-                        .font(.system(size: 14))
+                        .font(.system(size: 14, weight: .medium)) // ← Android TextButton labelLarge 14sp Medium
                         .foregroundColor(colors.onSurfaceVariant)
                         .frame(maxWidth: .infinity)
                         .frame(height: 40)
