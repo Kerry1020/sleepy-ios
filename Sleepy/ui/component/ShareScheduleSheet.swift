@@ -19,6 +19,7 @@ struct ShareScheduleSheet: View {
             Text(L10n.format("share_sheet_title"))
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(colors.onSurface)
+                .frame(maxWidth: .infinity, alignment: .leading)   // ← Android Column 默认 start 对齐(VStack 默认 center 会把标题居中)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
 
@@ -60,6 +61,7 @@ struct ShareScheduleSheet: View {
         }
         .padding(.bottom, 24)
         .sheetDetents([.medium])
+        // 有意差异: Android containerColor = colors.surface,iOS 用系统弹层背景;条目图标 Material outlined → SF Symbols
         .sheet(item: $shareSheet) { item in
             SharePayloadSheet(text: item.text, subject: item.subject, url: item.url)
         }
@@ -116,7 +118,7 @@ private struct ShareRow: View {
         Button(action: onClick) {
             HStack(spacing: 16) {
                 Image(systemName: icon)
-                    .font(.system(size: 20))
+                    .font(.system(size: 24))   // ← M3 Icon 默认 24dp(Android ExportItem 未覆写 size),此前 20
                     .foregroundColor(colors.onPrimaryContainer)
                     .frame(width: 44, height: 44)
                     .background(colors.primaryContainer)
