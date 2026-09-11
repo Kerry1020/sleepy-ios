@@ -32,25 +32,23 @@ struct AboutScreen: View {
     @State private var downloadTask: Task<Void, Never>? = nil
     @State private var snackMessage: String? = nil
     @State private var downloadedIpa: URL? = nil
+    // ← 1.0.51: 冷启动更新检查结果(横幅/高亮) + 自动检查开关(持久化 key 同 Android)
+    @ObservedObject private var updateNotifier = UpdateNotifier.shared
+    @State private var updateCheckEnabled = UpdateCheckPrefs.isEnabled
 
     var body: some View {
         VStack(spacing: 0) {
             SettingsTopBar(title: L10n.format("about_title"), onBack: onDismiss)
             ScrollView {
                 VStack(spacing: 12) {
-                    Spacer().frame(height: 24)
-
-                    // App name(← 1.0.51: 纯文字, 无 logo 图; headlineMedium bold 28sp)
-                    VStack(spacing: 4) {
-                        Spacer().frame(height: 8)
-                        Text(L10n.format("app_name"))
-                            .font(.system(size: 28, weight: .bold))
-                            .foregroundColor(colors.onSurface)
-                        Text("v\(UpdateManager.currentVersionName)")
-                            .font(.system(size: 14))
-                            .foregroundColor(colors.onSurfaceVariant)
-                        Spacer().frame(height: 24)
+                    // ← 1.0.51 UpdateBanner: 检查到新版时顶部横幅, 点击跳 Releases tag 页
+                    if let banner = updateNotifier.updateAvailable {
+                        UpdateBanner(version: banner.version) {
+                            openURL("https://gh.qdp.qzz.io/lingion/sleepy-ios/releases/tag/v\(banner.version)")
+                        }
                     }
+
+                    appNameHeader
 
                     // Version info card
                     InfoCard {
@@ -218,12 +216,37 @@ struct AboutScreen: View {
                         .buttonStyle(SleepyButtonStyle())
                     }
 
+                    // ← 1.0.51 自动检查更新 Toggle: 关闭后冷启动不拉远端, 高亮也立即消失
+                    InfoCard {
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(L10n.format("about_update_check"))
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(colors.onSurface)
+                                Text(L10n.format("about_update_check_detail"))
+                                    .font(.system(size: 12))
+                                    .foregroundColor(colors.onSurfaceVariant)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            Toggle("", isOn: $updateCheckEnabled)
+                                .labelsHidden()
+                                .tint(colors.primary) // ← M3 Switch checkedTrack=primary
+                                .onChange(of: updateCheckEnabled) { v in
+                                    UpdateCheckPrefs.setEnabled(v)
+                                    if !v { updateNotifier.clearCache() }
+                                }
+                        }
+                    }
+
                     Spacer().frame(height: 32)
                 }
                 .padding(.horizontal, 20)
             }
         }
-        .background(colors.background)
+        // ← 1.0.51: 有更新可用时页面底色高亮 primary 5%
+        .background(updateNotifier.updateAvailable != nil ? colors.primary.opacity(0.05) : colors.background)
+        // Android 在 MainActivity.onCreate 检查; iOS 入口不可改, 由关于页触发(一次进程最多一次)
+        .task { updateNotifier.maybeCheckOnStart() }
         .overlay(alignment: .bottom) {
             if let msg = snackMessage {
                 Text(msg)
@@ -270,6 +293,21 @@ struct AboutScreen: View {
 
     private var buildCode: Int {
         (Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String).flatMap(Int.init) ?? 0
+    }
+
+    // App name(← 1.0.51: 纯文字, 无 logo 图; headlineMedium bold 28sp)
+    @ViewBuilder
+    private var appNameHeader: some View {
+        VStack(spacing: 4) {
+            Spacer().frame(height: 8)
+            Text(L10n.format("app_name"))
+                .font(.system(size: 28, weight: .bold))
+                .foregroundColor(colors.onSurface)
+            Text("v\(UpdateManager.currentVersionName)")
+                .font(.system(size: 14))
+                .foregroundColor(colors.onSurfaceVariant)
+            Spacer().frame(height: 24)
+        }
     }
 
     private func openURL(_ s: String) {
@@ -413,9 +451,8 @@ private struct UpdateChangelogDialog: View {
                             .foregroundColor(colors.primary)
                     }
                     if !changelog.isEmpty {
-                        Text(changelog)
-                            .font(.system(size: 12))
-                            .foregroundColor(colors.onSurfaceVariant)
+                        // ← 1.0.51: changelog 按 Markdown 渲染(标题层级/圆点/粗体/链接)
+                        MarkdownChangelog(markdown: changelog)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -493,3 +530,107 @@ private struct UpdateChangelogDialog: View {
 }
 
 // ← InfoCard 已迁移到 Sleepy/ui/component/SettingsCards.swift 共享
+
+// ← UpdateBanner(1.0.51): primary 12% 底色横幅, 点击跳 Releases tag 页
+private struct UpdateBanner: View {
+    @Environment(\.localWakeUpColors) private var colors
+    let version: String
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 10) {
+                Image(systemName: "sparkles.rectangle.stack") // ← Icons.Outlined.NewReleases 20dp
+                    .font(.system(size: 20))
+                    .foregroundColor(colors.primary)
+                Text(L10n.format("about_update_available", "v\(version)"))
+                    .font(.system(size: 14, weight: .semibold)) // ← bodyMedium SemiBold primary
+                    .foregroundColor(colors.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "arrow.up.right.square") // ← Icons.AutoMirrored.OpenInNew 18dp
+                    .font(.system(size: 18))
+                    .foregroundColor(colors.primary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(colors.primary.opacity(0.12))
+            .cornerRadius(SleepyShapes.large) // ← clip(shapes.large) = 16dp
+        }
+        .buttonStyle(SleepyButtonStyle())
+    }
+}
+
+// ← MarkdownChangelog(1.0.51): changelog 按 Markdown 渲染
+//   标题: L1=titleLarge 22 Bold / L2=titleMedium 16 Bold / L3+=titleSmall 14 Bold, 上 10 下 2
+//   圆点: "•" primary 12sp + 间距 8, 缩进 6, 行距 2; 段落行距 2; 链接 accent+下划线
+private struct MarkdownChangelog: View {
+    @Environment(\.localWakeUpColors) private var colors
+    let markdown: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(MarkdownBlocks.parse(markdown).enumerated()), id: \.offset) { _, block in
+                blockView(block)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func blockView(_ block: MarkdownBlocks.Block) -> some View {
+        switch block {
+        case .heading(let level, let text):
+            headingView(level: level, text: text)
+        case .bullet(let items):
+            VStack(alignment: .leading, spacing: 2) {
+                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                    bulletRow(item)
+                }
+            }
+        case .paragraph(let text):
+            Text(inlineText(text))
+                .font(.system(size: 12)) // ← bodySmall 12sp
+                .foregroundColor(colors.onSurfaceVariant)
+                .padding(.vertical, 2)
+        }
+    }
+
+    @ViewBuilder
+    private func headingView(level: Int, text: String) -> some View {
+        // ← titleLarge 22 / titleMedium 16 / titleSmall 14, 均 Bold
+        let size = level == 1 ? 22.0 : (level == 2 ? 16.0 : 14.0)
+        Text(inlineText(text))
+            .font(.system(size: size, weight: .bold))
+            .foregroundColor(colors.onSurfaceVariant)
+            .padding(.top, 10)
+            .padding(.bottom, 2)
+    }
+
+    private func bulletRow(_ item: String) -> some View {
+        HStack(alignment: .top, spacing: 0) {
+            Text("•")
+                .font(.system(size: 12))
+                .foregroundColor(colors.primary)
+            Spacer().frame(width: 8)
+            Text(inlineText(item))
+                .font(.system(size: 12))
+                .foregroundColor(colors.onSurfaceVariant)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.leading, 6)
+        .padding(.vertical, 2)
+    }
+
+    /// ← inlineAnnotated: 链接 accent+下划线; 粗体/行内代码由 AttributedString(markdown:) 原生呈现
+    private func inlineText(_ text: String) -> AttributedString {
+        var attr = (try? AttributedString(
+            markdown: text,
+            options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(text)
+        for run in attr.runs where run.link != nil {
+            attr[run.range].foregroundColor = colors.primary
+            attr[run.range].underlineStyle = .single
+        }
+        return attr
+    }
+}

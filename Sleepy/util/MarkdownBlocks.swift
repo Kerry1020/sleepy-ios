@@ -35,7 +35,7 @@ public enum MarkdownInline {
     public struct Link: Equatable { public let text: String; public let url: String }
 }
 
-public enum MarkdownBlocks {
+public enum MarkdownBlocksLegacy {
 
     public static func parse(_ markdown: String) -> [Any] {
         var blocks: [Any] = []
