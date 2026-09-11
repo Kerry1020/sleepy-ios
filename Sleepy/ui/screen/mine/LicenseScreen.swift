@@ -1,7 +1,7 @@
 // LicenseScreen.swift — ← ui/screen/mine/LicenseScreen.kt
 // 开源许可与致谢二级页 (v1.0.46 从 AboutScreen 分离; v1.0.50 用户令:
 // 致谢按「跨校普适项目 / 按学校致谢」两类组织, 单校卡展开看明细)。
-//   - 顶层: 许可证区块 + 致谢导语(可折叠, 展开看 about_license_body 全文)
+//   - 顶层: 许可证区块 + 贡献者区块(v1.0.53) + 致谢导语(可折叠, 展开看 about_license_body 全文)
 //   - 跨校普适 = 单卡不可展开 (title + meta + usage 说明)
 //   - 按学校 = 1 校 1 卡, 默认收起, 点击展开看该校参考的全部学生维护项目
 //   - 展开态按卡片 id 记忆, 进入页面不重置 (Kotlin mutableStateMapOf)
@@ -205,6 +205,24 @@ private let perSchoolEntries: [PerSchoolEntry] = [
     ),
 ]
 
+// ← ContributorEntry — Kotlin 1:1, 姓名/handle 通用标识不翻译
+private struct ContributorEntry {
+    let id: String
+    let title: String
+    let meta: String
+    let usage: String
+}
+
+// 贡献者: 直接向本项目提交代码并合入的开发者 (与"上游参考仓库"致谢是两回事)。
+// v1.0.53 用户令: 收录 PR #29 作者 jim139129 (NEU 教务导入修复)。
+// 贡献描述沿用本页硬编码中文说明的既有模式 (Kotlin 同为硬编码, 非资源键)。
+private let contributorEntries: [ContributorEntry] = [
+    ContributorEntry(
+        id: "contributor-jim139129", title: "jim139129", meta: "GitHub @jim139129",
+        usage: "已合并多项 PR 并持续反馈 issue — 全部提交与讨论记录见 github.com/jim139129"
+    ),
+]
+
 struct LicenseScreen: View {
     @Environment(\.localWakeUpColors) private var colors
     let onDismiss: () -> Void
@@ -228,6 +246,18 @@ struct LicenseScreen: View {
                                 .foregroundColor(colors.onSurfaceVariant)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+
+                    // ---- 贡献者区块 (直接向本项目提交代码并合入的开发者, 与上游参考仓库致谢区分) ----
+                    SectionHeader(L10n.format("license_contributor_section"))
+                    ForEach(contributorEntries, id: \.id) { e in
+                        AttributionCard(
+                            title: e.title,
+                            subtitle: e.meta,
+                            description: e.usage,
+                            lines: nil,
+                            expanded: false,
+                            onToggle: nil)
                     }
 
                     // ---- 致谢导语区块 (可折叠: 展开看 about_license_body 全文) ----
