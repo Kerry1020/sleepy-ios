@@ -43,7 +43,7 @@ struct ExportScreen: View {
                                         .foregroundColor(colors.onPrimaryContainer)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                     Image(systemName: "chevron.down")
-                                        .font(.system(size: 16))
+                                        .font(.system(size: 24)) // ← Android 默认 Icon 24dp(ExpandMore 无 size 修饰)
                                         .foregroundColor(colors.onPrimaryContainer)
                                         // ← Android contentDescription = export_pick_table
                                         .accessibilityLabel(L10n.format("export_pick_table"))
@@ -97,6 +97,7 @@ struct ExportScreen: View {
                 }
             } else {
                 Text(L10n.format("export_no_table"))
+                    .font(.system(size: 16)) // ← Android 默认 bodyLarge 16(未显式指定 style)
                     .foregroundColor(colors.onSurfaceVariant)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -190,7 +191,7 @@ private struct ExportTablePickerSheet: View {
     var body: some View {
         VStack(spacing: 12) {
             Text(L10n.format("export_pick_table"))
-                .font(.system(size: 24, weight: .medium)) // ← Android AlertDialog headlineSmall 24
+                .font(.system(size: 24)) // ← Android AlertDialog 默认标题 headlineSmall 24 Regular
                 .foregroundColor(colors.onSurface)
                 .padding(.top, 16)
             ScrollView {
@@ -201,7 +202,7 @@ private struct ExportTablePickerSheet: View {
                             onSelect(table.id)
                         } label: {
                             HStack {
-                                VStack(alignment: .leading, spacing: 1) {
+                                VStack(alignment: .leading, spacing: 0) { // ← Android Column 默认 spacing 0
                                     Text(table.name)
                                         .font(.system(size: 14, weight: .medium))
                                         .foregroundColor(isSelected ? colors.onPrimaryContainer : colors.onSurface)
@@ -216,7 +217,7 @@ private struct ExportTablePickerSheet: View {
                                 Spacer()
                                 if isSelected {
                                     Image(systemName: "checkmark")
-                                        .font(.system(size: 15))
+                                        .font(.system(size: 18)) // ← Android Modifier.size(18.dp)
                                         .foregroundColor(colors.primary)
                                 }
                             }
@@ -277,7 +278,7 @@ private struct ExportItem: View {
         Button(action: onClick) {
             HStack(spacing: 16) {
                 Image(systemName: icon)
-                    .font(.system(size: 20))
+                    .font(.system(size: 24)) // ← Android 默认 Icon 24dp
                     .foregroundColor(colors.onPrimaryContainer)
                     .frame(width: 44, height: 44)
                     .background(colors.primaryContainer)

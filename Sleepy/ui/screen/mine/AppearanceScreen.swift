@@ -97,7 +97,6 @@ struct AppearanceScreen: View {
                         .background(colors.surfaceContainer)
                         .cornerRadius(SleepyShapes.medium)
                     }
-                    .padding(.top, 4)
                 }
                 .padding(16)
             }
