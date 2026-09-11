@@ -33,13 +33,18 @@ struct WeekViewWidgetProvider: TimelineProvider {
 // MARK: - View ← renderWeekView
 
 struct WeekViewWidgetEntryView: View {
+    @Environment(\.widgetFamily) private var widgetFamily
     let entry: WeekViewWidgetEntry
 
     var body: some View {
         let data = entry.data
         let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: data.isDark)
         let showSeparator = AppPrefs.shared.isWidgetSeparator()
-        let days = shownDays(data)
+        let todayDow = DateUtils.todayDayOfWeek(today: Date())
+        // SMALL 紧凑档 ← renderWeekViewCompact: 复用 Regular 渲染器, 数据侧换列(列少每列自然变宽)
+        let days = widgetFamily == .systemSmall
+            ? Self.compactDays(data: data, todayDow: todayDow)
+            : shownDays(data)
         // issue#26: widget 全局一档别名开关
         let useAlias = AppPrefs.shared.isWidgetUseAlias()
 
@@ -50,7 +55,6 @@ struct WeekViewWidgetEntryView: View {
                     .foregroundColor(s.onSurface)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             } else {
-                let todayDow = DateUtils.todayDayOfWeek(today: Date())
                 VStack(spacing: 0) {
                     // ★ 学期外: 顶部全宽状态行(只画一次, 同 renderWeekList)
                     if data.semesterStatus != .inRange {
@@ -146,6 +150,30 @@ struct WeekViewWidget: Widget {
             WeekViewWidgetEntryView(entry: entry)
         }
         .configurationDisplayName(L10n.format("widget_week_view_label"))
-        .supportedFamilies([.systemMedium, .systemLarge])
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+    }
+}
+
+// ← weekViewCompactColumns: SMALL 紧凑档选列(纯函数)。
+// 池 = 有课日(空则全周), 今天不在池必补入; 按 |dow−today| 排序取 maxColumns, 输出升序。
+// tie-break 按池内原序(Kotlin sortedBy 稳定排序语义)。
+extension WeekViewWidgetEntryView {
+    static func weekViewCompactColumns(days: [DayData], todayDow: Int, maxColumns: Int = 3) -> [Int] {
+        var pool = days.filter { !$0.courses.isEmpty }.map { $0.dayOfWeek }
+        if pool.isEmpty { pool = days.map { $0.dayOfWeek } }
+        if !pool.contains(todayDow) { pool.append(todayDow) }
+        let ranked = pool.enumerated().sorted { a, b in
+            let da = abs(a.element - todayDow), db = abs(b.element - todayDow)
+            return da != db ? da < db : a.offset < b.offset
+        }
+        return ranked.prefix(maxColumns).map { $0.element }.sorted()
+    }
+
+    // ← renderWeekViewCompact 数据侧换列: 先按 visibleDays 收窄可选池(空集回退全周防御), 再选 compact 列
+    static func compactDays(data: WeekData, todayDow: Int) -> [DayData] {
+        let compactDows = weekViewCompactColumns(days: shownDays(data), todayDow: todayDow)
+        return data.days
+            .filter { compactDows.contains($0.dayOfWeek) }
+            .sorted { $0.dayOfWeek < $1.dayOfWeek }
     }
 }

@@ -43,9 +43,25 @@ func shownDays(_ data: WeekData) -> [DayData] {
 // MARK: - View ← renderWeekList
 
 struct WeekListWidgetEntryView: View {
+    @Environment(\.widgetFamily) private var widgetFamily
     let entry: WeekListWidgetEntry
 
     var body: some View {
+        // SMALL 紧凑档 ← renderWeekListCompact: 无日期行, 今天+明天各一行"周X 课名"居中
+        if widgetFamily == .systemSmall {
+            let s = resolveWidgetScheme(themeKey: entry.data.themeKey, isDark: entry.data.isDark)
+            WidgetCompactFace(scheme: s, dateLabel: nil,
+                              lines: Self.weekListCompactTexts(data: entry.data,
+                                                               todayDow: DateUtils.todayDayOfWeek(today: Date()),
+                                                               useAlias: AppPrefs.shared.isWidgetUseAlias()))
+                .widgetURL(URL(string: "sleepy://open"))
+        } else {
+            regularBody
+        }
+    }
+
+    // ← renderWeekList: 常规/中大档 7 列日列排版
+    private var regularBody: some View {
         let data = entry.data
         let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: data.isDark)
         let colorless = AppPrefs.shared.isWidgetColorless()
@@ -155,6 +171,27 @@ struct WeekListWidget: Widget {
             WeekListWidgetEntryView(entry: entry)
         }
         .configurationDisplayName(L10n.format("widget_week_list_label"))
-        .supportedFamilies([.systemMedium, .systemLarge])
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+    }
+}
+
+// ← weekListCompactTexts(resolve, dayName, useAlias, today, data): SMALL 紧凑档纯文本行。
+// 今天+明天(周循环)有课的列各一行"周X 首课名", 按今天→明天目标序排(禁 ISO 排序:
+// 周日锚点时 ISO 会把"明天=周一"排到"今天"前面); 空回退"无课"。
+extension WeekListWidgetEntryView {
+    static func weekListCompactTexts(data: WeekData, todayDow: Int, useAlias: Bool) -> [String] {
+        if !data.hasTable || data.days.isEmpty { return [L10n.format("widget_create_schedule")] }
+        if data.semesterStatus != .inRange {
+            return [data.semesterStatus == .beforeStart
+                    ? L10n.format("semester_not_started")
+                    : L10n.format("semester_ended")]
+        }
+        let targetDows = [todayDow, todayDow % 7 + 1]   // 今天 + 明天(周循环)
+        let lines = data.days
+            .filter { targetDows.contains($0.dayOfWeek) && !$0.courses.isEmpty }
+            .sorted { targetDows.firstIndex(of: $0.dayOfWeek)! < targetDows.firstIndex(of: $1.dayOfWeek)! }
+            .prefix(2)
+            .map { "\(DateUtils.localizedDay($0.dayOfWeek)) \(CourseDisplayUtil.displayName($0.courses.first!, useAlias))" }
+        return lines.isEmpty ? [L10n.format("no_course")] : Array(lines)
     }
 }

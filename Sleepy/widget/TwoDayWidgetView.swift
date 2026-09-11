@@ -39,6 +39,21 @@ struct TwoDayWidgetEntryView: View {
     let entry: TwoDayWidgetEntry
 
     var body: some View {
+        // SMALL 紧凑档 ← renderTwoDayCompact: 日期小字(顶) + 状态/首课程名(居中), 纯文本无两栏胶囊
+        if widgetFamily == .systemSmall {
+            let s = resolveWidgetScheme(themeKey: entry.data.themeKey, isDark: entry.data.isDark)
+            WidgetCompactFace(scheme: s,
+                              dateLabel: entry.data.days.first.map { DateUtils.shortDateSlash($0.date) },
+                              lines: Self.twoDayCompactTexts(data: entry.data,
+                                                             useAlias: AppPrefs.shared.isWidgetUseAlias()))
+                .widgetURL(URL(string: "sleepy://open"))
+        } else {
+            regularBody
+        }
+    }
+
+    // ← renderTwoDay: 常规/中大档左右两栏排版
+    private var regularBody: some View {
         let data = entry.data
         let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: data.isDark)
         let prefs = AppPrefs.shared
@@ -162,12 +177,28 @@ private struct TwoDayColumn: View {
     }
 }
 
+// ← twoDayCompactTexts(resolve, useAlias, data): SMALL 紧凑档纯文本行。
+// 空课表/学期外/今日无课各有对应一行; 有课 → 两天课程名铺开取前 2 行。
+extension TwoDayWidgetEntryView {
+    static func twoDayCompactTexts(data: TwoDayData, useAlias: Bool) -> [String] {
+        if !data.hasTable || data.days.isEmpty { return [L10n.format("widget_create_schedule")] }
+        if data.semesterStatus != .inRange {
+            return [data.semesterStatus == .beforeStart
+                    ? L10n.format("semester_not_started")
+                    : L10n.format("semester_ended")]
+        }
+        let today = data.days.first!
+        if today.courses.isEmpty { return [L10n.format("no_course")] }
+        return data.days.flatMap { $0.courses }.map { CourseDisplayUtil.displayName($0, useAlias) }
+    }
+}
+
 struct TwoDayWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "TwoDayWidgetRV", provider: TwoDayWidgetProvider()) { entry in
             TwoDayWidgetEntryView(entry: entry)
         }
         .configurationDisplayName(L10n.format("widget_twoday_label"))
-        .supportedFamilies([.systemMedium, .systemLarge])
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }

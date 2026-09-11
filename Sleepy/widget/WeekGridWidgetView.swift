@@ -36,8 +36,20 @@ struct WeekGridWidgetProvider: TimelineProvider {
 
 struct WeekGridWidgetEntryView: View {
     let entry: WeekGridWidgetEntry
+    @Environment(\.widgetFamily) private var widgetFamily
 
     var body: some View {
+        // issue#26: SMALL 档 — 仅渲染今日紧凑面(复用 Today compact face)
+        if widgetFamily == .systemSmall {
+            WeekGridMinimumTodayFace(data: entry.data)
+                .widgetURL(URL(string: "sleepy://open"))
+        } else {
+            gridBody
+        }
+    }
+
+    // ← 常规/中大尺寸: 网格渲染(冲突分栏走 ConflictLayoutEngine.gridDayLanes)
+    private var gridBody: some View {
         let data = entry.data
         let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: data.isDark)
         let colorless = AppPrefs.shared.isWidgetColorless()
@@ -213,47 +225,55 @@ private struct WeekGridDayColumn: View {
     let useAlias: Bool
 
     var body: some View {
-        // today 背景列(primaryContainer @ 40/255 ≈ 16%)
-        ZStack(alignment: .top) {
+        // v7.10.8: 冲突课分栏 — ConflictLayoutEngine.gridDayLanes, 冲突区域课并排各占
+        // 1/N 列宽, 无冲突课整列宽(旧实现按槽叠盖, 冲突课信息丢失)
+        ZStack(alignment: .topLeading) {
             if isToday {
                 Rectangle()
                     .fill(scheme.primaryContainer.opacity(40.0 / 255.0))
             }
-            VStack(spacing: gapH) {
-                // 用对齐网格: maxNode 个槽,课程卡按 startNode 放置
-                ForEach(1...maxNode, id: \.self) { node in
-                    Group {
-                        if let course = courseStarting(at: node) {
-                            WeekGridCourseCard(course: course, scheme: scheme, colorless: colorless,
-                                               slotH: slotH, gapH: gapH, dayW: dayW,
-                                               maxNode: maxNode,
-                                               groupRows: allCourses.filter { $0.groupId == course.groupId },
-                                               useAlias: useAlias)
-                        } else {
-                            Color.clear
-                        }
-                    }
-                    .frame(width: dayW, height: slotHeight(for: node))
-                }
+            ForEach(ConflictLayoutEngine.gridDayLanes(dayData.courses), id: \.course.id) { rect in
+                WeekGridLaneCard(rect: rect, scheme: scheme, colorless: colorless,
+                                 maxNode: maxNode, slotH: slotH, dayW: dayW, gapH: gapH,
+                                 allCourses: allCourses, useAlias: useAlias)
             }
         }
+        // 显式满列尺寸: today 背景列必须铺满整列(分栏卡自身不满宽)
+        .frame(width: dayW,
+               height: slotH * CGFloat(maxNode) + gapH * CGFloat(max(maxNode - 1, 0)),
+               alignment: .topLeading)
     }
+}
 
-    private func courseStarting(at node: Int) -> CourseEntity? {
-        dayData.courses.first { $0.startNode == node }
-    }
+// MARK: - 分栏课程卡 ← Android laneRect 定位逐值移植
 
-    /// 该槽高度: 课程起始槽 = step 占多槽(前 step-1 槽由课程卡占位,后续槽高度 0)
-    private func slotHeight(for node: Int) -> CGFloat {
-        if let c = courseStarting(at: node) {
-            return slotH * CGFloat(c.step) + gapH * CGFloat(max(c.step - 1, 0))
-        }
-        // 该槽被上方课程覆盖? 被覆盖 → 0 高度
-        if let covering = dayData.courses.first(where: { $0.startNode < node && $0.startNode + $0.step > node }) {
-            _ = covering
-            return 0
-        }
-        return slotH
+private struct WeekGridLaneCard: View {
+    let rect: ConflictLayoutEngine.GridLaneRect
+    let scheme: WidgetScheme
+    let colorless: Bool
+    let maxNode: Int
+    let slotH: CGFloat
+    let dayW: CGFloat
+    let gapH: CGFloat
+    let allCourses: [CourseEntity]
+    let useAlias: Bool
+
+    // ← startIdx = max(startNode - 1, 0); step 夹 [1, maxNode - startIdx]
+    private var startIdx: Int { max(rect.course.startNode - 1, 0) }
+    private var clampedStep: Int { min(max(rect.course.step, 1), maxNode - startIdx) }
+    private var cardW: CGFloat { dayW * CGFloat(rect.laneWidthFraction) }
+    private var cardH: CGFloat { slotH * CGFloat(clampedStep) + gapH * CGFloat(max(clampedStep - 1, 0)) }
+
+    var body: some View {
+        WeekGridCourseCard(course: rect.course, scheme: scheme, colorless: colorless,
+                           slotH: slotH, gapH: gapH, dayW: dayW, cardW: cardW,
+                           maxNode: maxNode,
+                           groupRows: allCourses.filter { $0.groupId == rect.course.groupId },
+                           useAlias: useAlias)
+            .frame(width: cardW, height: cardH)
+            // ← laneX = colX + dayW*laneStartFraction; cardTop = +gapH + startIdx*(slotH+gapH)
+            .offset(x: dayW * CGFloat(rect.laneStartFraction),
+                    y: gapH + CGFloat(startIdx) * (slotH + gapH))
     }
 }
 
@@ -266,6 +286,8 @@ private struct WeekGridCourseCard: View {
     let slotH: CGFloat
     let gapH: CGFloat
     let dayW: CGFloat
+    /// 分栏后本卡实际宽(Android cardRect.width()) — 教室截断用它; 字号预算仍按整列 dayW
+    let cardW: CGFloat
     let maxNode: Int
     /// issue#22: 同 groupId 全行(含自身) — AUTO/CUSTOM 取色按行判
     var groupRows: [CourseEntity] = []
@@ -318,7 +340,7 @@ private struct WeekGridCourseCard: View {
 
     // 按卡片可用宽算能放几个字符, 超了截断 + … (中文≈0.55em宽)
     private var roomVisible: String {
-        let availRoomW = dayW - 8  // unifiedPad*2 = 4*2
+        let availRoomW = cardW - 8  // unifiedPad*2 = 4*2 (分栏后按本卡实际宽截断)
         let maxRoomChars = max(Int(availRoomW / (roomSize * 0.55)), 2)
         return roomStr.count > maxRoomChars ? String(roomStr.prefix(maxRoomChars - 1)) + "…" : roomStr
     }
@@ -553,12 +575,43 @@ enum VerticalNameTokenizer {
     }
 }
 
+// MARK: - SMALL 档 ← weekGridMinimumTodayData + pushTodayData(SMALL)
+
+/// WeekGrid systemSmall: 不再"折叠成单列的网格脸", 直接渲染今日课程·小
+/// (数据侧 weekGridMinimumTodayData: WeekData → 今日 WidgetData, 纯函数)
+private struct WeekGridMinimumTodayFace: View {
+    let data: WeekData
+
+    var body: some View {
+        let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: data.isDark)
+        let todayData = Self.minimumTodayData(data)
+        WidgetCompactFace(scheme: s,
+                          dateLabel: todayData.dateLabel,
+                          lines: TodayWidgetEntryView.todayCompactTexts(data: todayData,
+                                                                        useAlias: AppPrefs.shared.isWidgetUseAlias()))
+    }
+
+    // ← weekGridMinimumTodayData 逐行: 今日 DayData → WidgetData
+    static func minimumTodayData(_ data: WeekData) -> WidgetData {
+        let timeJson = data.days.first?.timeJson ?? ""
+        let todayDow = DateUtils.todayDayOfWeek(today: Date())
+        let todayDay = data.days.first { $0.dayOfWeek == todayDow }
+        return WidgetData(date: Date(),
+                          courses: todayDay?.courses ?? [],
+                          timeJson: timeJson,
+                          hasTable: data.hasTable,
+                          isDark: data.isDark,
+                          themeKey: data.themeKey,
+                          semesterStatus: data.semesterStatus)
+    }
+}
+
 struct WeekGridWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "WeekGridWidgetV19", provider: WeekGridWidgetProvider()) { entry in
             WeekGridWidgetEntryView(entry: entry)
         }
         .configurationDisplayName(L10n.format("widget_week_grid_label"))
-        .supportedFamilies([.systemMedium, .systemLarge])
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }

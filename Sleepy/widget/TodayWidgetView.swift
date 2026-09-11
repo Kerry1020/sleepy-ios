@@ -44,6 +44,20 @@ struct TodayWidgetEntryView: View {
     let entry: TodayWidgetEntry
 
     var body: some View {
+        // SMALL 紧凑档 ← renderTodayCompact: 日期小字(顶) + 状态/首课程名(居中), 纯文本无胶囊
+        if widgetFamily == .systemSmall {
+            let s = resolveWidgetScheme(themeKey: entry.data.themeKey, isDark: entry.data.isDark)
+            WidgetCompactFace(scheme: s, dateLabel: entry.data.dateLabel,
+                              lines: Self.todayCompactTexts(data: entry.data,
+                                                            useAlias: AppPrefs.shared.isWidgetUseAlias()))
+                .widgetURL(URL(string: "sleepy://open"))
+        } else {
+            regularBody
+        }
+    }
+
+    // ← renderTodayRegular: 常规/中大档全量排版
+    private var regularBody: some View {
         let data = entry.data
         let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: data.isDark)
         let prefs = AppPrefs.shared
@@ -128,6 +142,61 @@ struct TodayWidgetEntryView: View {
         case .systemMedium: return 3
         case .systemLarge: return 6
         default: return 3
+        }
+    }
+
+    // ← todayCompactTexts(resolve, useAlias, data): 紧凑档纯文本行(渲染与单测单一事实来源)。
+    // 空课表/学期外/无课也各有对应一行; useAlias: true 时显示别名(空回退原名)。
+    static func todayCompactTexts(data: WidgetData, useAlias: Bool) -> [String] {
+        if !data.hasTable { return [L10n.format("widget_create_schedule")] }
+        if data.semesterStatus != .inRange {
+            return [data.semesterStatus == .beforeStart
+                    ? L10n.format("semester_not_started")
+                    : L10n.format("semester_ended")]
+        }
+        if data.courses.isEmpty { return [L10n.format("today_no_course")] }
+        return data.courses.map { CourseDisplayUtil.displayName($0, useAlias) }
+    }
+}
+
+// MARK: - SMALL 紧凑面 ← renderTodayCompact 布局(Today/TwoDay/WeekList/WeekGrid 共用)
+
+/// 紧凑档渲染面 — 布局常量逐值对照 Android renderTodayCompact:
+/// 背景圆角 20 / pad 10 / 日期行 11sp 顶部左侧 / 正文 15sp bold 居中,
+/// 首行基线 ≈ h/2, 行距 pitch 20, 最多 2 行, 超宽省略号截断(w - pad*2)。
+struct WidgetCompactFace: View {
+    let scheme: WidgetScheme
+    let dateLabel: String?
+    let lines: [String]
+
+    var body: some View {
+        ZStack {
+            Rectangle()
+                .fill(scheme.bg)
+                .cornerRadius(20)
+            VStack(spacing: 0) {
+                if let dateLabel = dateLabel {
+                    Text(dateLabel)
+                        .font(.system(size: 11))
+                        .foregroundColor(scheme.onSurfaceVariant)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 10)
+                }
+                Spacer(minLength: 0)
+                VStack(spacing: 2) {
+                    ForEach(Array(lines.prefix(2).enumerated()), id: \.offset) { _, line in
+                        Text(line)
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundColor(scheme.onSurface)
+                            .lineLimit(1)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.horizontal, 10)
+                    }
+                }
+                // 首行基线 ≈ h/2: 两行块高≈38, 居中后基线偏上 ~5, 下移补偿 (← Android y=h/2)
+                .offset(y: 4)
+                Spacer(minLength: 0)
+            }
         }
     }
 }
