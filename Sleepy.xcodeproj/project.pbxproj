@@ -73,6 +73,7 @@
 		3DD6F4241087EF31CE73CAE5 /* JwSchoolInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22F391D73202D6B93FFF6070 /* JwSchoolInfo.swift */; };
 		3E992FD3E17B2A44ECC1CC77 /* JwHniuParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF61666211374C18CE1676CC /* JwHniuParser.swift */; };
 		40061C26490E27046B141D5A /* JwWiseduParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 467B034A9889202CEA76931B /* JwWiseduParser.swift */; };
+		41F5B59C468562763A588C8D /* CourseDisplayUtil.swift in Sources */ = {isa = PBXBuildFile; fileRef = E451AD795407D5BA73BD0A6B /* CourseDisplayUtil.swift */; };
 		43944B5632697D4438ECEF4C /* WeekListWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12CB5E397A61641128360FA3 /* WeekListWidgetView.swift */; };
 		451EC791E28FAFB2754E6149 /* UpdateInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD5B884B15CD7982BF4BC2F9 /* UpdateInfo.swift */; };
 		47A68F16AF8D29100394A94A /* WidgetArchiveLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361943C96AEED91260036E34 /* WidgetArchiveLog.swift */; };
@@ -82,6 +83,7 @@
 		4B0BE4A90A3D8C0E1D17ECD9 /* TimeTableEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 480CB26C5638A20DE5CED8AC /* TimeTableEntity.swift */; };
 		4C11CEA9A518D6F2972027E6 /* ScheduleRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F93B2813DC503FB445168386 /* ScheduleRepository.swift */; };
 		4D12094DB99D2877F409F0FD /* VersionAndUpdateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C69CDDE3F7F1E2BEA3DA3C03 /* VersionAndUpdateTests.swift */; };
+		4D994AF69C97E9EDE3A981FB /* CourseDisplayUtil.swift in Sources */ = {isa = PBXBuildFile; fileRef = E451AD795407D5BA73BD0A6B /* CourseDisplayUtil.swift */; };
 		4EDA62AC9956E6B0ADB1A6AA /* JwFetchError.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6385BFCE2C0419152DFEAB9 /* JwFetchError.swift */; };
 		4FB605D9F58DCE55719C200F /* JwQzParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 166C8FB4895B9F8ACF079DDD /* JwQzParser.swift */; };
 		50E91661C108662A9B7122F7 /* JwCquParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C11210F0D929BD75517DDD5 /* JwCquParser.swift */; };
@@ -215,8 +217,6 @@
 		D1DAE4F6D52A83D515D91744 /* AppearanceScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 779E427676157A13B322A5B5 /* AppearanceScreen.swift */; };
 		D289B54F535EFF1753F5AD4C /* SleepyPlaceholderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E82A553EBD1D0C8456D3011 /* SleepyPlaceholderTests.swift */; };
 		D2E92422ED2FA5E9F9645DE3 /* AppPrefs.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB174180E779B7796964E378 /* AppPrefs.swift */; };
-		AA01C0DE0000000000000001 /* CourseDisplayUtil.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA01C0DE0000000000000003 /* CourseDisplayUtil.swift */; };
-		AA01C0DE0000000000000002 /* CourseDisplayUtil.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA01C0DE0000000000000003 /* CourseDisplayUtil.swift */; };
 		D6770DDC7A4CB4206244FDD1 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1205376525F575AF970B7CD4 /* Localizable.strings */; };
 		D67D25E07B51C16543935000 /* JwHniuParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF61666211374C18CE1676CC /* JwHniuParser.swift */; };
 		D7FEDBA885B825B893C17A74 /* JwImportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413E30FAD9261068960FC5F /* JwImportViewModel.swift */; };
@@ -460,8 +460,8 @@
 		D651B0E8CCB723BAB435B4C8 /* UndoManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoManagerTests.swift; sourceTree = "<group>"; };
 		DA6CEF27A9C39504E09D3487 /* GeneralSettingsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsScreen.swift; sourceTree = "<group>"; };
 		DB174180E779B7796964E378 /* AppPrefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPrefs.swift; sourceTree = "<group>"; };
-		AA01C0DE0000000000000003 /* CourseDisplayUtil.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseDisplayUtil.swift; sourceTree = "<group>"; };
 		DBC7DB3DE13257F697784257 /* JwJsonParsers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwJsonParsers.swift; sourceTree = "<group>"; };
+		E451AD795407D5BA73BD0A6B /* CourseDisplayUtil.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseDisplayUtil.swift; sourceTree = "<group>"; };
 		E6C202EA6E5DE4FC41312B62 /* JwHnustParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwHnustParser.swift; sourceTree = "<group>"; };
 		EAA351FA5E1B5313277092F1 /* WebViewNavigationPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewNavigationPolicyTests.swift; sourceTree = "<group>"; };
 		EB16BBC06209972B0E6B63A1 /* AllTablesScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllTablesScreen.swift; sourceTree = "<group>"; };
@@ -513,10 +513,10 @@
 			children = (
 				A3F73FAB76399721B954DF20 /* AppGroupResolver.swift */,
 				DB174180E779B7796964E378 /* AppPrefs.swift */,
-				AA01C0DE0000000000000003 /* CourseDisplayUtil.swift */,
 				D31FA03F7AF7A6E296C6B4BD /* ConflictDetailReporter.swift */,
 				D4045004893D9AB9C079A3CF /* ConflictLayoutEngine.swift */,
 				5F8589E7A5EA8C34355C1FFF /* CourseColorUtil.swift */,
+				E451AD795407D5BA73BD0A6B /* CourseDisplayUtil.swift */,
 				A1D79D23433FE386230D5AB1 /* DateUtils.swift */,
 				43F1E27AEBC58B8A02E88519 /* FeedbackComposer.swift */,
 				C280149FF5701E57DD8E3418 /* HolidayManager.swift */,
@@ -1077,7 +1077,6 @@
 				65CF01F49FC04AD316F12BB6 /* AppDatabase.swift in Sources */,
 				52BF11E4543EFC2F7C4941BA /* AppGroupResolver.swift in Sources */,
 				D850C9512A65FE07DDC9556F /* AppPrefs.swift in Sources */,
-				AA01C0DE0000000000000001 /* CourseDisplayUtil.swift in Sources */,
 				D1DAE4F6D52A83D515D91744 /* AppearanceScreen.swift in Sources */,
 				DC5CE34D036E0C2093928DEE /* ConflictCard.swift in Sources */,
 				AD0511066366C95F452D312F /* ConflictDetailReporter.swift in Sources */,
@@ -1085,6 +1084,7 @@
 				B7B7B9E50F2427797E4F6752 /* CourseColorUtil.swift in Sources */,
 				9C3967DF73C2215296271E04 /* CourseDao.swift in Sources */,
 				6DBAC0D88FECC7F3CD92F43C /* CourseDetailSheet.swift in Sources */,
+				41F5B59C468562763A588C8D /* CourseDisplayUtil.swift in Sources */,
 				75BDBE0C304130911EB16781 /* CourseEntity.swift in Sources */,
 				ED1304B67D86E2778FC7A12F /* CourseTableView.swift in Sources */,
 				F5B6512BFE9EB65E52C1FAD5 /* DateTimePickers.swift in Sources */,
@@ -1221,11 +1221,11 @@
 				92F5FBC94FF2A739A0980E4E /* AppDatabase.swift in Sources */,
 				0721F81C7C4D4E517D11B4D0 /* AppGroupResolver.swift in Sources */,
 				D2E92422ED2FA5E9F9645DE3 /* AppPrefs.swift in Sources */,
-				AA01C0DE0000000000000002 /* CourseDisplayUtil.swift in Sources */,
 				2504B261A1F9A94ABC2FA3F7 /* ConflictDetailReporter.swift in Sources */,
 				496DF2875E115783B5201D7F /* ConflictLayoutEngine.swift in Sources */,
 				BA5D6AE2D8A400A25159A6DE /* CourseColorUtil.swift in Sources */,
 				DF3C38B397BF68B63560316F /* CourseDao.swift in Sources */,
+				4D994AF69C97E9EDE3A981FB /* CourseDisplayUtil.swift in Sources */,
 				77BF6566053079C67DBD9122 /* CourseEntity.swift in Sources */,
 				1359BA5B59555988AB6494CF /* DateUtils.swift in Sources */,
 				9235B99583013389D06A2934 /* Eams5PathPrefix.swift in Sources */,
@@ -1384,10 +1384,10 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 35;
+				CURRENT_PROJECT_VERSION = 36;
 				DEVELOPMENT_TEAM = GU39QS224C;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
-				MARKETING_VERSION = 1.0.34;
+				MARKETING_VERSION = 1.0.43;
 				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(PRODUCT_BUNDLE_IDENTIFIER)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1456,11 +1456,11 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 35;
+				CURRENT_PROJECT_VERSION = 36;
 				DEVELOPMENT_TEAM = GU39QS224C;
 				ENABLE_TESTABILITY = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
-				MARKETING_VERSION = 1.0.34;
+				MARKETING_VERSION = 1.0.43;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(PRODUCT_BUNDLE_IDENTIFIER)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
