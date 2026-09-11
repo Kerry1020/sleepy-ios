@@ -68,11 +68,11 @@ struct ScheduleScreen: View {
                             showUndoNoneToast = true
                         }
                     },
-                    onOpenWeekJump: { showWeekJumpMenu = true },
                     onSwitchTable: { showTableSwitcher = true },
                     onAddCourse: onManualAdd,
                     onShare: { showShareSheet = true },
-                    hasUndoSnapshot: UndoManager.shared.hasSnapshot)
+                    hasUndoSnapshot: UndoManager.shared.hasSnapshot,
+                    onOpenWeekJump: { showWeekJumpMenu = true })
 
                 // Segmented Switcher
                 SegmentedSwitcher(
