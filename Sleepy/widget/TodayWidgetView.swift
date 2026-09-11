@@ -51,6 +51,8 @@ struct TodayWidgetEntryView: View {
         // ★ 用户显示设置 (决策 D5-12)
         let displayMode = prefs.getDisplayMode()
         let showDate = prefs.isShowDate()
+        // issue#26: widget 全局一档别名开关
+        let useAlias = prefs.isWidgetUseAlias()
 
         VStack(alignment: .leading, spacing: 0) {
             // 标题行: 今天 · 周X  +  日期 (★ showDate=false 时隐藏右侧日期)
@@ -105,7 +107,8 @@ struct TodayWidgetEntryView: View {
                         WidgetCourseCard(course: course, timeJson: data.timeJson, scheme: s,
                                          colorless: colorless, fontSizeSp: 12,
                                          displayMode: displayMode,
-                                         groupRows: data.courses.filter { $0.groupId == course.groupId })
+                                         groupRows: data.courses.filter { $0.groupId == course.groupId },
+                                         useAlias: useAlias)
                             .frame(height: 38)
                     }
                 }

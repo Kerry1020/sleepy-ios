@@ -50,6 +50,8 @@ struct WeekListWidgetEntryView: View {
         let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: data.isDark)
         let colorless = AppPrefs.shared.isWidgetColorless()
         let days = shownDays(data)
+        // issue#26: widget 全局一档别名开关
+        let useAlias = AppPrefs.shared.isWidgetUseAlias()
 
         Group {
             if !data.hasTable || days.isEmpty {
@@ -73,7 +75,7 @@ struct WeekListWidgetEntryView: View {
                     HStack(alignment: .top, spacing: 4) {
                         ForEach(days, id: \.dayOfWeek) { day in
                             WeekListDayColumn(day: day, scheme: s, colorless: colorless,
-                                              isToday: day.dayOfWeek == todayDow)
+                                              isToday: day.dayOfWeek == todayDow, useAlias: useAlias)
                         }
                     }
                 }
@@ -90,6 +92,8 @@ private struct WeekListDayColumn: View {
     let scheme: WidgetScheme
     let colorless: Bool
     let isToday: Bool
+    /// issue#26: widget 场景别名 — 课名展示名
+    let useAlias: Bool
 
     var body: some View {
         let s = scheme
@@ -120,7 +124,7 @@ private struct WeekListDayColumn: View {
                         let bgColor = CourseColorUtil.pickCourseColorSwiftUIWithGroupRows(
                             course, groupRows: day.courses.filter { $0.groupId == course.groupId },
                             isDark: s.isDark, neutralColor: s.surfaceVariant, colorless: colorless)
-                        Text(course.courseName)
+                        Text(CourseDisplayUtil.displayName(course, useAlias))
                             .font(.system(size: 9, weight: .bold))
                             .foregroundColor(CourseColorUtil.textColorOn(bg: bgColor, isDark: s.isDark,
                                                                          onSurface: s.onSurface))

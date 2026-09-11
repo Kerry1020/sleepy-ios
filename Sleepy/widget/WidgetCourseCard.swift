@@ -13,6 +13,8 @@ struct WidgetCourseCard: View {
     var displayMode: String = "node"
     /// issue#22: 同 groupId 全行(含自身) — AUTO/CUSTOM 取色按行判; 空=回退 [course]
     var groupRows: [CourseEntity] = []
+    /// issue#26: widget 场景别名 — true 显示别名(trim 后, 空回退原名), false 原名
+    var useAlias: Bool = false
 
     var body: some View {
         // 统一取色入口 (决策 D3) — colorless 灰底传 surfaceVariant
@@ -60,5 +62,6 @@ struct WidgetCourseCard: View {
     }
 
     // Android: measureText 超 maxWidth → 逐字截断加 "…"(SwiftUI lineLimit(1) 等价)
-    private var displayName: String { course.courseName }
+    // issue#26: 展示名走 CourseDisplayUtil — useAlias→trim 别名, 空回退原名
+    private var displayName: String { CourseDisplayUtil.displayName(course, useAlias) }
 }

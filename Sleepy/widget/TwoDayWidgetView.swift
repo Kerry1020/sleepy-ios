@@ -46,6 +46,8 @@ struct TwoDayWidgetEntryView: View {
         let displayMode = prefs.getDisplayMode()
         let showDate = prefs.isShowDate()
         let perColLimit: Int = widgetFamily == .systemLarge ? 3 : 2
+        // issue#26: widget 全局一档别名开关
+        let useAlias = prefs.isWidgetUseAlias()
 
         VStack(alignment: .leading, spacing: 0) {
             // 顶部标签
@@ -78,7 +80,7 @@ struct TwoDayWidgetEntryView: View {
                         TwoDayColumn(day: day, scheme: s, colorless: colorless,
                                      displayMode: displayMode, showDate: showDate,
                                      isLast: colIdx == data.days.count - 1,
-                                     maxCourses: perColLimit)
+                                     maxCourses: perColLimit, useAlias: useAlias)
                     }
                 }
             }
@@ -98,6 +100,8 @@ private struct TwoDayColumn: View {
     let showDate: Bool
     let isLast: Bool
     let maxCourses: Int
+    /// issue#26: widget 场景别名 — 透传给课程胶囊
+    let useAlias: Bool
 
     var body: some View {
         let s = scheme
@@ -129,7 +133,8 @@ private struct TwoDayColumn: View {
                         WidgetCourseCard(course: course, timeJson: day.timeJson, scheme: s,
                                          colorless: colorless, fontSizeSp: 10,
                                          displayMode: displayMode,
-                                         groupRows: day.courses.filter { $0.groupId == course.groupId })
+                                         groupRows: day.courses.filter { $0.groupId == course.groupId },
+                                         useAlias: useAlias)
                             .frame(height: 44) // 安卓胶囊 maxRowH 44dp
                     }
                     if day.courses.count > maxCourses {

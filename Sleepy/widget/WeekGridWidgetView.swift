@@ -44,6 +44,8 @@ struct WeekGridWidgetEntryView: View {
         let todayDow = DateUtils.todayDayOfWeek(today: Date())
         // issue#22: 同名课程多地点 — 跨天汇总 course 全集, 传取色入口做 AUTO/CUSTOM 按行判
         let allCourses = data.days.flatMap { $0.courses }
+        // issue#26: widget 全局一档别名开关 — 字号预算与绘制用同一个名字
+        let useAlias = AppPrefs.shared.isWidgetUseAlias()
 
         // ── 数据 ── (parseTimeSlots → TimeTableUtils; maxNode 派生同 Android)
         let timeJson = data.days.first?.timeJson ?? ""
@@ -168,7 +170,7 @@ struct WeekGridWidgetEntryView: View {
                                     WeekGridDayColumn(dayData: dayData, scheme: s, colorless: colorless,
                                                       isToday: isToday, maxNode: maxNode,
                                                       slotH: slotH, dayW: dayW, gapH: gapH,
-                                                      allCourses: allCourses)
+                                                      allCourses: allCourses, useAlias: useAlias)
                                 }
                             }
                         }
@@ -207,6 +209,8 @@ private struct WeekGridDayColumn: View {
     let dayW: CGFloat
     let gapH: CGFloat
     let allCourses: [CourseEntity]
+    /// issue#26: widget 场景别名 — 透传课程卡
+    let useAlias: Bool
 
     var body: some View {
         // today 背景列(primaryContainer @ 40/255 ≈ 16%)
@@ -223,7 +227,8 @@ private struct WeekGridDayColumn: View {
                             WeekGridCourseCard(course: course, scheme: scheme, colorless: colorless,
                                                slotH: slotH, gapH: gapH, dayW: dayW,
                                                maxNode: maxNode,
-                                               groupRows: allCourses.filter { $0.groupId == course.groupId })
+                                               groupRows: allCourses.filter { $0.groupId == course.groupId },
+                                               useAlias: useAlias)
                         } else {
                             Color.clear
                         }
@@ -264,6 +269,8 @@ private struct WeekGridCourseCard: View {
     let maxNode: Int
     /// issue#22: 同 groupId 全行(含自身) — AUTO/CUSTOM 取色按行判
     var groupRows: [CourseEntity] = []
+    /// issue#26: widget 场景别名 — 竖排课名展示名(trim 别名, 空回退原名)
+    var useAlias: Bool = false
 
     var body: some View {
         // 卡片背景色 — 统一入口 CourseColorUtil (决策 D3); colorless 灰底传 surfaceVariant
@@ -276,7 +283,7 @@ private struct WeekGridCourseCard: View {
 
         VStack(spacing: 1) {
             // ★ v21: token 化课名竖排
-            VerticalNameView(name: course.courseName, charSize: charSize, nameAvailH: nameAvailH,
+            VerticalNameView(name: displayName, charSize: charSize, nameAvailH: nameAvailH,
                              textColor: textColor)
             // ★ 教室: 底部横排小字角标, 0.62× 字号, 半透明, 按卡片宽截断省略
             if !roomStr.isEmpty {
@@ -301,6 +308,10 @@ private struct WeekGridCourseCard: View {
         course.room.filter { $0 != "\n" && $0 != " " }
     }
 
+    // issue#26: 展示名 = CourseDisplayUtil(useAlias→trim 别名, 空回退原名) —
+    // 字号预算(charSize)与绘制必须用同一个名字, 否则截断不一致 (← Android 同款注释)
+    private var displayName: String { CourseDisplayUtil.displayName(course, useAlias) }
+
     private var roomSize: CGFloat {
         min(max(charSize * 0.62, 5), 8)
     }
@@ -319,7 +330,7 @@ private struct WeekGridCourseCard: View {
         let availCardH = max(cardH - 8, 0)  // unifiedPad*2
         let roomReserve = roomStr.isEmpty ? 0 : min(11 * 0.7, availCardH * 0.35)
         let nameAvail = max(availCardH - roomReserve, 0)
-        let tokens = VerticalNameTokenizer.tokenize(course.courseName)
+        let tokens = VerticalNameTokenizer.tokenize(displayName)
         let unitH = max(VerticalNameTokenizer.unitHeight(tokens), 1)
         // 安卓: nameCeil = min(nameMaxDp, dayAvailW*0.92) — 列宽封顶, 窄列不放大字
         let nameCeil = min(min(56 * 0.24, 13), max(dayW - 8, 8) * 0.92)

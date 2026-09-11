@@ -40,6 +40,8 @@ struct WeekViewWidgetEntryView: View {
         let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: data.isDark)
         let showSeparator = AppPrefs.shared.isWidgetSeparator()
         let days = shownDays(data)
+        // issue#26: widget 全局一档别名开关
+        let useAlias = AppPrefs.shared.isWidgetUseAlias()
 
         Group {
             if !data.hasTable || days.isEmpty {
@@ -63,7 +65,7 @@ struct WeekViewWidgetEntryView: View {
                     HStack(alignment: .top, spacing: 4) {
                         ForEach(days, id: \.dayOfWeek) { day in
                             WeekViewDayColumn(day: day, scheme: s, isToday: day.dayOfWeek == todayDow,
-                                              showSeparator: showSeparator)
+                                              showSeparator: showSeparator, useAlias: useAlias)
                         }
                     }
                 }
@@ -80,6 +82,8 @@ private struct WeekViewDayColumn: View {
     let scheme: WidgetScheme
     let isToday: Bool
     let showSeparator: Bool
+    /// issue#26: widget 场景别名 — 课名展示名
+    let useAlias: Bool
 
     var body: some View {
         let s = scheme
@@ -106,7 +110,7 @@ private struct WeekViewDayColumn: View {
                 VStack(spacing: 3) {  // 3dp (原2dp太紧, 对齐胶囊版)
                     ForEach(Array(day.courses.prefix(5).enumerated()), id: \.element.id) { idx, course in
                         // today → onPrimaryContainer@0.82alpha, 其他 → onSurfaceVariant
-                        Text(course.courseName)
+                        Text(CourseDisplayUtil.displayName(course, useAlias))
                             .font(.system(size: 9))
                             .foregroundColor(isToday
                                 ? s.onPrimaryContainer.opacity(0.82)

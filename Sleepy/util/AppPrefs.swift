@@ -4,6 +4,7 @@
 
 import Foundation
 import Combine
+import WidgetKit
 
 /// App 级别轻量设置 — 避免引入额外依赖。
 final class AppPrefs {
@@ -58,6 +59,7 @@ final class AppPrefs {
     static let KEY_WEEK_HIDE_EMPTY_DAYS = "week_hide_empty_days" // bool default false — 隐藏无课日
     static let KEY_WEEK_USE_ALIAS = "week_use_alias"  // bool default false — 周视图显示别名 (issue#26)
     static let KEY_GRID_USE_ALIAS = "grid_use_alias"  // bool default false — 网格视图显示别名 (issue#26)
+    static let KEY_WIDGET_USE_ALIAS = "widget_use_alias"  // bool default false — widget 场景显示别名 (issue#26, 全局一档)
     static let GRID_SCALE_RANGE: ClosedRange<Double> = 0.7...1.3
     static let CORNER_RATIO_RANGE: ClosedRange<Double> = 0.0...2.0
 
@@ -334,6 +336,15 @@ final class AppPrefs {
 
     func isGridUseAlias() -> Bool { sp().bool(forKey: Self.KEY_GRID_USE_ALIAS) }
     func setGridUseAlias(_ v: Bool) { sp().set(v, forKey: Self.KEY_GRID_USE_ALIAS) }
+
+    // issue#26: widget 场景 课程名显示 原名/别名 — 全局一档(所有小组件共享, 渲染器无
+    // widgetId, 与 colorless/separator 同先例)。写入后全量刷 timeline
+    // (← Android WidgetUpdater.notifyDataChanged, 桌面即时重绘)。
+    func isWidgetUseAlias() -> Bool { sp().bool(forKey: Self.KEY_WIDGET_USE_ALIAS) }
+    func setWidgetUseAlias(_ v: Bool) {
+        sp().set(v, forKey: Self.KEY_WIDGET_USE_ALIAS)
+        WidgetCenter.shared.reloadAllTimelines()
+    }
 
     // ===== 冲突簇默认置顶图层 =====
     // JSON Map<clusterKey, layerRepId>;内存真相源(@Published)保瞬时更新 —
