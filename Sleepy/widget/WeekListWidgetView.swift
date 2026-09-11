@@ -98,8 +98,8 @@ private struct WeekListDayColumn: View {
             Text(weekDayLabels[day.dayOfWeek])
                 .font(.system(size: 12, weight: .bold))
                 .foregroundColor(isToday ? s.onPrimaryContainer : s.onSurface)
-                .padding(.top, 12)
-                .padding(.bottom, 2)
+                .padding(.top, 1)   // 安卓标题基线 colTop+12 (字形顶≈+4)
+                .padding(.bottom, 11) // chip 顶 colTop+26
 
             if !day.courses.isEmpty {
                 // 课程数量 chip
@@ -125,11 +125,12 @@ private struct WeekListDayColumn: View {
                             .foregroundColor(CourseColorUtil.textColorOn(bg: bgColor, isDark: s.isDark,
                                                                          onSurface: s.onSurface))
                             .lineLimit(1)
-                            .frame(maxWidth: .infinity)
-                            .padding(.horizontal, 3)
+                            .padding(.horizontal, 2) // 文字距胶囊左/右 2dp (安卓 x+coursePad+2, 截断预算 colW-10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .frame(height: 16)
                             .background(bgColor)
                             .cornerRadius(4)
+                            .padding(.horizontal, 3) // 胶囊两侧内缩 3dp (安卓 x+3 ~ x+colW-3)
                     }
                 }
                 Spacer(minLength: 0)

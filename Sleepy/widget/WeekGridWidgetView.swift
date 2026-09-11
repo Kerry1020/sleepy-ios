@@ -313,7 +313,7 @@ private struct WeekGridCourseCard: View {
     }
 
     // v20b: 全表统一字号 — 每 cardH/unitH 理想字号在父级算不了(需要全表信息),
-    // SwiftUl 版每卡独立计算: ideal = nameAvailH / unitH, 夹 [11, headH*0.24 cap 13]
+    // SwiftUl 版每卡独立计算: ideal = nameAvailH / unitH, 夹 [11, min(headH*0.24 cap 13, (dayW-8)*0.92)]
     private var charSize: CGFloat {
         let cardH = slotH * CGFloat(course.step) + gapH * CGFloat(max(course.step - 1, 0))
         let availCardH = max(cardH - 8, 0)  // unifiedPad*2
@@ -321,7 +321,9 @@ private struct WeekGridCourseCard: View {
         let nameAvail = max(availCardH - roomReserve, 0)
         let tokens = VerticalNameTokenizer.tokenize(course.courseName)
         let unitH = max(VerticalNameTokenizer.unitHeight(tokens), 1)
-        return min(max(nameAvail / unitH, 11), min(56 * 0.24, 13))
+        // 安卓: nameCeil = min(nameMaxDp, dayAvailW*0.92) — 列宽封顶, 窄列不放大字
+        let nameCeil = min(min(56 * 0.24, 13), max(dayW - 8, 8) * 0.92)
+        return min(max(nameAvail / unitH, 11), nameCeil)
     }
 
     private var nameAvailH: CGFloat {
