@@ -377,6 +377,12 @@ struct ConflictClusterCard: View {
             .sheet(isPresented: $showPicker) {
                 ConflictCoursePickerSheet(
                     courses: drawList.map { $0.course },
+                    // ← Android (rotationLayerOrder ?: baselineOrderIds).first(): 轮换顶层,
+                    //   否则置顶感知基准序顶层(= topOverrideId 所在层代表)
+                    layerRepIdOfCourse: layerRepIdOfCourse,
+                    topRepId: rotationTopId
+                        ?? (topOverrideId.flatMap { layerRepIdOfCourse[$0] }
+                            ?? defaultLayerOrderIds.first ?? 0),
                     onDismiss: { showPicker = false },
                     onPick: { id in
                         showPicker = false
@@ -477,23 +483,25 @@ private struct ConflictCourseCard: View {
             Group {
                 if subText.isBlank {
                     Text(course.courseName)
+                        // ← Android labelSmall.copy(SemiBold, 10sp, lineHeight 13sp), textAlign 默认 Start
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundColor(effectiveFg)
                         .strikethrough(textDecoration)
+                        .lineSpacing(1)
                         .lineLimit(6)
                         .minimumScaleFactor(0.6)
                         .allowsTightening(true)
-                        .multilineTextAlignment(.center)
                 } else {
                     VStack(spacing: 0) {
                         Text(course.courseName)
+                            // ← Android labelSmall.copy(SemiBold, 10sp, lineHeight 13sp), textAlign 默认 Start
                             .font(.system(size: 10, weight: .semibold))
                             .foregroundColor(effectiveFg)
                             .strikethrough(textDecoration)
+                            .lineSpacing(1)
                             .lineLimit(6)
                             .minimumScaleFactor(0.6)
                             .allowsTightening(true)
-                            .multilineTextAlignment(.center)
                             .frame(maxHeight: .infinity)
                         Text(subText)
                             .font(SleepyTextStyle.micro())
@@ -533,8 +541,9 @@ private struct ConflictBadge: View {
                 .font(.system(size: badgeFont, weight: .medium))
                 .foregroundColor(colors.onSurface)
                 .lineLimit(1)
-                .frame(minWidth: badgeSize, maxWidth: badgeSize * 1.7, minHeight: badgeSize)
-                .padding(.horizontal, 2)
+                // ← Android 单位数固定 14dp 圆形 / 两位数固定 14×23.8 胶囊,无水平 padding
+                .frame(width: (0...9).contains(hiddenCount) ? badgeSize : badgeSize * 1.7,
+                       height: badgeSize)
         }
         .buttonStyle(SleepyButtonStyle())
         .background(Capsule().fill(colors.surface))
@@ -546,6 +555,10 @@ private struct ConflictBadge: View {
 private struct ConflictCoursePickerSheet: View {
     @Environment(\.localWakeUpColors) private var colors
     let courses: [CourseEntity]
+    // ← Android ConflictCoursePickerDialog(layerRepIdOfCourse, topRepId): 顶层行
+    //   primaryContainer/onPrimaryContainer + 层代表 Check;仅视觉高亮用
+    let layerRepIdOfCourse: [Int64: Int64]
+    let topRepId: Int64
     let onDismiss: () -> Void
     let onPick: (Int64) -> Void
 
@@ -561,13 +574,24 @@ private struct ConflictCoursePickerSheet: View {
                         Button {
                             onPick(course.id)
                         } label: {
-                            Text(course.courseName)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(colors.onSurface)
-                                .lineLimit(2)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.vertical, 10)
-                                .padding(.horizontal, 8)
+                            let repId = layerRepIdOfCourse[course.id] ?? course.id
+                            let isTopLayer = repId == topRepId
+                            HStack(spacing: 0) {
+                                Text(course.courseName)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(isTopLayer ? colors.onPrimaryContainer : colors.onSurface)
+                                    .lineLimit(2)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                if repId == course.id && isTopLayer {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 18))
+                                        .foregroundColor(colors.primary)
+                                }
+                            }
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 8)
+                            .background(isTopLayer ? colors.primaryContainer : colors.surfaceContainer)
+                            .cornerRadius(SleepyShapes.small)
                         }
                         .buttonStyle(SleepyButtonStyle())
                         .accessibilityLabel(course.courseName)
