@@ -26,6 +26,8 @@ struct ScheduleScreen: View {
     @State private var showTableSwitcher = false
     // v7.10.7 顶栏分享 → 格式选择弹层
     @State private var showShareSheet = false
+    // ← Android 跳周 DropdownMenu(menuOpen): 自绘 ZStack 浮层呈现 280pt chip 网格
+    @State private var showWeekJumpMenu = false
 
     var body: some View {
         let state = viewModel.state
@@ -60,6 +62,7 @@ struct ScheduleScreen: View {
                         viewModel.changeWeek(DateUtils.currentWeek(startDate: start))
                     },
                     onSelectWeek: { week in viewModel.changeWeek(week) },
+                    onOpenWeekJump: { showWeekJumpMenu = true },
                     onUndo: {
                         // v7.10.16: 任何课表数据改动可一键撤销一次
                         if !viewModel.undoLastChange() {
@@ -125,6 +128,20 @@ struct ScheduleScreen: View {
                         guard !Task.isCancelled else { return }
                         withAnimation { showUndoNoneToast = false }
                     }
+            }
+        }
+        // ← Android 跳周 DropdownMenu: 自绘 ZStack 浮层(与仓库浮层容器同款模式),
+        //   280pt 面板 + 圆形周 chip 网格, 点击即选即关, 点面板外任意处关闭。
+        .overlay(alignment: .top) {
+            if showWeekJumpMenu {
+                WeekJumpMenu(currentWeek: state.selectedWeek,
+                             maxWeek: state.currentTable?.maxWeek ?? 20,
+                             onSelect: { week in
+                                 viewModel.changeWeek(week)
+                                 showWeekJumpMenu = false
+                             },
+                             onDismiss: { showWeekJumpMenu = false })
+                    .padding(.top, 56)   // 锚在顶栏周胶囊正下方
             }
         }
         // 详情 Bottom Sheet
@@ -243,8 +260,8 @@ private struct ScheduleTopBar: View {
     var onShare: () -> Void = {}
     /// v7.10.16g: 撤回按钮仅有可撤回快照时显示(UndoManager.hasSnapshot 订阅)
     var hasUndoSnapshot: Bool = false
-
-    @State private var menuOpen = false
+    // ← Android menuOpen=true: 打开跳周 DropdownMenu(浮层由 ScheduleScreen 呈现)
+    var onOpenWeekJump: () -> Void = {}
 
     var body: some View {
         let actualWeek = startDate.isEmpty ? 1 : DateUtils.currentWeek(startDate: startDate)
@@ -296,12 +313,11 @@ private struct ScheduleTopBar: View {
             WeekNavButton(icon: "chevron.left", onClick: onPrevWeek)
 
             // 第 N 周 标签 — 点击行为根据是否在当前实际周而不同
-            // ★ iOS 16 修复(二段): Menu 挂非 Button 顶层内容(VStack/LazyVGrid)在
-            //   iOS 16 上点击不展开(实测 menu 元素为 0)→ 改为 Button + sheet 弹层,
-            //   与 Android FlowRow 280dp 弹层语义一致。
+            // ★ 跳周弹层走 ScheduleScreen 顶层 ZStack 浮层(WeekJumpMenu),
+            //   ← Android DropdownMenu 280dp FlowRow chip 弹层逐项对齐。
             Button {
                 if isOnActual {
-                    menuOpen = true
+                    onOpenWeekJump()
                 } else {
                     onJumpToActual()   // 不在实际周 → 一键跳回(原 simultaneousGesture 语义)
                 }
@@ -323,34 +339,6 @@ private struct ScheduleTopBar: View {
             }
             .buttonStyle(SleepyButtonStyle())
             .accessibilityIdentifier("week_label")   // ← G5: 跳周菜单锚点
-            .sheet(isPresented: $menuOpen) {
-                // ★ v7.10.18 原生化: Picker(.wheel) 系统原生滚轮选择器
-                //   - iOS 15+ 自动获得系统震动反馈 + 高亮当前值
-                //   - 比自制 LazyVGrid 更短(33 行 → 20 行)+ 一致 iOS 体验
-                //   - sheetDetents .medium 自带下拉 dismiss,保持 iOS 16+ swipe 手势
-                VStack(spacing: 8) {
-                    Text(L10n.format("schedule_jump_week"))
-                        .font(.system(size: 12, weight: .medium)) // ← Android labelMedium 12
-                        .foregroundColor(colors.onSurfaceVariant)
-                    Picker("", selection: Binding(
-                        get: { currentWeek },
-                        set: { newWeek in onSelectWeek(newWeek) }
-                    )) {
-                        ForEach(1...maxWeek, id: \.self) { w in
-                            Text("\(w)").tag(w)
-                                .accessibilityIdentifier("week_num_\(w)")
-                        }
-                    }
-                    .pickerStyle(.wheel)
-                    .frame(height: 200)
-                }
-                .padding(.vertical, 16)
-                .sheetDetents([.medium])
-                // 选中即关(iOS 16+ 用户改值后也能手动 ✕)
-                .onChange(of: currentWeek) { _ in
-                    if menuOpen { menuOpen = false }
-                }
-            }
 
             WeekNavButton(icon: "chevron.right", onClick: onNextWeek)
         }
@@ -437,6 +425,83 @@ private struct WeekNavButton: View {
         .buttonStyle(SleepyButtonStyle())
         // ← G5: 周导航箭头锚点(chevron.left → week_prev / chevron.right → week_next)
         .accessibilityIdentifier(icon.contains("left") ? "week_prev" : "week_next")
+    }
+}
+
+// ← ScheduleScreen.kt L475-528 跳周 DropdownMenu — 280dp 弹层 + FlowRow 圆形周 chip:
+//   容器 surfaceContainerHighest / 内边距 12 / 标题 schedule_jump_week(labelMedium
+//   onSurfaceVariant, padding start4 bottom8) / chip 40dp Circle spacedBy 8×8,
+//   选中 primary+Bold+onPrimary, 未选中 surfaceContainerHigh+Regular+onSurface,
+//   点击即选即关; 点面板外任意处关闭(自绘 ZStack 浮层, 与仓库浮层容器模式一致)。
+private struct WeekJumpMenu: View {
+    @Environment(\.localWakeUpColors) private var colors
+    let currentWeek: Int
+    let maxWeek: Int
+    let onSelect: (Int) -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        ZStack {
+            // 弹层外点击关闭(Android DropdownMenu 外点 scrim);近透明不遮内容
+            Color.black.opacity(0.001)
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onDismiss)
+            menuPanel
+                .padding(.top, 56)   // 锚在顶栏周胶囊正下方
+        }
+    }
+
+    // 面板: 宽 280 + containerColor surfaceContainerHighest + Column padding 12
+    private var menuPanel: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(L10n.format("schedule_jump_week"))
+                .font(.system(size: 12, weight: .medium))   // ← labelMedium 12
+                .foregroundColor(colors.onSurfaceVariant)
+                .padding(.leading, 4)
+                .padding(.bottom, 8)
+            chipGrid
+        }
+        .padding(12)                                  // ← Column(padding 12dp)
+        .frame(width: 280, alignment: .leading)       // ← DropdownMenu 宽 280dp
+        .background(colors.surfaceContainerHighest)   // ← containerColor
+        .cornerRadius(4)                              // ← M3 menu 容器 extra-small 圆角
+        .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
+    }
+
+    // FlowRow(spacedBy 8/8, fillMaxWidth): 均一 40pt chip → 256pt 内每行 5 枚
+    private var chipGrid: some View {
+        let clampedMax = max(maxWeek, 1)
+        let rows = stride(from: 1, through: clampedMax, by: 5).map {
+            Array($0...min($0 + 4, clampedMax))
+        }
+        return VStack(spacing: 8) {   // ← FlowRow 纵向 spacedBy(8)
+            ForEach(rows.indices, id: \.self) { r in
+                HStack(spacing: 8) {  // ← FlowRow 横向 spacedBy(8)
+                    ForEach(rows[r], id: \.self) { w in
+                        weekChip(w)
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)   // ← FlowRow fillMaxWidth
+    }
+
+    // 40dp Circle chip: 选中 primary/Bold/onPrimary,未选中 surfaceContainerHigh/Regular/onSurface
+    private func weekChip(_ w: Int) -> some View {
+        let isCurrent = w == currentWeek
+        return Button {
+            onSelect(w)   // ← onSelectWeek(w) + menuOpen=false: 点击即选即关
+        } label: {
+            Text("\(w)")
+                .font(.system(size: 14, weight: isCurrent ? .bold : .regular))  // ← labelLarge 14
+                .foregroundColor(isCurrent ? colors.onPrimary : colors.onSurface)
+                .frame(width: 40, height: 40)   // ← 40dp
+                .background(isCurrent ? colors.primary : colors.surfaceContainerHigh)
+                .clipShape(Circle())            // ← M3 圆形 chip
+                .contentShape(Circle())
+        }
+        .buttonStyle(SleepyButtonStyle())
+        .accessibilityIdentifier("week_num_\(w)")
     }
 }
 

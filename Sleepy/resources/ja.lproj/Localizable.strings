@@ -650,6 +650,8 @@
 "jw_fetch_session_expired" = "会话已过期，请重新登录后再点导入";
 "jw_fetch_timeout" = "取得がタイムアウトしました：サーバーが長時間応答しません。ネットワークを確認して再試行してください";
 "jw_refresh" = "再読み込み";
+"jw_toggle_desktop_ua" = "デスクトップ版サイトに切り替え";
+"jw_toggle_mobile_ua" = "モバイル版サイトに切り替え";
 "license_contributor_section" = "貢献者";
 "settings_grid_alias" = "グリッドビューの科目名";
 "settings_name_alias" = "別名";

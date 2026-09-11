@@ -650,6 +650,8 @@
 "jw_fetch_session_expired" = "会话已过期，请重新登录后再点导入";
 "jw_fetch_timeout" = "Fetch timed out: the server did not respond for a long time. Check your network and retry";
 "jw_refresh" = "Refresh";
+"jw_toggle_desktop_ua" = "Toggle desktop version of website";
+"jw_toggle_mobile_ua" = "Toggle mobile version of website";
 "license_contributor_section" = "Contributors";
 "settings_grid_alias" = "Grid view course names";
 "settings_name_alias" = "Alias";

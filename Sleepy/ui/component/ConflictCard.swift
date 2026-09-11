@@ -2,6 +2,8 @@
 // Sleepy iOS — 100% port of sleepy Android
 // 冲突簇整卡渲染: STACK 等大双卡左上/右下 / FOLD 折角 / RAIL 顶卡收窄。
 // 引擎与几何纯函数在 ConflictLayoutEngine.swift(绘制序/命中区/簇级形态)。
+// 偏差: layoutCluster 仅收 topOverrideId(置顶→基准首位),不支持完整 layerOrderOverride;
+//   轮换序完整重排在 ConflictCard 侧回退(旋转后首位=轮换首位)。
 
 import SwiftUI
 
@@ -137,11 +139,22 @@ struct ConflictClusterCard: View {
         // 轮换是会话态,不落盘;两节簇 rotationStep 恒 null 走原 topOverride 通道
         let defaultLayerOrderIds = ConflictLayoutEngine.defaultLayerIdOrder(cluster.courses)
         let layerRepIdOfCourse = ConflictLayoutEngine.memberToLayerRep(cluster.courses)
-        let clusterLayerCount = defaultLayerOrderIds.count
+        // ← overrideAwareLayerOrder: 置顶感知基准序 — 用户置顶层恒在基准首位(整层),
+        //   整周期(步数≡0 mod N)轮换序===基准序 → 置顶自动还原(评审 #4)
+        let baselineOrderIds: [Int64] = {
+            guard let top = topOverrideId, defaultLayerOrderIds.contains(top) else {
+                return defaultLayerOrderIds
+            }
+            return [top] + defaultLayerOrderIds.filter { $0 != top }
+        }()
+        let clusterLayerCount = baselineOrderIds.count
         let rotationActive = clusterLayerCount >= 3 && (rotationStep ?? 0) > 0
-        let rotationTopId: Int64? = rotationActive
-            ? ConflictLayoutEngine.applyLayerRotation(defaultLayerOrderIds, rotationStep!).first
+        // ← 完整轮换层序;引擎 layoutCluster 仅收 topOverrideId,故取轮换序首位落地
+        //   (整层序完整重排需引擎 layerOrderOverride 通道 — 已知偏差,见文件头注释)
+        let rotationLayerOrder: [Int64]? = rotationActive
+            ? ConflictLayoutEngine.applyLayerRotation(baselineOrderIds, rotationStep!)
             : nil
+        let rotationTopId: Int64? = rotationLayerOrder?.first
         let effectiveTopId = rotationTopId ?? topOverrideId
         // 布局现算(引擎零缓存承诺)——override 变化即重排;hidden 与渲染同一裁剪空间
         let laid = ConflictLayoutEngine.layoutCluster(
@@ -153,12 +166,14 @@ struct ConflictClusterCard: View {
             ? { node in (1...maxNode).contains(node) ? node - 1 : -1 }
             : { node in timeSlots.firstIndex { $0.nodeStart == node } ?? -1 }
         let drawList = laid.filter { slotIndexOf($0.course.startNode) >= 0 }
-        let hiddenCount = drawList.filter { $0.hidden }.count
-        // N 徽标可见性: 图层 N≥3 且存在 hidden 课(v7.6: N 按图层数)
-        let chainGroups = ConflictLayoutEngine.chainGroups(drawList.map { $0.course })
-        let layerCount = ConflictLayoutEngine.conflictBadgeLayerCount(
-            groupSizes: chainGroups.map { $0.count }, rawCount: drawList.count)
-        let showBadgeV = ConflictLayoutEngine.conflictShowBadge(layerCount, hiddenCount)
+        // v7.10.16r 图层模型统一(评审 #5): 轮换/徽标/切换闸门共用「全量簇的层数」,
+        // 不再从 drawList 重算 chainGroups(出界过滤会让两模型分歧)。徽标「+N」= 层数-2
+        // (评审 #3: 按层计,轮换中恒定;默认两层已显示,三层 +1 / 四层 +2)。
+        let layerCount = clusterLayerCount
+        let hiddenLayerN = max(layerCount - 2, 0)   // ← ConflictLayoutEngine.hiddenLayerCount
+        let showBadgeV = ConflictLayoutEngine.conflictShowBadge(layerCount, hiddenLayerN)
+        // ← chainGroups 从簇全量课推导(评审 #5): 层归属/层代表/折角资格同一模型
+        let chainGroups = ConflictLayoutEngine.chainGroups(cluster.courses)
         // 绘制序: 非顶卡(zRank 降序) → 顶卡 → hidden 课 Mark 命中区(overlay 层)
         let drawOrder = ConflictLayoutEngine.overlayMarkOrder(drawList)
         // 顶层判定(与 overlayMarkOrder 兜底同源)
@@ -196,7 +211,9 @@ struct ConflictClusterCard: View {
         var layerOfId: [Int64: Int] = [:]
         for (gi, g) in chainGroups.enumerated() { for c in g { layerOfId[c.id] = gi } }
         var layerRepId: [Int: Int64] = [:]
-        for (gi, g) in chainGroups.enumerated() { layerRepId[gi] = g.first!.id }
+        for (gi, g) in chainGroups.enumerated() {
+            layerRepId[gi] = layerRepIdOfCourse[g.first!.id] ?? g.first!.id
+        }
         // v7.8: 拼条态仅用于 FOLD flap 绘制,不影响 rect 几何
         let chainStripActive = topLaid.chainFront
 
@@ -364,10 +381,10 @@ struct ConflictClusterCard: View {
                             .offset(x: 2, y: cardYOf(hid.course.startNode) + 2)
                     }
                 }
-                // ---- N 徽标(图层 N≥3 且 hidden 存在): overlay 右上,+被盖人数(v7.10.16r)
+                // ---- N 徽标(图层 N≥3 且存在被盖层): overlay 右上,+层数-2(评审#3 按层计)
                 if showBadgeV {
                     let styleIsFold = form == .fold
-                    ConflictBadge(hiddenCount: hiddenCount, onClick: { showPicker = true })
+                    ConflictBadge(hiddenLayerN: hiddenLayerN, onClick: { showPicker = true })
                         .offset(x: styleIsFold ? -(foldSize + 4) : -2, y: 2)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                 }
@@ -380,16 +397,15 @@ struct ConflictClusterCard: View {
                     // ← Android (rotationLayerOrder ?: baselineOrderIds).first(): 轮换顶层,
                     //   否则置顶感知基准序顶层(= topOverrideId 所在层代表)
                     layerRepIdOfCourse: layerRepIdOfCourse,
-                    topRepId: rotationTopId
-                        ?? (topOverrideId.flatMap { layerRepIdOfCourse[$0] }
-                            ?? defaultLayerOrderIds.first ?? 0),
+                    topRepId: (rotationLayerOrder ?? baselineOrderIds).first ?? 0,
                     onDismiss: { showPicker = false },
                     onPick: { id in
                         showPicker = false
                         if clusterLayerCount >= 3 {
-                            // v7.10.16r: 气泡选课 = 「换来看」— 轮换步数使该层转到首位(会话态)
+                            // v7.10.16r: 气泡选课 = 「换来看」— 轮换步数使该层转到基准
+                            // 首位(会话态);target=0 = 清轮换回基准,语义自洽
                             let repId = layerRepIdOfCourse[id] ?? id
-                            if let target = defaultLayerOrderIds.firstIndex(of: repId) {
+                            if let target = baselineOrderIds.firstIndex(of: repId) {
                                 onPickFromBadge(target)
                             }
                         } else {
@@ -529,20 +545,20 @@ private struct ConflictCourseCard: View {
     }
 }
 
-/// N 徽标(N≥3) — 右上角小气泡;文案 = 「+被盖人数」(三层 +1 / 四层 +2)
+/// N 徽标(N≥3) — 右上角小气泡;文案 = 「+层数-2」(三层 +1 / 四层 +2,按层计不按课数)
 private struct ConflictBadge: View {
     @Environment(\.localWakeUpColors) private var colors
-    let hiddenCount: Int
+    let hiddenLayerN: Int
     let onClick: () -> Void
 
     var body: some View {
         Button(action: onClick) {
-            Text("+\(hiddenCount)")
+            Text("+\(hiddenLayerN)")
                 .font(.system(size: badgeFont, weight: .medium))
                 .foregroundColor(colors.onSurface)
                 .lineLimit(1)
                 // ← Android 单位数固定 14dp 圆形 / 两位数固定 14×23.8 胶囊,无水平 padding
-                .frame(width: (0...9).contains(hiddenCount) ? badgeSize : badgeSize * 1.7,
+                .frame(width: (0...9).contains(hiddenLayerN) ? badgeSize : badgeSize * 1.7,
                        height: badgeSize)
         }
         .buttonStyle(SleepyButtonStyle())

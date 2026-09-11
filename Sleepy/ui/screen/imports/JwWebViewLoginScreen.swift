@@ -6,11 +6,20 @@
 //   - SSL 自签 proceed → 不实现(WKWebView 默认拒绝;ATS 例外需 Info.plist, 保守不放开)
 //   - 新窗(target=_blank/window.open) → NavUIDelegate.createWebViewWith 在当前
 //     webview 内加载(Android WebView 默认语义); 无它教务卡片点不动(a.v.1.0.41)
+//   - 桌面 UA 切换(#18) → TopBar 原生按钮: customUserAgent + reload
+//     ← Android key(recreateKey) 销毁重建(UA 仅创建期可靠)
+//   - 刷新 → TopBar 原生按钮 webView.reload(), 进度走 estimatedProgress KVO
 // 抓 HTML: document.documentElement.outerHTML + iframe/frame 合并(同一份 JS)。
 // wisedu(金智) 协议: WebView 内 fetch 课表 JSON(WISEDU_FETCH_JS 原文移植)。
 
 import SwiftUI
 import WebKit
+
+// ← DESKTOP_USER_AGENT: Chrome 121 / Windows 10 桌面 UA — 无 Android/iPhone 词汇,
+// 触发门户桌面版布局(UCAS SEP 等门户手机 UA 下无"个人课表"入口)
+private let jwDesktopUserAgent =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) " +
+    "Chrome/121.0.0.0 Safari/537.36"
 
 struct JwWebViewLoginScreen: View {
     // (WISEDU_FETCH_JS 定义在文件尾 WiseduFetchJs enum; 前置引用走 static)
@@ -23,6 +32,9 @@ struct JwWebViewLoginScreen: View {
     @State private var progress: Double = 0
     @State private var webViewCoordinator: WebViewCoordinator? = nil
     @State private var snackMessage: String? = nil
+    // ← desktopUa = remember { mutableStateOf(false) } — 默认手机 UA。
+    // Android 本屏无持久化(纯会话态, 离开页面即重置), iOS @State 等价
+    @State private var desktopUa = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -43,6 +55,37 @@ struct JwWebViewLoginScreen: View {
                         .foregroundColor(colors.onSurfaceVariant)
                 }
                 Spacer()
+                // ← actions UA IconButton(#18): 部分门户手机 UA 下无"个人课表"入口。
+                // 图标随状态切换: 手机 UA → Computer(点了变桌面), 桌面 UA → PhoneAndroid
+                // (点了回手机); enabled = webViewRef != null
+                Button(action: toggleDesktopUa) {
+                    Image(systemName: uaToggleSymbol)
+                        .font(.system(size: 24))   // ← M3 Icon 24dp
+                        .frame(width: 40, height: 40)   // ← M3 IconButton 40×40
+                        .foregroundColor(webViewCoordinator == nil
+                            ? colors.onSurface.opacity(0.38)   // ← disabled: onSurface 38%
+                            : colors.onBackground)   // ← actionIconContentColor
+                }
+                .buttonStyle(SleepyButtonStyle())
+                .disabled(webViewCoordinator == nil)
+                // ← contentDescription: jw_toggle_mobile_ua / jw_toggle_desktop_ua
+                .accessibilityLabel(L10n.format(desktopUa ? "jw_toggle_mobile_ua"
+                                                          : "jw_toggle_desktop_ua"))
+                .accessibilityIdentifier("jw_toggle_ua")
+                // ← actions 刷新 IconButton: webViewRef?.reload(); 刷新进度表现由
+                // estimatedProgress KVO 驱动上方进度条(Android progress 1..99 同判)
+                Button(action: { webViewCoordinator?.reload() }) {
+                    Image(systemName: "arrow.clockwise")   // ← Icons.Outlined.Refresh
+                        .font(.system(size: 24))
+                        .frame(width: 40, height: 40)
+                        .foregroundColor(webViewCoordinator == nil
+                            ? colors.onSurface.opacity(0.38)
+                            : colors.onBackground)
+                }
+                .buttonStyle(SleepyButtonStyle())
+                .disabled(webViewCoordinator == nil)
+                .accessibilityLabel(L10n.format("jw_refresh"))   // ← contentDescription
+                .accessibilityIdentifier("jw_refresh")
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
@@ -115,6 +158,23 @@ struct JwWebViewLoginScreen: View {
                     }
             }
         }
+    }
+
+    // ← Icons.Outlined.Computer / PhoneAndroid; "iphone" SF Symbol 需 iOS16, 低版本回退
+    private var uaToggleSymbol: String {
+        guard desktopUa else { return "desktopcomputer" }
+        if #available(iOS 16.0, *) { return "iphone" }
+        return "phone"
+    }
+
+    // ← actions UA IconButton onClick: desktopUa = !desktopUa; uaSwitchReload++。
+    // Android 因 UA 仅创建期可靠而销毁重建 WebView(cookie 全局共享、当前 URL 保留);
+    // iOS 等价 customUserAgent(对 reload/后续导航生效)+ reload — cookie 走默认共享
+    // WKWebsiteDataStore。先设 UA 再 reload, 顺序不可反(← 创建期生效语义)
+    private func toggleDesktopUa() {
+        guard webViewCoordinator != nil else { return }
+        desktopUa.toggle()
+        webViewCoordinator?.applyDesktopUserAgent(desktopUa)
     }
 
     // ← CaptureBar onCapture
@@ -272,6 +332,20 @@ final class WebViewCoordinator: NSObject, WKNavigationDelegate, WKScriptMessageH
         webView?.evaluateJavaScript(js) { result, _ in
             completion?(result as? String)
         }
+    }
+
+    // ← Android UA 切换 = key(recreateKey) 销毁重建 (userAgentString 仅创建期可靠)。
+    // WKWebView 的 customUserAgent 设置后对 reload/后续导航即生效, set + reload 等价;
+    // 传 nil 恢复默认手机 UA(← Android 重建时不设 userAgentString)
+    func applyDesktopUserAgent(_ desktop: Bool) {
+        guard let wv = webView else { return }
+        wv.customUserAgent = desktop ? jwDesktopUserAgent : nil
+        wv.reload()
+    }
+
+    // ← actions 刷新 IconButton onClick: webViewRef?.reload()
+    func reload() {
+        webView?.reload()
     }
 
     // ← @JavascriptInterface onWiseduResult

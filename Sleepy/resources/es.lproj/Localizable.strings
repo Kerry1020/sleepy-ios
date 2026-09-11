@@ -650,6 +650,8 @@
 "jw_fetch_session_expired" = "会话已过期，请重新登录后再点导入";
 "jw_fetch_timeout" = "Tiempo de espera agotado: el servidor no respondió durante mucho tiempo. Verifique su red y reintente";
 "jw_refresh" = "Refresh";
+"jw_toggle_desktop_ua" = "Cambiar a la versión de escritorio del sitio";
+"jw_toggle_mobile_ua" = "Cambiar a la versión móvil del sitio";
 "license_contributor_section" = "Colaboradores";
 "settings_grid_alias" = "Nombres en la vista de cuadrícula";
 "settings_name_alias" = "Alias";

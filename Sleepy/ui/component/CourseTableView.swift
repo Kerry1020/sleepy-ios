@@ -21,6 +21,9 @@ struct TimeSlot {
     var nodeEnd: Int { nodeStart }  // 派生段(段内多节由调用方展开为单节行)
 
     var timeString: String { "\(displayStart)-\(displayEnd)" }
+
+    /// 渲染期占位节次(buildRenderSlotPlan 生成的空档): label 空 = 占位行 ← isPlaceholder
+    var isPlaceholder: Bool { label.isEmpty }
 }
 
 // MARK: - CardsGridView ← CardsGridView
@@ -264,13 +267,16 @@ private struct SingleTimeHeadCell: View {
     var cornerRatio: Double = 1.0
 
     var body: some View {
-        VStack(spacing: 1 * scale) {
-            Text(L10n.format("period_format_node", slot.label))
-                .font(.system(size: 10 * scale, weight: .semibold))
-                .foregroundColor(colors.onSurface)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-                .allowsTightening(true)
+        let isPh = slot.isPlaceholder
+        return VStack(spacing: 1 * scale) {
+            if !isPh {
+                Text(L10n.format("period_format_node", slot.label))
+                    .font(.system(size: 10 * scale, weight: .semibold))
+                    .foregroundColor(colors.onSurface)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .allowsTightening(true)
+            }
             Text(slot.timeString)
                 .font(.system(size: 9 * scale))
                 .foregroundColor(colors.onSurfaceVariant)
@@ -280,7 +286,8 @@ private struct SingleTimeHeadCell: View {
         }
         .padding(4 * scale)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(colors.surfaceContainerLow)
+        // ← Android: 占位节次 α0.5(只显时间,节号隐藏)
+        .background(colors.surfaceContainerLow.opacity(isPh ? 0.5 : 1))
         .cornerRadius(12 * scale * cornerRatio)
         .padding(2 * scale)
     }

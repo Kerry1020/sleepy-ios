@@ -650,6 +650,8 @@
 "jw_fetch_session_expired" = "会话已过期，请重新登录后再点导入";
 "jw_fetch_timeout" = "抓取逾時：教務伺服器長時間無回應，請檢查網路後重試";
 "jw_refresh" = "刷新當前頁面";
+"jw_toggle_desktop_ua" = "切換桌面版網頁";
+"jw_toggle_mobile_ua" = "切換手機版網頁";
 "license_contributor_section" = "貢獻者";
 "settings_grid_alias" = "網格視圖課程名";
 "settings_name_alias" = "別名";
