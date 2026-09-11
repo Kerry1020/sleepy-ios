@@ -43,7 +43,7 @@ struct ExportScreen: View {
                                         .foregroundColor(colors.onPrimaryContainer)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                     Image(systemName: "chevron.down")
-                                        .font(.system(size: 16))
+                                        .font(.system(size: 24)) // ← Android 默认 Icon 24dp(ExpandMore 无 size 修饰)
                                         .foregroundColor(colors.onPrimaryContainer)
                                         // ← Android contentDescription = export_pick_table
                                         .accessibilityLabel(L10n.format("export_pick_table"))
@@ -97,6 +97,7 @@ struct ExportScreen: View {
                 }
             } else {
                 Text(L10n.format("export_no_table"))
+                    .font(.system(size: 16)) // ← Android 默认 bodyLarge 16(未显式指定 style)
                     .foregroundColor(colors.onSurfaceVariant)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -106,7 +107,7 @@ struct ExportScreen: View {
         .overlay(alignment: .bottom) {
             if let msg = snackMessage {
                 Text(msg)
-                    .font(.system(size: 13))
+                    .font(.system(size: 14)) // ← Android Snackbar bodyMedium 14
                     .accessibilityIdentifier("export_snackbar")
                     .foregroundColor(colors.onSurface)
                     .padding(.horizontal, 16)
@@ -114,15 +115,15 @@ struct ExportScreen: View {
                     .background(colors.surfaceContainerHighest)
                     .cornerRadius(8)
                     .padding(.bottom, 12)
-                    .onAppear {
+                    .task(id: msg) {
                         // snackbar 2s(← Android LENGTH_SHORT)。UI 测试态延到 6s:
                         // 批量跑套件时模拟器负载高, 单次 XCUITest 快照可能 >2s,
                         // 负载尖峰会错过 snackbar 存活窗口造成批量 flake(单跑全绿)。
                         let life: Double = ProcessInfo.processInfo.arguments
                             .contains("-SLEEPY_UI_TEST_SEED") ? 6 : 2
-                        DispatchQueue.main.asyncAfter(deadline: .now() + life) {
-                            withAnimation { snackMessage = nil }
-                        }
+                        try? await Task.sleep(nanoseconds: UInt64(life * 1_000_000_000))
+                        guard !Task.isCancelled else { return }
+                        withAnimation { snackMessage = nil }
                     }
             }
         }
@@ -190,7 +191,7 @@ private struct ExportTablePickerSheet: View {
     var body: some View {
         VStack(spacing: 12) {
             Text(L10n.format("export_pick_table"))
-                .font(.system(size: 15, weight: .medium))
+                .font(.system(size: 24)) // ← Android AlertDialog 默认标题 headlineSmall 24 Regular
                 .foregroundColor(colors.onSurface)
                 .padding(.top, 16)
             ScrollView {
@@ -201,7 +202,7 @@ private struct ExportTablePickerSheet: View {
                             onSelect(table.id)
                         } label: {
                             HStack {
-                                VStack(alignment: .leading, spacing: 1) {
+                                VStack(alignment: .leading, spacing: 0) { // ← Android Column 默认 spacing 0
                                     Text(table.name)
                                         .font(.system(size: 14, weight: .medium))
                                         .foregroundColor(isSelected ? colors.onPrimaryContainer : colors.onSurface)
@@ -216,7 +217,7 @@ private struct ExportTablePickerSheet: View {
                                 Spacer()
                                 if isSelected {
                                     Image(systemName: "checkmark")
-                                        .font(.system(size: 15))
+                                        .font(.system(size: 18)) // ← Android Modifier.size(18.dp)
                                         .foregroundColor(colors.primary)
                                 }
                             }
@@ -277,7 +278,7 @@ private struct ExportItem: View {
         Button(action: onClick) {
             HStack(spacing: 16) {
                 Image(systemName: icon)
-                    .font(.system(size: 20))
+                    .font(.system(size: 24)) // ← Android 默认 Icon 24dp
                     .foregroundColor(colors.onPrimaryContainer)
                     .frame(width: 44, height: 44)
                     .background(colors.primaryContainer)

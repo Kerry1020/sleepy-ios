@@ -28,7 +28,15 @@ struct GeneralSettingsScreen: View {
     @State private var conflictStackInset: Double = AppPrefs.shared.getConflictStackInset()
     @State private var conflictRailInset: Double = AppPrefs.shared.getConflictRailInset()
     @State private var conflictFoldSize: Double = AppPrefs.shared.getConflictFoldSize()
-    @State private var highRefresh: Bool = AppPrefs.shared.isHighRefreshEnabled()
+    // ★ issue#8 主页显示 pill 组(← Android GeneralSettingsScreen 189-330)
+    @State private var weekUseAlias: Bool = AppPrefs.shared.isWeekUseAlias()
+    @State private var gridUseAlias: Bool = AppPrefs.shared.isGridUseAlias()
+    @State private var gridScale: Double = AppPrefs.shared.getGridScale()
+    @State private var weekScale: Double = AppPrefs.shared.getWeekScale()
+    @State private var gridCorner: Double = AppPrefs.shared.getGridCornerRatio()
+    @State private var weekTwoColumn: Bool = AppPrefs.shared.isWeekTwoColumn()
+    @State private var weekTwoColumnMode: String = AppPrefs.shared.getWeekTwoColumnMode()
+    @State private var weekHideEmptyDays: Bool = AppPrefs.shared.isWeekHideEmptyDays()
     /// 底栏样式 — false=贴底(默认), true=悬浮药丸(与 Android v1.0.45 b0f8280 对齐)
     @State private var navFloating: Bool = AppPrefs.shared.isNavDocked()
     // ★ v7.10.18: HolidaySettings 在本屏内 sheet 弹出,无需走 root enum
@@ -55,25 +63,32 @@ struct GeneralSettingsScreen: View {
                     SettingsTopBar(title: L10n.format("mine_general"), onBack: onDismiss)
                     ScrollView {
                         VStack(spacing: 16) {
-                            // ── 分组① 课程显示(11 子视图超 ViewBuilder 上限, 拆 Group) ──
+                            // ── 分组① 课程显示 — 嵌套 Group(单个 builder 上限 10 子视图);
+                            //    卡片顺序对齐 Android LazyColumn: 别名→pill→冲突→显示星期→启动页→统一底色 ──
                             Group {
-                                SectionHeader(title: L10n.format("appearance_section_display"))
+                                Group {
+                                    SectionHeader(title: L10n.format("appearance_section_display"))
 
-                                displayModeCard
-                                gridSubInfoCard
-                                visibleDaysCard
-                                startViewCard
-                                showDateCard
-                                courseColorlessCard
-                                conflictStyleCard
-                                holidayEntryCard
+                                    displayModeCard
+                                    gridSubInfoCard
+                                    weekAliasCard
+                                    gridAliasCard
+                                    pillCard
+                                    conflictStyleCard
+                                    visibleDaysCard
+                                    startViewCard
+                                    courseColorlessCard
+                                }
+                                Group {
+                                    holidayEntryCard
+                                }
                             }
 
                             MajorDivider()
 
-                            // ── 分组② 画面(高刷率 + 底栏样式) — ← Android v1.0.45 edec776/b0f8280 ──
+                            // ── 分组② 画面(底栏样式) — ← Android v1.0.45 b0f8280;
+                            //    高刷新率行已删:iOS 无公开刷率 API,系统自动调度,纯对齐开关=无效 placebo ──
                             DisplaySection(
-                                highRefresh: $highRefresh,
                                 navFloating: $navFloating,
                                 onNavFloatingChange: { on in
                                     navFloating = on
@@ -195,21 +210,6 @@ struct GeneralSettingsScreen: View {
         )
     }
 
-    // 课表显示日期: 开关
-    private var showDateCard: some View {
-        SettingsCard(title: L10n.format("settings_show_date"),
-                     expanded: expandedSections.contains("showDate"),
-                     onToggle: { toggleSection("showDate") }) {
-            SettingToggleRow(label: L10n.format("settings_show_date"),
-                             subtitle: L10n.format("settings_show_date_sub"),
-                             checked: showDate) {
-                showDate = $0
-                prefs.setShowDate($0)
-                refreshWidgets()
-            }
-        }
-    }
-
     // 课程胶囊统一底色: 标题行开关 — ← Android flat title-plus-switch row
     private var courseColorlessCard: some View {
         HStack {
@@ -289,18 +289,123 @@ struct GeneralSettingsScreen: View {
         }
     }
 
-    // ← 节假日课程灰显: 点击进入二级页(Android General 页同款入口卡)
+    // ★ issue#26 课程别名: 周视图场景 原名/别名 二选一(← Android SettingsFlatCard)
+    private var weekAliasCard: some View {
+        SettingsFlatCard(
+            title: L10n.format("settings_week_alias"),
+            options: [
+                L10n.format("settings_name_original"),
+                L10n.format("settings_name_alias")
+            ],
+            selectedIndex: Binding(
+                get: { weekUseAlias ? 1 : 0 },
+                set: { idx in
+                    let v = idx == 1
+                    guard v != weekUseAlias else { return }
+                    weekUseAlias = v
+                    prefs.setWeekUseAlias(v)
+                }
+            ),
+            onSelect: { _ in }
+        )
+    }
+
+    // ★ issue#26 课程别名: 网格场景 原名/别名 二选一
+    private var gridAliasCard: some View {
+        SettingsFlatCard(
+            title: L10n.format("settings_grid_alias"),
+            options: [
+                L10n.format("settings_name_original"),
+                L10n.format("settings_name_alias")
+            ],
+            selectedIndex: Binding(
+                get: { gridUseAlias ? 1 : 0 },
+                set: { idx in
+                    let v = idx == 1
+                    guard v != gridUseAlias else { return }
+                    gridUseAlias = v
+                    prefs.setGridUseAlias(v)
+                }
+            ),
+            onSelect: { _ in }
+        )
+    }
+
+    // ★ issue#8 主页显示 pill 组: 网格/周视图缩放 + 圆角比例 + 周视图两栏 + 隐藏无课日
+    // (← Android SettingsCard "settings_pill"; 滑杆 5% 吸附, 拖完落盘)
+    private var pillCard: some View {
+        SettingsCard(title: L10n.format("settings_pill"),
+                     expanded: expandedSections.contains("gridScale"),
+                     onToggle: { toggleSection("gridScale") }) {
+            // 内容 10 条 — 包 Group(builder 上限);行间距对齐 Android(标签 bottom 8/8/4)
+            Group {
+                PillSliderRow(label: L10n.format("settings_pill_scale"),
+                              value: $gridScale, range: AppPrefs.GRID_SCALE_RANGE) {
+                    prefs.setGridScale(gridScale)
+                }
+                SubDivider()
+                PillSliderRow(label: L10n.format("settings_pill_week_scale"),
+                              value: $weekScale, range: AppPrefs.GRID_SCALE_RANGE) {
+                    prefs.setWeekScale(weekScale)
+                }
+                SubDivider()
+                PillSliderRow(label: L10n.format("settings_pill_corner"),
+                              value: $gridCorner, range: AppPrefs.CORNER_RATIO_RANGE,
+                              labelSpacing: 4) {
+                    prefs.setGridCornerRatio(gridCorner)
+                }
+                SubDivider()
+                SettingToggleRow(label: L10n.format("settings_week_two_column"),
+                                 subtitle: "",
+                                 checked: weekTwoColumn) {
+                    weekTwoColumn = $0
+                    prefs.setWeekTwoColumn($0)
+                }
+                // 分栏标准 — 两栏开启时才需要选
+                if weekTwoColumn {
+                    SubDivider()
+                    DisplayModeOption(label: L10n.format("settings_week_two_column_days"),
+                                      subtitle: "",
+                                      selected: weekTwoColumnMode == "days") {
+                        weekTwoColumnMode = "days"
+                        prefs.setWeekTwoColumnMode("days")
+                    }
+                    SubDivider()
+                    DisplayModeOption(label: L10n.format("settings_week_two_column_balance"),
+                                      subtitle: "",
+                                      selected: weekTwoColumnMode == "balance") {
+                        weekTwoColumnMode = "balance"
+                        prefs.setWeekTwoColumnMode("balance")
+                    }
+                }
+                // 隐藏无课日 — 与两栏无关, 单栏/两栏都生效(单栏按安卓语义不分栏不过滤)
+                SubDivider()
+                SettingToggleRow(label: L10n.format("settings_week_hide_empty"),
+                                 subtitle: "",
+                                 checked: weekHideEmptyDays) {
+                    weekHideEmptyDays = $0
+                    prefs.setWeekHideEmptyDays($0)
+                }
+            }
+            SubDivider()
+            // 课表显示日期 — Android 此开关位于 pill 卡末尾, 无副标题
+            SettingToggleRow(label: L10n.format("settings_show_date"),
+                             subtitle: "",
+                             checked: showDate) {
+                showDate = $0
+                prefs.setShowDate($0)
+                refreshWidgets()
+            }
+        }
+    }
+
+    // ← 节假日课程灰显: 点击进入二级页 — ← Android GeneralSettingsScreen.kt: titleSmall 单行, 无副标题
     private var holidayEntryCard: some View {
         Button { holidaySettingsItem = HolidaySettingsItem() } label: {
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(L10n.format("settings_holiday_title"))
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(colors.onSurface)
-                    Text(L10n.format("settings_holiday_entry_sub"))
-                        .font(.system(size: 12))
-                        .foregroundColor(colors.onSurfaceVariant)
-                }
+                Text(L10n.format("settings_holiday_title"))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(colors.onSurface)
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.system(size: 20))
@@ -320,6 +425,35 @@ struct GeneralSettingsScreen: View {
     }
 }
 
+// issue#8 pill 拖杆行: 左侧百分比标签, 5% 吸附, 拖完落盘 — ← Android (it*20).roundToInt()/20f
+private struct PillSliderRow: View {
+    @Environment(\.localWakeUpColors) private var colors
+    let label: String
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+    /// 标签与滑杆间距 — Android 三行 label bottomPadding 8/8/4(圆角行为 4)
+    var labelSpacing: CGFloat = 8
+    let onFinished: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: labelSpacing) {
+            Text(label)
+                .font(.system(size: 16))
+                .foregroundColor(colors.onSurface)
+            HStack(spacing: 8) {
+                Text("\(Int((value * 100).rounded()))%")
+                    .font(.system(size: 14, weight: .medium)) // ← Android labelLarge 14
+                    .foregroundColor(colors.primary)
+                    .frame(minWidth: 52, alignment: .leading)
+                Slider(value: $value, in: range, step: 0.05) { _ in
+                    onFinished()
+                }
+                .tint(colors.primary)
+            }
+        }
+    }
+}
+
 // 冲突拖杆行: 左侧量值标签(dp), 右侧 Slider — ← Android Slider 拖完落盘
 private struct ConflictSliderRow: View {
     @Environment(\.localWakeUpColors) private var colors
@@ -335,7 +469,7 @@ private struct ConflictSliderRow: View {
                 .foregroundColor(colors.onSurface)
             HStack(spacing: 8) {
                 Text("\(Int(value.rounded()))dp")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 14, weight: .medium)) // ← Android labelLarge 14
                     .foregroundColor(colors.primary)
                     .frame(minWidth: 52, alignment: .leading)
                 Slider(value: $value, in: range) { _ in
@@ -344,8 +478,6 @@ private struct ConflictSliderRow: View {
                 .tint(colors.primary)
             }
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 4)
     }
 }
 
@@ -438,7 +570,7 @@ private struct WidgetSection: View {
             Button { showManage = true } label: {
                 HStack {
                     Text(L10n.format("widget_manage_entry"))
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 14, weight: .medium)) // ← Android titleSmall 14sp Medium
                         .foregroundColor(colors.onSurface)
                     Spacer()
                     Image(systemName: "chevron.right")
@@ -510,53 +642,36 @@ private struct LanguageSection: View {
     }
 }
 
-// ── 分组② 画面: 高刷新率 + 底栏样式 ──
+// ── 分组② 画面: 底栏样式 ──
 private struct DisplaySection: View {
     @Environment(\.localWakeUpColors) private var colors
-    @Binding var highRefresh: Bool
     @Binding var navFloating: Bool
     let onNavFloatingChange: (Bool) -> Void
 
     var body: some View {
         VStack(spacing: 16) {
             SectionHeader(title: L10n.format("settings_section_display"))
-            VStack(spacing: 0) {
-                SettingToggleRow(
-                    label: L10n.format("settings_high_refresh"),
-                    subtitle: "",
-                    checked: highRefresh
-                ) { enabled in
-                    highRefresh = enabled
-                    AppPrefs.shared.setHighRefreshEnabled(enabled)
-                    Task { @MainActor in
-                        _ = HighRefreshRate.apply(enabled: enabled)
-                    }
+            // ← Android SettingsFlatCard(padding h16/v14, Column spacedBy(4), 标题 titleSmall 14sp SemiBold)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L10n.format("settings_nav_style"))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(colors.onSurface)
+                Picker("", selection: Binding(
+                    get: { navFloating },
+                    set: { onNavFloatingChange($0) }
+                )) {
+                    // 标签顺序: 贴底(默认) → 悬浮;Picker 用 Bool tag 配 (false, true)
+                    // (← Android GeneralSettingsScreen.kt selectedKey = if (navDock) 1 else 0:
+                    //  选项索引 0=docked, 1=floating;navDock=true 即悬浮药丸)
+                    Text(L10n.format("settings_nav_style_docked")).tag(false)
+                    Text(L10n.format("settings_nav_style_floating")).tag(true)
                 }
-                .accessibilityIdentifier("settings_high_refresh")
-
-                SubDivider()
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(L10n.format("settings_nav_style"))
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(colors.onSurface)
-                    Picker("", selection: Binding(
-                        get: { navFloating },
-                        set: { onNavFloatingChange($0) }
-                    )) {
-                        // 标签顺序: 贴底(默认) → 悬浮;Picker 用 Bool tag 配 (false, true)
-                        // (← Android GeneralSettingsScreen.kt selectedKey = if (navDock) 1 else 0:
-                        //  选项索引 0=docked, 1=floating;navDock=true 即悬浮药丸)
-                        Text(L10n.format("settings_nav_style_docked")).tag(false)
-                        Text(L10n.format("settings_nav_style_floating")).tag(true)
-                    }
-                    .pickerStyle(.segmented)
-                    .accessibilityIdentifier("settings_nav_style")
-                }
-                .padding(.vertical, 10)
-                .padding(.horizontal, 4)
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("settings_nav_style")
             }
-            .padding(16)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(colors.surfaceContainer)
             .cornerRadius(SleepyShapes.large)
         }

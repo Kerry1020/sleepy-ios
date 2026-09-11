@@ -88,8 +88,8 @@ private struct WeekViewDayColumn: View {
             Text(weekDayLabels[day.dayOfWeek])
                 .font(.system(size: 12, weight: .bold))
                 .foregroundColor(isToday ? s.onPrimaryContainer : s.onSurface)
-                .padding(.top, 12)
-                .padding(.bottom, 2)
+                .padding(.top, 1)   // 安卓标题基线 colTop+12 (字形顶≈+4)
+                .padding(.bottom, 11) // chip 顶 colTop+26
 
             if !day.courses.isEmpty {
                 // 课程数量 chip
@@ -111,16 +111,17 @@ private struct WeekViewDayColumn: View {
                             .foregroundColor(isToday
                                 ? s.onPrimaryContainer.opacity(0.82)
                                 : s.onSurfaceVariant)
-                            .multilineTextAlignment(.center)
-                            .lineLimit(2)   // wrapMax2Lines → 最多2行,超出截断
-                            .minimumScaleFactor(0.8)
-                            .frame(maxWidth: .infinity)
+                            .multilineTextAlignment(.leading) // 安卓 Paint 默认 LEFT, 画在 x+textPad
+                            .lineLimit(2)   // wrapMax2Lines → 最多2行,超出截断 (安卓只截断不缩字)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 4) // textPad 4dp
                         // 课程间分隔: 开关ON→1dp@40%线; OFF→纯3dp留白(由 VStack spacing 提供)
                         if showSeparator && idx < min(day.courses.count, 5) - 1 {
                             Rectangle()
                                 .fill(s.onSurfaceVariant.opacity(0.4))
                                 .frame(height: 1)
                                 .padding(.horizontal, 4)
+                                .padding(.vertical, -1.5) // 安卓: 间距 courseGap/2(1.5) + 线1 + 1.5
                         }
                     }
                 }

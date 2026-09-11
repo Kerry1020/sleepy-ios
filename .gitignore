@@ -20,3 +20,8 @@ DerivedData/
 tasks/
 Sleepy-unsigned.zip
 SPEC.md
+
+# SOP & 内部规范 (用户私有, 永不入库)
+BRANCHING.md
+docs/sop/commit-sop.md
+docs/sop/release-sop.md

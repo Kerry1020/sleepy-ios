@@ -45,6 +45,11 @@ struct CourseEntity: Codable, FetchableRecord, MutablePersistableRecord, Identif
     ///   1 = AUTO   — 自动色,渲染时按 row 自身 id 相对同组行序号实时算
     ///   2 = CUSTOM — 自定义色,color 字段存十六进制
     var colorMode: Int = 0
+    /// 非常规节次卡 (issue#23): startNode 为边缘编号(早课/午休/晚课)时为 true,
+    /// 渲染走独立卡片通道; 保存时由 startNode 推导回写防漂移
+    var isIrregularNode: Bool = false
+    /// 非常规时间卡 (issue#23): true = 用 startTime/endTime 直读时间(吞并旧 ownTime 语义)
+    var isIrregularTime: Bool = false
     /// 是否自定义时间 (即 startTime/endTime 由用户设置而非系统)
     /// 保留字段以兼容 WakeUp 旧 db
     var ownTime: Bool = false
@@ -52,6 +57,8 @@ struct CourseEntity: Codable, FetchableRecord, MutablePersistableRecord, Identif
     var startTime: String = ""
     /// 自定义结束时间 (HH:mm), 仅 ownTime=true 时使用
     var endTime: String = ""
+    /// 课程别名 (issue#26): 非空时界面显示此名, 课表数据仍用 courseName
+    var alias: String = ""
     var credit: Double = 0
     var level: Int = 0
     /// 主键 autoGenerate
@@ -80,9 +87,12 @@ struct CourseEntity: Codable, FetchableRecord, MutablePersistableRecord, Identif
         container["type"] = type
         container["color"] = color
         container["colorMode"] = colorMode
+        container["isIrregularNode"] = isIrregularNode
+        container["isIrregularTime"] = isIrregularTime
         container["ownTime"] = ownTime
         container["startTime"] = startTime
         container["endTime"] = endTime
+        container["alias"] = alias
         container["credit"] = credit
         container["level"] = level
     }

@@ -2,7 +2,8 @@
 // Room @Database(version=4) → GRDB。建表 SQL 与 Room schema 逐列对齐
 // (列名/类型亲和/索引/FK CASCADE — Room 注解生成语义手工落 SQL)。
 // fallbackToDestructiveMigration → migrator 语义等价(降级/未知版本重建);
-// v4 = 1.0.52 issue#22 colorMode 列(见下方 v4.addColorMode)。
+// v4 = 1.0.52 issue#22 colorMode; v5 = issue#23 isIrregularNode/isIrregularTime;
+// v6 = issue#26 alias (与 Android Migrations.kt 一一对应)。
 
 import Foundation
 import GRDB
@@ -105,6 +106,19 @@ final class AppDatabase {
         // ← MIGRATION_3_4 (1.0.52 issue#22): courses 加 colorMode 列, 旧数据全默认 0=GROUP
         m.registerMigration("v4.addColorMode") { db in
             try db.execute(sql: "ALTER TABLE courses ADD COLUMN colorMode INTEGER NOT NULL DEFAULT 0")
+        }
+
+        // ← MIGRATION_4_5 (issue#23 逐卡非常规重构): isIrregularNode / isIrregularTime
+        //    ownTime=1 旧行 isIrregularTime=1 (旧「自定义时间」语义并入新标志)
+        m.registerMigration("v5.addIrregular") { db in
+            try db.execute(sql: "ALTER TABLE courses ADD COLUMN isIrregularNode INTEGER NOT NULL DEFAULT 0")
+            try db.execute(sql: "ALTER TABLE courses ADD COLUMN isIrregularTime INTEGER NOT NULL DEFAULT 0")
+            try db.execute(sql: "UPDATE courses SET isIrregularTime = 1 WHERE ownTime = 1")
+        }
+
+        // ← MIGRATION_5_6 (issue#26 课程别名): alias 列, 旧行全空 → 处处显示原名
+        m.registerMigration("v6.addAlias") { db in
+            try db.execute(sql: "ALTER TABLE courses ADD COLUMN alias TEXT NOT NULL DEFAULT ''")
         }
 
         return m

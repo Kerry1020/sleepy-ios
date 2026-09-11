@@ -58,6 +58,7 @@ struct TodayWidgetEntryView: View {
                 Text("\(L10n.format("today_today")) · \(data.dayName)")
                     .font(.system(size: 13, weight: .bold))
                     .foregroundColor(s.primary)
+                    .lineLimit(1) // 安卓 ellipsize 单行 (min 预算 40dp)
                 Spacer()
                 if showDate {
                     Text(data.dateLabel)
@@ -65,7 +66,7 @@ struct TodayWidgetEntryView: View {
                         .foregroundColor(s.onSurfaceVariant)
                 }
             }
-            .padding(.bottom, 10)
+            .padding(.bottom, 8.5) // 安卓头部前进 24dp: pad14+行高≈15.5+8.5≈38
 
             if !data.hasTable {
                 Text(L10n.format("widget_create_schedule"))

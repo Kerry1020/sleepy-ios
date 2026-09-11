@@ -30,7 +30,7 @@ struct JwWebViewLoginScreen: View {
             HStack {
                 Button(action: onDismiss) {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: 20, weight: .medium))
+                        .font(.system(size: 24))   // ← Android ArrowBack 默认 24dp regular
                         .foregroundColor(colors.onBackground)
                 }
                 .buttonStyle(SleepyButtonStyle())
@@ -78,14 +78,15 @@ struct JwWebViewLoginScreen: View {
                 Button(action: capture) {
                     HStack(spacing: 6) {
                         Image(systemName: "checkmark.circle")
+                            .font(.system(size: 24))   // ← Android CheckCircle 默认 24dp
                         Text(L10n.format("jw_import_page"))
                     }
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(webViewCoordinator == nil
                         ? colors.onSurface.opacity(0.38)   // ← Android disabled: onSurface 38%
                         : colors.onPrimary)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
+                    .padding(.horizontal, 24)   // ← M3 Button ContentPadding 24/8 (高 40)
+                    .padding(.vertical, 8)
                     .background(webViewCoordinator == nil
                         ? colors.onSurface.opacity(0.12)   // ← Android disabled: onSurface 12% 容器
                         : colors.primary)
@@ -100,17 +101,17 @@ struct JwWebViewLoginScreen: View {
         .overlay(alignment: .bottom) {
             if let msg = snackMessage {
                 Text(msg)
-                    .font(.system(size: 13))
+                    .font(.system(size: 14)) // ← Android Snackbar bodyMedium 14
                     .foregroundColor(colors.onSurface)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .background(colors.surfaceContainerHighest)
                     .cornerRadius(8)
                     .padding(.bottom, 80)
-                    .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                            withAnimation { snackMessage = nil }
-                        }
+                    .task(id: msg) {
+                        try? await Task.sleep(nanoseconds: 2_500_000_000)
+                        guard !Task.isCancelled else { return }
+                        withAnimation { snackMessage = nil }
                     }
             }
         }

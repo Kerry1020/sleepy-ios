@@ -62,6 +62,7 @@ private struct ManualTimeSlotEditor: View {
                             .font(.system(size: 14))   // ← TextButton labelLarge 14sp
                     }
                     .foregroundColor(colors.primary)
+                    .frame(minHeight: 40)   // ← M3 TextButton 最小高 40dp
                 }
                 .buttonStyle(SleepyButtonStyle())
                 .accessibilityIdentifier("slot_add")

@@ -11,16 +11,20 @@ struct AppearanceScreen: View {
     let onDismiss: () -> Void
     var themeMode: String = AppPrefs.THEME_MODE_SYSTEM
     var onThemeModeChange: (String) -> Void = { _ in }
+    // ← Android themeKeyFlow.collectAsState: 选色即时生效,经 AppRoot 回写 themeKey
+    var onThemeKeyChange: () -> Void = {}
 
     @State private var currentKey: String
     private let prefs = AppPrefs.shared
 
     init(onDismiss: @escaping () -> Void,
          themeMode: String = AppPrefs.THEME_MODE_SYSTEM,
-         onThemeModeChange: @escaping (String) -> Void = { _ in }) {
+         onThemeModeChange: @escaping (String) -> Void = { _ in },
+         onThemeKeyChange: @escaping () -> Void = {}) {
         self.onDismiss = onDismiss
         self.themeMode = themeMode
         self.onThemeModeChange = onThemeModeChange
+        self.onThemeKeyChange = onThemeKeyChange
         _currentKey = State(initialValue: AppPrefs.shared.getThemeKey())
     }
 
@@ -35,6 +39,7 @@ struct AppearanceScreen: View {
                     SystemThemeCard(selected: currentKey == ThemePresets.KEY_SYSTEM) {
                         prefs.setThemeKey(ThemePresets.KEY_SYSTEM)
                         currentKey = ThemePresets.KEY_SYSTEM
+                        onThemeKeyChange()
                         refreshWidgets()
                     }
 
@@ -48,6 +53,7 @@ struct AppearanceScreen: View {
                                     PresetThemeCard(preset: p, selected: currentKey == p.key) {
                                         prefs.setThemeKey(p.key)
                                         currentKey = p.key
+                                        onThemeKeyChange()
                                         refreshWidgets()
                                     }
                                 }
@@ -91,7 +97,6 @@ struct AppearanceScreen: View {
                         .background(colors.surfaceContainer)
                         .cornerRadius(SleepyShapes.medium)
                     }
-                    .padding(.top, 4)
                 }
                 .padding(16)
             }

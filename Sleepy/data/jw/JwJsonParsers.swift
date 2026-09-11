@@ -28,7 +28,7 @@ func jint(_ o: [String: Any]?, _ key: String) -> Int? {
 // 字段映射: KCM→name SKJS→teacher JASMC→room SKXQ→day KSJC→startNode JSJC→endNode ZCMC→周次段。
 // 支持三形态 ZCMC: 范围"1-16周"/单双周"1-10周(单)"/离散"2,4,6周"。
 // 单/双周端点收敛到第一个匹配周次(SEUTimetable parseWeekRange 语义)。
-final class JwSeuParser: JwParser {
+final class JwSeuParser: JwParser, JwParserConfidenceReporting {
 
     let source: String
 
@@ -36,7 +36,7 @@ final class JwSeuParser: JwParser {
         self.source = source
     }
 
-    func generateCourseList() -> [JwCourse] {
+    func generateCourseList() throws -> [JwCourse] {
         guard let data = source.trimmingCharacters(in: .whitespacesAndNewlines).data(using: .utf8),
               let root = try? JSONSerialization.jsonObject(with: data) else { return [] }
 
@@ -114,7 +114,7 @@ final class JwSeuParser: JwParser {
         return out
     }
 
-    func confidence() -> Int {
+    var confidenceValue: Int {
         let quoted = source.contains("\"KCM\"") && source.contains("\"ZCMC\"")
         let bare = source.contains("KCM") && source.contains("ZCMC")
         if quoted { return 90 }
@@ -122,7 +122,7 @@ final class JwSeuParser: JwParser {
         return 0
     }
 
-    func matchedFeatures() -> [String] {
+    var matchedFeatureList: [String] {
         var out: [String] = []
         if source.contains("\"KCM\"") { out.append("KCM") }
         if source.contains("\"ZCMC\"") { out.append("ZCMC") }
@@ -136,7 +136,7 @@ final class JwSeuParser: JwParser {
 // 数据源: /classroom-web/classroom/searchTimetable 返回 kbList 数组。
 // kcb 是 "课名<br>周次串<br>老师<br>教室" 拼接的 HTML 片段(以 zwf 截断);
 // dsz="0"单/"1"双, djj=起始节, skcd=节次长度。单/双周端点修正由本 parser 负责。
-final class JwZjuParser: JwParser {
+final class JwZjuParser: JwParser, JwParserConfidenceReporting {
 
     let source: String
 
@@ -144,7 +144,7 @@ final class JwZjuParser: JwParser {
         self.source = source
     }
 
-    func generateCourseList() -> [JwCourse] {
+    func generateCourseList() throws -> [JwCourse] {
         guard let data = source.data(using: .utf8),
               let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
               let kbList = jsonArr(root["kbList"]) else { return [] }
@@ -211,13 +211,13 @@ final class JwZjuParser: JwParser {
         return out
     }
 
-    func confidence() -> Int {
+    var confidenceValue: Int {
         guard let data = source.data(using: .utf8),
               let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return 0 }
         return root["kbList"] is [Any] ? 90 : 0
     }
 
-    func matchedFeatures() -> [String] {
+    var matchedFeatureList: [String] {
         guard let data = source.data(using: .utf8),
               let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
               root["kbList"] is [Any] else { return [] }
@@ -229,7 +229,7 @@ final class JwZjuParser: JwParser {
 //
 // JSON 路径: x.studentTableVm.activities[]。weeksStr 一次性给完整周次串:
 // "1-16"/"1-16单"/"1-16双"/"2,4,6..."。lessonCode 4 位数字, 1-2 位=startNode, 3-4 位=endNode。
-final class JwUstcParser: JwParser {
+final class JwUstcParser: JwParser, JwParserConfidenceReporting {
 
     let source: String
 
@@ -237,7 +237,7 @@ final class JwUstcParser: JwParser {
         self.source = source
     }
 
-    func generateCourseList() -> [JwCourse] {
+    func generateCourseList() throws -> [JwCourse] {
         guard let data = source.data(using: .utf8),
               let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
               let tableVm = jsonObj(root["studentTableVm"]),
@@ -320,13 +320,13 @@ final class JwUstcParser: JwParser {
         return (start, end)
     }
 
-    func confidence() -> Int {
+    var confidenceValue: Int {
         guard let data = source.data(using: .utf8),
               let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return 0 }
         return root["studentTableVm"] is [String: Any] ? 90 : 0
     }
 
-    func matchedFeatures() -> [String] {
+    var matchedFeatureList: [String] {
         guard let data = source.data(using: .utf8),
               let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
               root["studentTableVm"] is [String: Any] else { return [] }
@@ -339,7 +339,7 @@ final class JwUstcParser: JwParser {
 // JSON 路径: x.dateList[0].selectCourseList[].timeAndPlaceList[]。
 // weekDescription 剥非数字/横/逗后展开(上游 replaceAll 语义) — 单/双信息协议层丢失, 强制 type=0。
 // classDay 0-6 → day 1-7。
-final class JwScuParser: JwParser {
+final class JwScuParser: JwParser, JwParserConfidenceReporting {
 
     let source: String
 
@@ -347,7 +347,7 @@ final class JwScuParser: JwParser {
         self.source = source
     }
 
-    func generateCourseList() -> [JwCourse] {
+    func generateCourseList() throws -> [JwCourse] {
         guard let data = source.data(using: .utf8),
               let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
               let dateList = jsonArr(root["dateList"]),
@@ -403,7 +403,7 @@ final class JwScuParser: JwParser {
         return out
     }
 
-    func confidence() -> Int {
+    var confidenceValue: Int {
         guard let data = source.data(using: .utf8),
               let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
               let dl = jsonArr(root["dateList"]), !dl.isEmpty,
@@ -412,7 +412,7 @@ final class JwScuParser: JwParser {
         return 90
     }
 
-    func matchedFeatures() -> [String] {
+    var matchedFeatureList: [String] {
         guard let data = source.data(using: .utf8),
               let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
               let dl = jsonArr(root["dateList"]), !dl.isEmpty,
@@ -426,7 +426,7 @@ final class JwScuParser: JwParser {
 //
 // JSON 路径: x.datas.arrangedList[]。titleDetail[0]=汇总; titleDetail[1..]="周数串 教室"。
 // teacher 从 weeksAndTeachers "/" 末段剥 [主讲] 标记。单/双周协议层丢失, 强制 type=0。
-final class JwNeuParser: JwParser {
+final class JwNeuParser: JwParser, JwParserConfidenceReporting {
 
     let source: String
 
@@ -434,7 +434,7 @@ final class JwNeuParser: JwParser {
         self.source = source
     }
 
-    func generateCourseList() -> [JwCourse] {
+    func generateCourseList() throws -> [JwCourse] {
         guard let data = source.data(using: .utf8),
               let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
               let datas = jsonObj(root["datas"]),
@@ -526,7 +526,7 @@ final class JwNeuParser: JwParser {
         return out
     }
 
-    func confidence() -> Int {
+    var confidenceValue: Int {
         guard let data = source.data(using: .utf8),
               let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
               let datas = jsonObj(root["datas"]),
@@ -534,7 +534,7 @@ final class JwNeuParser: JwParser {
         return 90
     }
 
-    func matchedFeatures() -> [String] {
+    var matchedFeatureList: [String] {
         guard let data = source.data(using: .utf8),
               let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
               let datas = jsonObj(root["datas"]),

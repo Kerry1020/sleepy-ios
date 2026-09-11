@@ -52,7 +52,7 @@ struct TwoDayWidgetEntryView: View {
             Text(L10n.format("widget_twoday_label"))
                 .font(.system(size: 13, weight: .bold))
                 .foregroundColor(s.primary)
-                .padding(.bottom, 8)
+                .padding(.bottom, 6.5) // 安卓 y+=22 − 13sp 行高≈15.5
 
             if !data.hasTable || data.days.isEmpty {
                 Text(L10n.format("widget_create_schedule"))
@@ -103,7 +103,7 @@ private struct TwoDayColumn: View {
         let s = scheme
         VStack(alignment: .leading, spacing: 0) {
             // 列标题: 今天/明天/星期 + 日期(★ showDate=false 时隐藏)
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) { // 安卓日期间隔 titleW+6dp
                 Text(title)
                     .font(.system(size: 12, weight: .bold))
                     .foregroundColor(s.primary)
@@ -113,7 +113,8 @@ private struct TwoDayColumn: View {
                         .foregroundColor(s.onSurfaceVariant)
                 }
             }
-            .padding(.bottom, 8)
+            .padding(.top, 0.5)  // 安卓标题基线 listTop+12 (字形顶≈+3.5)
+            .padding(.bottom, 5) // 课程起点 listTop+20
 
             if day.courses.isEmpty {
                 Text(L10n.format("no_course"))
@@ -129,7 +130,7 @@ private struct TwoDayColumn: View {
                                          colorless: colorless, fontSizeSp: 10,
                                          displayMode: displayMode,
                                          groupRows: day.courses.filter { $0.groupId == course.groupId })
-                            .frame(height: 36)
+                            .frame(height: 44) // 安卓胶囊 maxRowH 44dp
                     }
                     if day.courses.count > maxCourses {
                         Spacer(minLength: 0)

@@ -122,8 +122,8 @@ private struct BreakGroupSection: View {
         let n = max(totalPeriods - 1, 0)
 
         VStack(alignment: .leading, spacing: 8) {
-            // Header: 名称 + 分钟数 + 删除
-            HStack(spacing: 8) {
+            // Header ← Android Row(无 spacedBy,间距0): color chip + 名称(weight(1f)) + 显式 8dp Spacer + 分钟数 + 删除
+            HStack(spacing: 0) {
                 // 颜色 chip
                 Circle()
                     .fill(groupColor)
@@ -131,7 +131,10 @@ private struct BreakGroupSection: View {
                 Text(breakOption.displayLabel(index: groupIdx))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(colors.onSurface)
+                    .padding(.leading, 8)                          // ← Android chip 后显式 Spacer(8.dp)
+                    .frame(maxWidth: .infinity, alignment: .leading) // ← Android 名称 weight(1f)
                 Spacer()
+                    .frame(width: 8)
                 NumberField(label: "", unit: L10n.format("unit_minutes"),
                             value: breakOption.minutes, onValueChange: onMinuteChange)
                     .frame(width: 110)
@@ -296,6 +299,7 @@ private struct NumberField: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading) // ← Android TextField weight(1f) 填满 + filled 高 56dp
         .background(colors.surfaceContainer)
         .cornerRadius(SleepyTheme.fieldShape)
         // ← Android NumberField = filled TextField, 无描边(Material3 filled 无 border)
@@ -323,6 +327,7 @@ private struct AddBreakChip: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
+            .frame(minHeight: 32)   // ← M3 FilterChip 标准高 32dp
             .background(color.opacity(SleepyTheme.Alpha.tinted))
             .cornerRadius(8)
         }

@@ -61,9 +61,11 @@ struct SettingsCard<Content: View>: View {
             .accessibilityIdentifier("card_\(title)")
             // 展开动画: 高度+淡入同拍
             if expanded {
-                VStack(alignment: .leading, spacing: 4) {
+                // ← Android AnimatedVisibility 内 Column{Spacer(4); content()}: 标题→内容总间距 8, 内容子项间距 0
+                VStack(alignment: .leading, spacing: 0) {
                     content()
                 }
+                .padding(.top, 4)
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
@@ -128,9 +130,12 @@ struct DisplayModeOption: View {
                     Text(label)
                         .font(.system(size: 16))
                         .foregroundColor(selected ? colors.primary : colors.onSurface)
-                    Text(subtitle)
-                        .font(.system(size: 12))
-                        .foregroundColor(colors.onSurfaceVariant)
+                    // ← Android if (subtitle.isNotEmpty())
+                    if !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(.system(size: 12))
+                            .foregroundColor(colors.onSurfaceVariant)
+                    }
                 }
                 Spacer()
                 if selected {
@@ -161,9 +166,12 @@ struct SettingToggleRow: View {
                 Text(label)
                     .font(.system(size: 16))
                     .foregroundColor(colors.onSurface)
-                Text(subtitle)
-                    .font(.system(size: 12))
-                    .foregroundColor(colors.onSurfaceVariant)
+                // ← Android if (subtitle != null)
+                if !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.system(size: 12))
+                        .foregroundColor(colors.onSurfaceVariant)
+                }
             }
             Spacer()
             Toggle("", isOn: Binding(

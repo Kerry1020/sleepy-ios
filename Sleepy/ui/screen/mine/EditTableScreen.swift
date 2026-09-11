@@ -33,7 +33,7 @@ struct EditTableScreen: View {
     @State private var loadedTableId: Int64? = nil
     @State private var name = ""
     @State private var startDate = ""
-    @State private var maxWeekText = ""
+    @State private var maxWeek = 20
     @State private var timeSlotsExpanded = false
     @State private var error: String? = nil
     @State private var showDeleteConfirm = false
@@ -87,10 +87,21 @@ struct EditTableScreen: View {
                             FieldTextField(text: $name, label: L10n.format("edit_table_name"))
                             FieldTextField(text: $startDate, label: L10n.format("edit_table_start_date"),
                                            placeholder: L10n.format("edit_table_start_date_hint"))
-                            FieldTextField(text: Binding(
-                                get: { maxWeekText },
-                                set: { maxWeekText = String($0.filter { $0.isNumber }) }
-                            ), label: L10n.format("edit_table_max_week"))
+                            // 原生化: 周数 = Stepper(系统步进控件, 免键盘/免解析/免越界),
+                            // 替换 Android NumberField 式数字键盘 TextField
+                            HStack {
+                                Text(L10n.format("edit_table_max_week"))
+                                    .font(.system(size: 16))
+                                    .foregroundColor(colors.onSurfaceVariant)
+                                Spacer()
+                                Stepper(value: $maxWeek, in: 1...60) {
+                                    Text(L10n.format("schedule_current_week", maxWeek))
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(colors.onSurface)
+                                        .monospacedDigit()
+                                }
+                                .fixedSize()
+                            }
                         }
                     }
                     .onAppear { loadIfNeeded(table: table) }
@@ -101,7 +112,7 @@ struct EditTableScreen: View {
                             withAnimation { timeSlotsExpanded.toggle() }
                         } label: {
                             HStack {
-                                VStack(alignment: .leading, spacing: 2) {
+                                VStack(alignment: .leading, spacing: 0) {   // ← Android Column 默认无间距
                                     Text(L10n.format("edit_table_time_slots"))
                                         .font(.system(size: 16, weight: .semibold))
                                         .foregroundColor(colors.onSurface)
@@ -112,6 +123,7 @@ struct EditTableScreen: View {
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.down")
+                                    .font(.system(size: 24))   // ← Android ExpandMore Icon 默认 24dp
                                     .foregroundColor(colors.onSurfaceVariant)
                                     .rotationEffect(.degrees(timeSlotsExpanded ? 180 : 0))
                             }
@@ -145,9 +157,10 @@ struct EditTableScreen: View {
                     Button(action: { save(table: table) }) {
                         HStack(spacing: 8) {
                             Image(systemName: "checkmark")
+                                .font(.system(size: 24))   // ← Android Check Icon 默认 24dp
                             Text(L10n.format("edit_table_save"))
+                                .font(.system(size: 14, weight: .medium))   // ← labelLarge 14 Medium
                         }
-                        .font(.system(size: 14, weight: .medium))
                         .foregroundColor(colors.onPrimary)
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
@@ -162,9 +175,10 @@ struct EditTableScreen: View {
                         Button(action: { showDeleteConfirm = true }) {
                             HStack(spacing: 8) {
                                 Image(systemName: "trash")
+                                    .font(.system(size: 24))   // ← Android Delete Icon 默认 24dp
                                 Text(L10n.format("edit_table_delete"))
+                                    .font(.system(size: 14, weight: .medium))   // ← labelLarge 14 Medium
                             }
-                            .font(.system(size: 14, weight: .medium))
                             .foregroundColor(colors.onErrorContainer)
                             .frame(maxWidth: .infinity)
                             .frame(height: 48)
@@ -207,7 +221,7 @@ struct EditTableScreen: View {
         loadedTableId = table.id
         name = table.name
         startDate = table.startDate
-        maxWeekText = "\(table.maxWeek)"
+        maxWeek = table.maxWeek
         slotRows = TimeTableUtils.parseTimeSlotRows(table.timeJson)
         // smartConfig: 已存 JSON 反序列化; 否则从 slotRows 推断
         if !table.smartConfigJson.isEmpty,
@@ -223,7 +237,6 @@ struct EditTableScreen: View {
 
     // ← 保存: 校验日期/时间格式 + start<end
     private func save(table: TimeTableEntity) {
-        let maxWeek = Int(maxWeekText) ?? 20
         let dateOK = startDate.range(of: #"^\d{4}-\d{2}-\d{2}$"#, options: .regularExpression) != nil
         let timeFmtOK = slotRows.allSatisfy {
             $0.start.range(of: #"^\d{2}:\d{2}$"#, options: .regularExpression) != nil &&
@@ -283,8 +296,9 @@ struct FieldTextField: View {
         TextField(placeholder.isEmpty ? label : placeholder, text: $text)
             .keyboardType(keyboardType)
             .font(.system(size: 16))
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 16)   // ← M3 filled TextField 内边距 16dp(原 12)
             .padding(.vertical, 10)
+            .frame(minHeight: 56, alignment: .bottom)   // ← M3 TextField MinHeight 56dp, 文字贴底(原约 40)
             .background(colors.surfaceContainerLowest)
             .cornerRadius(SleepyTheme.fieldShape)
             // ← Android filled TextField, 无描边
@@ -293,7 +307,7 @@ struct FieldTextField: View {
                 if !placeholder.isEmpty {
                     // label 浮动到左上(M3 风格近似: 前缀标签)
                     Text(label)
-                        .font(.system(size: 10))
+                        .font(.system(size: 12)) // ← M3 floating label ≈ bodySmall 12
                         .foregroundColor(colors.onSurfaceVariant)
                         .padding(.leading, 12)
                         .frame(maxWidth: .infinity, alignment: .topLeading)

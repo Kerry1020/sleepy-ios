@@ -68,10 +68,10 @@ final class JwParserTests: XCTestCase {
         </head><body><h1>个人课表</h1></body></html>
     """
 
-    func testJwNewUrpParserParsesHEUMockHTML() {  // ← `JwNewUrpParser parses HEU mock HTML`
+    func testJwNewUrpParserParsesHEUMockHTML() throws {  // ← `JwNewUrpParser parses HEU mock HTML`
         let parser = JwNewUrpParser(mockHeuHtml)
 
-        let courses = parser.generateCourseList()
+        let courses = try parser.generateCourseList()
 
         XCTAssertEqual(3, courses.count, "3 门课")
 
@@ -92,18 +92,18 @@ final class JwParserTests: XCTestCase {
         XCTAssertEqual(1, c2.type)  // 单周
     }
 
-    func testJwUrpParserHandlesEmptyHTMLGracefully() {  // ← `JwUrpParser handles empty HTML gracefully`
-        let result = JwUrpParser("<html><body>空</body></html>").generateCourseList()
+    func testJwUrpParserHandlesEmptyHTMLGracefully() throws {  // ← `JwUrpParser handles empty HTML gracefully`
+        let result = try JwUrpParser("<html><body>空</body></html>").generateCourseList()
         XCTAssertEqual(0, result.count)
     }
 
-    func testJwNewUrpParserHandlesEmptyHTMLGracefully() {  // ← `JwNewUrpParser handles empty HTML gracefully`
-        let result = JwNewUrpParser("<html><body>空</body></html>").generateCourseList()
+    func testJwNewUrpParserHandlesEmptyHTMLGracefully() throws {  // ← `JwNewUrpParser handles empty HTML gracefully`
+        let result = try JwNewUrpParser("<html><body>空</body></html>").generateCourseList()
         XCTAssertEqual(0, result.count)
     }
 
-    func testJwNewUrpParserHandlesMalformedJSONGracefully() {  // ← `JwNewUrpParser handles malformed JSON gracefully`
-        let result = JwNewUrpParser("not json").generateCourseList()
+    func testJwNewUrpParserHandlesMalformedJSONGracefully() throws {  // ← `JwNewUrpParser handles malformed JSON gracefully`
+        let result = try JwNewUrpParser("not json").generateCourseList()
         XCTAssertEqual(0, result.count)
     }
 
@@ -130,8 +130,8 @@ final class JwParserTests: XCTestCase {
         </body></html>
     """
 
-    func testJwQzParserParsesQZMockHTML() {  // ← `JwQzParser parses QZ mock HTML`
-        let courses = JwQzParser(mockQzHtml).generateCourseList()
+    func testJwQzParserParsesQZMockHTML() throws {  // ← `JwQzParser parses QZ mock HTML`
+        let courses = try JwQzParser(mockQzHtml).generateCourseList()
         XCTAssertTrue(courses.count >= 1, "应至少 1 门课")
         // Android 侧只打日志不断言字段。iOS 补字段断言,但对齐真实语义:
         // - name: 无 <font> 标签时 substringBefore("<font")=整块 → text() 拼全部
@@ -162,8 +162,8 @@ final class JwNewZfParserTests: XCTestCase {
             ]}
     """
 
-    func testMultiSegmentWeeksPreserved() {  // ← `multi-segment weeks preserved`
-        let courses = JwNewZfParser(jsonSource).generateCourseList()
+    func testMultiSegmentWeeksPreserved() throws {  // ← `multi-segment weeks preserved`
+        let courses = try JwNewZfParser(jsonSource).generateCourseList()
         let gao = courses.filter { $0.name == "高等数学" }
         XCTAssertEqual(2, gao.count, "高等数学应展开成 2 段周次")
         let ranges = Set(gao.map { "\($0.startWeek)-\($0.endWeek)" })
@@ -171,18 +171,18 @@ final class JwNewZfParserTests: XCTestCase {
         XCTAssertTrue(ranges.contains("13-16"), "应含 13-16 段(之前会被 ranges.first() 丢弃)")
     }
 
-    func testMissingEndNodeDefaultsToSingleSection() {  // ← `missing end node defaults to single section`
-        let courses = JwNewZfParser(jsonSource).generateCourseList()
+    func testMissingEndNodeDefaultsToSingleSection() throws {  // ← `missing end node defaults to single section`
+        let courses = try JwNewZfParser(jsonSource).generateCourseList()
         let single = courses.first { $0.name == "单节缺结束" }!
         // 无 jsjc → 之前默认 startNode+1=4(2节),修复后按单节 startNode=endNode=3
         XCTAssertEqual(3, single.startNode, "缺结束节次应按单节:startNode=endNode")
         XCTAssertEqual(3, single.endNode, "缺结束节次应按单节:endNode")
     }
 
-    func testBitmapWeekStringParsed() {  // ← `bitmap week string parsed`
+    func testBitmapWeekStringParsed() throws {  // ← `bitmap week string parsed`
         // 正方 bitmap 周次:11111111111100000(1-12 周)
         let src = #"{"kbxx":[{"kcmc":"位图课","kcxq":3,"ksjc":5,"jsjc":6,"zcd":"11111111111100000"}]}"#
-        let courses = JwNewZfParser(src).generateCourseList()
+        let courses = try JwNewZfParser(src).generateCourseList()
         XCTAssertTrue(!courses.isEmpty, "位图周次应解析出课程")
         let c = courses[0]
         XCTAssertEqual(1, c.startWeek)
@@ -207,12 +207,12 @@ final class JwWiseduParserTests: XCTestCase {
     }
 
     func testParsesRealHEUScheduleTotalCount() throws {  // ← `parses real HEU schedule - total count`
-        let courses = JwWiseduParser(try loadRealJson()).generateCourseList()
+        let courses = try JwWiseduParser(try loadRealJson()).generateCourseList()
         XCTAssertEqual(46, courses.count, "34 行展开后应为 46 个 JwCourse")
     }
 
     func testSingleWeekCompressionXingshiYuZhengce() throws {  // ← `single-week compression - 形势与政策`
-        let courses = JwWiseduParser(try loadRealJson()).generateCourseList()
+        let courses = try JwWiseduParser(try loadRealJson()).generateCourseList()
         let type1 = courses.filter { $0.type == 1 }
         XCTAssertEqual(1, type1.count, "应恰好 1 个单周课段")
         let xs = type1[0]
@@ -223,7 +223,7 @@ final class JwWiseduParserTests: XCTestCase {
     }
 
     func testFieldMappingPE2() throws {  // ← `field mapping - 体育（二）`
-        let courses = JwWiseduParser(try loadRealJson()).generateCourseList()
+        let courses = try JwWiseduParser(try loadRealJson()).generateCourseList()
         let pe = courses.first { $0.name == "体育（二）" }!
         XCTAssertEqual("篮球训练馆", pe.room)
         XCTAssertEqual("鲍伟", pe.teacher)
@@ -236,7 +236,7 @@ final class JwWiseduParserTests: XCTestCase {
     }
 
     func testMultiSegmentSplitCircuit() throws {  // ← `multi-segment split - 电路与电子I`
-        let courses = JwWiseduParser(try loadRealJson()).generateCourseList()
+        let courses = try JwWiseduParser(try loadRealJson()).generateCourseList()
         // 电路与电子I 周一段 SKZC 含 3 个连续段 (2-5, 7-9, 11-14)
         let circuit = courses.filter { $0.name == "电路与电子I" && $0.day == 1 }
         let ranges = Set(circuit.map { "\($0.startWeek)-\($0.endWeek)" })
@@ -246,9 +246,9 @@ final class JwWiseduParserTests: XCTestCase {
     }
 
     func testEmptyAndMalformedInputGraceful() throws {  // ← `empty and malformed input - graceful`
-        XCTAssertEqual(0, JwWiseduParser("").generateCourseList().count)
-        XCTAssertEqual(0, JwWiseduParser("not json").generateCourseList().count)
-        XCTAssertEqual(0, JwWiseduParser(#"{"code":"0","datas":{}}"#).generateCourseList().count)
+        XCTAssertEqual(0, try JwWiseduParser("").generateCourseList().count)
+        XCTAssertEqual(0, try JwWiseduParser("not json").generateCourseList().count)
+        XCTAssertEqual(0, try JwWiseduParser(#"{"code":"0","datas":{}}"#).generateCourseList().count)
     }
 }
 
@@ -257,14 +257,14 @@ final class JwWiseduParserTests: XCTestCase {
 final class JwImportViewModelLogicTests: XCTestCase {
 
     func testDetectProtocolFromUrl() {
-        // ← detectProtocolFromUrl 5 分支
+        // ← detectProtocolFromUrlImpl 判型链(Android JwOldZfParserTest.kt:519 + JwProtocolDetectionUnitTest 为准)
         XCTAssertEqual(JwProtocol.TYPE_WISEDU, JwImportViewModel.detectProtocolFromUrl("https://jwgl.hrbeu.edu.cn/jwapp/sys/"))
         XCTAssertEqual(JwProtocol.TYPE_ZF_NEW, JwImportViewModel.detectProtocolFromUrl("http://x/jwglxt/kbcx"))
         XCTAssertEqual(JwProtocol.TYPE_ZF_NEW, JwImportViewModel.detectProtocolFromUrl("http://x/xtgl/login"))
-        XCTAssertEqual(JwProtocol.TYPE_QZ, JwImportViewModel.detectProtocolFromUrl("http://x/qz/index"))
-        // ahut 这类 URL 无协议特征 → Android/Kotlin 同为 null(数据源靠 schools.json 的 type 字段)
-        XCTAssertNil(JwImportViewModel.detectProtocolFromUrl("http://jwxt.ahut.edu.cn/jsxsd/"))
-        XCTAssertEqual(JwProtocol.TYPE_URP_NEW, JwImportViewModel.detectProtocolFromUrl("http://x/urp/main"))
+        // ahut /jsxsd/ → QZ(Android 实测: assertEquals("qz", detectProtocolFromUrl("http://jwxt.ahut.edu.cn/jsxsd/")))
+        XCTAssertEqual(JwProtocol.TYPE_QZ, JwImportViewModel.detectProtocolFromUrl("http://jwxt.ahut.edu.cn/jsxsd/"))
+        // B3: 裸 urp 不再钉死 URP_NEW → nil 走 HTML/tryAllParsers 兜底
+        XCTAssertNil(JwImportViewModel.detectProtocolFromUrl("http://x/urp/main"))
         XCTAssertNil(JwImportViewModel.detectProtocolFromUrl("http://plain.example.com/"))
     }
 
@@ -287,8 +287,8 @@ final class JwImportViewModelLogicTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(courses.count, 1)
         XCTAssertTrue(courses[0].name.contains("课A"))
 
-        // 不支持协议 → 抛
-        XCTAssertThrowsError(try JwImportViewModel.parseHtml("<html/>", protocolType: "pku"))
+        // 不支持协议 → 抛(Android dispatch_未知协议仍抛暂不支持 同语义,type 用无工厂的假值)
+        XCTAssertThrowsError(try JwImportViewModel.parseHtml("<html/>", protocolType: "nope"))
     }
 
     func testToCourseEntitiesMapping() {
@@ -337,31 +337,14 @@ final class JwImportViewModelLogicTests: XCTestCase {
     }
 
     func testSchoolsJsonLoadsAndParses() throws {
-        // ← parseSchoolsJson 走 app bundle 的 schools.json(159 校, 985 批次后与安卓终态对齐)
+        // ← parseSchoolsJson 走 app bundle 的 schools.json; 校数闸门随安卓 schools.json 联动
         let bundle = Bundle(for: JwImportViewModel.self) // @testable → 用 app 类型
         let url = Bundle.main.url(forResource: "schools", withExtension: "json")
             ?? bundle.url(forResource: "schools", withExtension: "json")
         let raw = try String(contentsOf: url!, encoding: .utf8)
-        let text = raw
-        let list = try schoolsFromJson(text)
-        XCTAssertEqual(159, list.count)
+        let list = JwImportViewModel.parseSchoolsJson(raw)
+        XCTAssertEqual(184, list.count)
         let first = list[0]
         XCTAssertFalse(first.name.isEmpty)
-    }
-
-    // 复刻 parseSchoolsJson 以便独立验证(静态方法私有)
-    private func schoolsFromJson(_ text: String) throws -> [JwSchoolInfo] {
-        let data = text.data(using: .utf8)!
-        let arr = try JSONSerialization.jsonObject(with: data) as! [[String: Any]]
-        return arr.map { obj in
-            JwSchoolInfo(
-                sortKey: obj["sortKey"] as? String ?? "",
-                name: obj["name"] as? String ?? "",
-                url: obj["url"] as? String ?? "",
-                type: (obj["type"] as? String).flatMap { $0.isEmpty ? nil : $0 },
-                aliases: (obj["aliases"] as? [String]) ?? [],
-                sortKeyFull: obj["sortKeyFull"] as? String ?? ""
-            )
-        }
     }
 }

@@ -20,13 +20,14 @@ struct CourseDetailSheet: View {
             let clusterInfo = clusterOf(course)
 
             VStack(alignment: .leading, spacing: 0) {
-                // Header ← SheetHeader (surface-container)
-                HStack {
+                // Header ← SheetHeader (surface-container) — Android Row verticalAlignment = Top
+                HStack(alignment: .top) {
                     Text(course.courseName.isEmpty ? L10n.format("course_detail_title") : course.courseName)
                         .font(SleepyTypography.titleLarge)
                         .foregroundColor(colors.onSurface)
                         .lineLimit(3)
                     Spacer()
+                    // 有意差异: Android 无关闭按钮(下滑手势/点遮罩关闭), iOS 补充 ✕
                     Button {
                         onDismiss()
                     } label: {
@@ -86,9 +87,10 @@ struct CourseDetailSheet: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
-                .padding(.bottom, 12)
+                .padding(.bottom, 24)   // ← Android 外层 Column padding(bottom = 24.dp),此前 12 少了 12pt
             }
             .sheetDetents([.medium])
+            // 有意差异: Android shape = RoundedCornerShape(topStart/topEnd 28dp),iOS 系统弹层自带圆角与把手交互
             // iOS 15 无 drag indicator API,iOS 16+ 隐藏把手(iOS15 默认无把手,行为一致)
             .modifier(HideDragIndicatorIfAvailable())
         }
@@ -121,7 +123,11 @@ private struct DefaultTopPickerSection: View {
         let clusterKey = ConflictLayoutEngine.conflictClusterKey(cluster)
         let savedRepId: Int64? = defaultTopStore.map[clusterKey]
 
-        VStack(alignment: .leading, spacing: 2) {
+        // v7.10.16p: 单图层(全部课并排无真重叠, 链组把它们串成一条链而已)没有"谁压谁",
+        // 选择置顶无意义 — ← Android `if (layers.size < 2) return`(用户报障「没有冲突的课也弹默认置顶」)
+        Group {
+            if layers.count >= 2 {
+                VStack(alignment: .leading, spacing: 2) {
             Text(L10n.format("conflict_default_top_title"))
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(colors.onSurface)
@@ -150,6 +156,8 @@ private struct DefaultTopPickerSection: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(SleepyButtonStyle())
+            }
+                }
             }
         }
     }

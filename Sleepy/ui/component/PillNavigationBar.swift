@@ -94,7 +94,7 @@ private enum DockedSpec {
     static let thumbHeight: CGFloat = 32
     static let thumbYOffset: CGFloat = 12       // 顶栏 12pt + thumb 32pt + 底栏 32pt = 76pt 上下对称
     static let iconSize: CGFloat = 20
-    static let labelFontSize: CGFloat = 10
+    static let labelFontSize: CGFloat = 11      // ← Android labelSmall = 11sp
     static let labelFontWeight: Font.Weight = .medium
     static let labelFontWeightSelected: Font.Weight = .semibold
     static let iconHalf: CGFloat = 10           // thumb 覆盖计算用
@@ -409,7 +409,7 @@ private func sweepCoverage(rects: [CGRect], thumbStart: CGFloat, thumbEnd: CGFlo
 
 private func characterRects(text: String, in size: CGSize) -> [CGRect] {
     guard !text.isEmpty, size.width > 0 else { return [] }
-    let font = UIFont.systemFont(ofSize: 10, weight: .semibold)
+    let font = UIFont.systemFont(ofSize: 11, weight: .semibold)
     let attr = NSAttributedString(string: text, attributes: [.font: font])
     let framesetter = CTFramesetterCreateWithAttributedString(attr)
     let path = CGPath(rect: CGRect(origin: .zero,

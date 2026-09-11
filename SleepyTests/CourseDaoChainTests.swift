@@ -149,9 +149,11 @@ final class CourseDaoChainTests: XCTestCase {
     func testSchemaParity() throws {
         // PRAGMA 走 Row 读取 name 列,别手解析分隔字符串
         let courseCols = try Set(db.dbQueue.read { try Row.fetchAll($0, sql: "PRAGMA table_info(courses)").map { (r: Row) -> String in r["name"] } })
+        // Android schema v6 全列集: v1 基础 19 列 + colorMode(v4) + isIrregularNode/isIrregularTime(v5) + alias(v6)
         XCTAssertEqual(["id","groupId","tableId","courseName","teacher","room","note","day",
-                        "startNode","step","startWeek","endWeek","type","color","ownTime",
-                        "startTime","endTime","credit","level"], courseCols)
+                        "startNode","step","startWeek","endWeek","type","color","colorMode",
+                        "isIrregularNode","isIrregularTime","ownTime",
+                        "startTime","endTime","alias","credit","level"], courseCols)
         let tableCols = try Set(db.dbQueue.read { try Row.fetchAll($0, sql: "PRAGMA table_info(time_tables)").map { (r: Row) -> String in r["name"] } })
         XCTAssertEqual(["id","name","startDate","maxWeek","nodesPerDay","timeJson","color",
                         "isDefault","smartConfigJson","createdAt"], tableCols)

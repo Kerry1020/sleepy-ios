@@ -16,9 +16,17 @@ struct JwSchoolInfo: Equatable {
     var status: String = STATUS_SUPPORTED
     var aliases: [String] = []
     var sortKeyFull: String = ""
+    /// T11 新增:该校是否启用 WebView 内 fetch 模式。默认 false 避免给未验证学校强行 fetch 出 0 课。
+    var enableFetch: Bool = false
 
     var isSupported: Bool { status == Self.STATUS_SUPPORTED || status == Self.STATUS_GRAD_SUPPORTED }
     var isGrad: Bool { status == Self.STATUS_GRAD_SUPPORTED || status == Self.STATUS_GRAD_PENDING }
+
+    /// T13: pending/grad_pending 状态 — 待适配(点行弹申请适配弹窗, 不进 WebView)
+    var isPending: Bool { status == Self.STATUS_PENDING || status == Self.STATUS_GRAD_PENDING }
+
+    /// T13: 是否配置了可打开的教务 URL
+    var hasUrl: Bool { !url.trimmingCharacters(in: .whitespaces).isEmpty }
 
     static let STATUS_SUPPORTED = "supported"
     static let STATUS_PENDING = "pending"

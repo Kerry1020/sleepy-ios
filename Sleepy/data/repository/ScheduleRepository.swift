@@ -181,6 +181,23 @@ final class ScheduleRepository {
         onDataChanged()
     }
 
+    /// sleepy-v1 (§3.4 契约一): groupId 已由解析端权威生成(按文档内 token 分区),
+    /// 落库绕过 assignGroupIds — 否则同名不同 token 的分区会被静默合并, 分区往返被破坏。
+    @discardableResult
+    func insertCoursesKeepingGroups(_ courses: [CourseEntity]) throws -> [Int64] {
+        try captureForUndo()
+        let ids = try courseDao.insertAll(courses)
+        onDataChanged()
+        return ids
+    }
+
+    /// 覆盖式导入(保留解析端 groupId), 配合 insertCoursesKeepingGroups 的 sleepy-v1 路径
+    func replaceCoursesKeepingGroups(_ tableId: Int64, _ courses: [CourseEntity]) throws {
+        try captureForUndo()
+        try courseDao.replaceAll(tableId: tableId, courses: courses)
+        onDataChanged()
+    }
+
     /// 数据变更后:刷新所有 widget,并在提醒开启时重排通知。
     /// ★ 修复(继承自 Android):之前只刷 widget 不重排通知,导致编辑课表后课前提醒仍按旧时间。
     private func onDataChanged() {

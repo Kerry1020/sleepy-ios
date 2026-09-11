@@ -247,7 +247,7 @@ struct LicenseScreen: View {
                                     withAnimation { bodyExpanded.toggle() }
                                 } label: {
                                     Image(systemName: bodyExpanded ? "chevron.up" : "chevron.down")
-                                        .font(.system(size: 20))
+                                        .font(.system(size: 24)) // ← Android IconButton 内 Icon 默认 24dp
                                         .foregroundColor(colors.onSurfaceVariant)
                                         .frame(width: 36, height: 36)
                                 }
@@ -291,9 +291,8 @@ struct LicenseScreen: View {
                             })
                     }
 
-                    Spacer().frame(height: 16)
                 }
-                .padding(16)
+                .padding(16) // ← Android LazyColumn contentPadding 16dp(末尾无额外 Spacer)
             }
         }
         .background(colors.background)
@@ -363,7 +362,7 @@ struct LicenseScreen: View {
                 Spacer()
                 if onToggle != nil {
                     Image(systemName: expanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 20))
+                        .font(.system(size: 24)) // ← Android IconButton 内 Icon 默认 24dp
                         .foregroundColor(colors.onSurfaceVariant)
                     // ← Android contentDescription = collapse/expand
                         .accessibilityLabel(expanded ? "collapse" : "expand")

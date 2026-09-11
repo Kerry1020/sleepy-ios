@@ -18,5 +18,6 @@ protocol JwParser {
     var source: String { get }
 
     /// 解析教务 HTML 源码,输出统一结构的课程列表
-    func generateCourseList() -> [JwCourse]
+    /// T8: 缺容器等已分类失败抛 JwParseError(带 NO_TABLE_CONTAINER_MARKER 等 attempt 快照)
+    func generateCourseList() throws -> [JwCourse]
 }

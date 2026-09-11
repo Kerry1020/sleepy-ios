@@ -256,6 +256,83 @@ enum TimeTableUtils {
         return nodes.sorted()
     }
 
+    // MARK: - issue#23 逐卡非常规 (← effectiveCourseTime / maxStandardNode / EdgeCandidate / edgeCandidates / updateEdgeNodeTimes)
+
+    /**
+     * issue#23 §3.3 逐卡 effective 时间解析 — validateCourseDraft / buildCourseEntity /
+     * blockRangeMinutes 共用契约, 四处解析必须一致:
+     *   1. isIrregularTime=true → 课程自带覆盖起止直接生效 (不受槽位默认时间窗口约束, §2.3)
+     *   2. startNode 为边缘槽位 (edgeClass != null) → 槽位默认时间
+     *   3. 否则 → 标准 1..N 节次时间 (startNode..startNode+step-1)
+     * 无法解析 (时间无效 / 节次不存在) → nil, 由调用方校验报错, 不静默给值。
+     */
+    static func effectiveCourseTime(isIrregularTime: Bool, startTime: String, endTime: String,
+                                    startNode: Int, step: Int, timeJson: String) -> (String, String)? {
+        if isIrregularTime {
+            guard let s = normalizedHm(startTime), let e = normalizedHm(endTime) else { return nil }
+            return (s, e)
+        }
+        let rows = parseTimeSlotRows(timeJson)
+        guard let first = rows.first(where: { $0.node == startNode }),
+              let last = rows.first(where: { $0.node == startNode + step - 1 }) else { return nil }
+        return (first.start, last.end)
+    }
+
+    /// "H:mm"/"HH:mm" 规范为 "HH:mm"(LocalTime.toString 语义); 非法 → nil
+    private static func normalizedHm(_ v: String) -> String? {
+        let t = v.trimmingCharacters(in: .whitespaces)
+        let parts = t.split(separator: ":")
+        guard parts.count == 2, let h = Int(parts[0]), let m = Int(parts[1]),
+              (0...23).contains(h), (0...59).contains(m) else { return nil }
+        return String(format: "%02d:%02d", h, m)
+    }
+
+    /// 标准 1..N 连续节次上界 (edge 行不参与) — 逐卡重构后标准卡片只允许 1..maxStd
+    static func maxStandardNode(_ timeJson: String) -> Int {
+        maxContiguousFromOne(parseTimeSlotRows(timeJson))
+    }
+
+    /// 候选节次: exists=true = 复用已有槽位(带默认时间); exists=false = 新建(时间待用户填)
+    struct EdgeCandidate: Hashable {
+        let node: Int
+        let start: String
+        let end: String
+        let exists: Bool
+        /// 候选归属: Before 组节点 <= 0, After 组节点 > 0 (edgeCandidates 构造保证)
+        var edgeClass: EdgeClass { node <= 0 ? .before : .after }
+    }
+
+    /**
+     * 候选节次集合 (§2.2): Before 组升序(-2,-1,0...) + After 组升序(N+1,N+2...)。
+     * 每组 = 该方向全部已有边缘槽位 + 紧贴边界的一个「新建」候选;
+     * 无任何槽位时新建候选 = 0 / maxContiguous+1。禁止跳号。
+     */
+    static func edgeCandidates(_ timeJson: String) -> [EdgeCandidate] {
+        let rows = parseTimeSlotRows(timeJson)
+        let beforeSlots = rows.filter { $0.edgeClass == .before }.sorted { $0.node < $1.node }
+        let afterSlots = rows.filter { $0.edgeClass == .after }.sorted { $0.node < $1.node }
+        let maxStd = maxContiguousFromOne(rows)
+        let newBefore = (beforeSlots.map { $0.node }.min() ?? 1) - 1
+        let newAfter = (afterSlots.map { $0.node }.max() ?? maxStd) + 1
+        let beforeGroup = [EdgeCandidate(node: newBefore, start: "", end: "", exists: false)] +
+            beforeSlots.map { EdgeCandidate(node: $0.node, start: $0.start, end: $0.end, exists: true) }
+        let afterGroup = afterSlots.map { EdgeCandidate(node: $0.node, start: $0.start, end: $0.end, exists: true) } +
+            [EdgeCandidate(node: newAfter, start: "", end: "", exists: false)]
+        return beforeGroup + afterGroup
+    }
+
+    /**
+     * 修改某边缘槽位的默认时间 — 仅 edgeClass != nil 的行可改;
+     * 节点不存在或为标准行时原样返回入参 (调用方无需预检)。
+     */
+    static func updateEdgeNodeTimes(timeJson: String, node: Int, start: String, end: String) -> String {
+        let rows = parseTimeSlotRows(timeJson)
+        guard let target = rows.first(where: { $0.node == node }) else { return timeJson }
+        if target.edgeClass == nil { return timeJson }
+        return buildTimeJsonFromRows(
+            rows.map { $0.node == node ? TimeSlotRow(node: $0.node, start: start, end: end, edgeClass: $0.edgeClass) : $0 })
+    }
+
     /// v7.10.16k 无损合并 — "哪个大用哪个"(用户 2026-09-03):
     /// 双方作息逐节合并, 结果 = max(两边节次数, requiredNodeCount), 任何一方不得把另一方压小。
     /// 同一节次: 导入源非空时间优先(空串视为没声明), 否则原表, 都没有用 smart 默认。

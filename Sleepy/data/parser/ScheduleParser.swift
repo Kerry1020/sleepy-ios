@@ -25,6 +25,12 @@ enum ScheduleParser {
         var nodesPerDay: Int = 0
         /// 防呆: 输入里非空但没解析成功的行(前 40 字符), UI 拿去提示用户 "这几行没进去"
         var droppedLines: [String] = []
+        /// 表级提示(T行钳制/节点抬升/chk不符/n=不符/二次表头); 行级问题走 droppedLines (sleepy-v1 §7.3)
+        var warnings: [String] = []
+        /// sleepy-v1: 总周数由解析端声明(修 P2 "maxWeek 写不读"); 0 = 旧路径未声明
+        var maxWeek: Int = 0
+        /// sleepy-v1: groupId 已由解析端权威生成, 落库必须绕过 assignGroupIds (§3.4 契约一)
+        var groupIdsAuthoritative: Bool = false
     }
 
     /// 解析课表文本。返回 .success / .failure(错误)。 ← Result<ParseResult>
@@ -44,6 +50,14 @@ enum ScheduleParser {
         }
 
         return Result {
+            // sleepy-v1 原生格式 (§6.2: 分派链最顶 — magic 行首锚定, 与其他 5 路判别子串零交集)
+            // 显式拒绝 v2: 用户的 "丢 v2 专有字段" 应有升级决策依据, 不静默尽力导入
+            if SleepyNativeFormat.detectVersion(trimmed) > 1 {
+                throw ParseError("文件由新版 Sleepy 导出(v\(SleepyNativeFormat.detectVersion(trimmed))),请升级 Sleepy 后导入")
+            }
+            if SleepyNativeFormat.detectVersion(trimmed) == 1 {
+                return try SleepyNativeParser.parse(trimmed, defaultTableId: defaultTableId, defaultColor: defaultColor)
+            }
             if body.contains("\"courseDetailJson\"") {
                 return try parseWakeUpShareText(body, defaultTableId)
             }

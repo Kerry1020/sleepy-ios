@@ -20,23 +20,36 @@
 // 一门课多时段 = 多行(按行展开);不连续周次 = 拆成多个连续段,每段一个 JwCourse。
 // 整体等差 step=2 的周次(如 11,13,15,17)压缩成单周/双周(type=1/2)。
 // (kotlinx-serialization 宽松 JSON → JSONSerialization,语义等价)
+//
+// open for WHUT: 武汉理工同属金智 jwapp 但走 kcbcxby 微应用 (cxxskcb 路径) 且
+// 节次 DM 需映射 — 子类 JwWhutParser 注入 rows 路径别名与节次映射。
 
 import Foundation
 
-final class JwWiseduParser: JwParser {
+class JwWiseduParser: JwParser, JwParserConfidenceReporting {
 
     let source: String
 
-    init(_ source: String) {
+    required init(_ source: String) {
         self.source = source
     }
 
-    func generateCourseList() -> [JwCourse] {
+    /// rows 所在路径 datas.<module>.rows; 子类可注入别名 (WHUT = xskcb + cxxskcb)。
+    var moduleNames: [String] { ["xskcb"] }
+
+    /// 节次 DM → 物理节次; 默认直通 (HEU DM 即物理节次)。
+    func mapSection(_ dm: Int) -> Int { dm }
+
+    func generateCourseList() throws -> [JwCourse] {
         guard let data = source.data(using: .utf8),
               let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
             return []  // ← kotlinx Json 宽松解析失败 → 空(Kotlin 侧异常由调用方 catch)
         }
-        let rows = ((root["datas"] as? [String: Any])?["xskcb"] as? [String: Any])?["rows"] as? [[String: Any]] ?? []
+        let datas = root["datas"] as? [String: Any]
+        let module = datas.flatMap { d in
+            moduleNames.first { d[$0] != nil }.flatMap { d[$0] as? [String: Any] }
+        }
+        let rows = module?["rows"] as? [[String: Any]] ?? []
 
         var result: [JwCourse] = []
         for o in rows {
@@ -50,8 +63,9 @@ final class JwWiseduParser: JwParser {
             let teacher = str("SKJS")
             let room = str("JASMC")
             guard let day = int("SKXQ") else { continue }
-            guard let startNode = int("KSJC") else { continue }
-            let endNode = int("JSJC") ?? startNode
+            guard let rawStartNode = int("KSJC") else { continue }
+            let startNode = mapSection(rawStartNode)
+            let endNode = int("JSJC").map { mapSection($0) } ?? startNode
             let skzc = str("SKZC")
 
             for (sw, ew, type) in weekRuns(skzc) {
@@ -108,5 +122,21 @@ final class JwWiseduParser: JwParser {
             return [(weeks.first!, weeks.last!, type)]
         }
         return runs.map { ($0.0, $0.1, 0) }
+    }
+
+    /// T8: /jwapp/sys/wdkb/ = 100; xskcb.do = 90; datas.xskcb = 80
+    var confidenceValue: Int {
+        if source.contains("/jwapp/sys/wdkb/") { return 100 }
+        if source.contains("xskcb.do") { return 90 }
+        if source.contains("datas.xskcb") { return 80 }
+        return 0
+    }
+
+    var matchedFeatureList: [String] {
+        var out: [String] = []
+        if source.contains("/jwapp/sys/wdkb/") { out.append("jwapp/sys/wdkb") }
+        if source.contains("xskcb.do") { out.append("xskcb.do") }
+        if source.contains("datas.xskcb") { out.append("datas.xskcb.rows") }
+        return out
     }
 }

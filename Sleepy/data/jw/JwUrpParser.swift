@@ -11,7 +11,7 @@
 import Foundation
 import SwiftSoup
 
-final class JwUrpParser: JwParser {
+final class JwUrpParser: JwParser, JwParserConfidenceReporting {
 
     let source: String
 
@@ -19,7 +19,7 @@ final class JwUrpParser: JwParser {
         self.source = source
     }
 
-    func generateCourseList() -> [JwCourse] {
+    func generateCourseList() throws -> [JwCourse] {
         var result: [JwCourse] = []
         guard let doc = try? SwiftSoup.parse(source) else { return result }
         var tables = (try? doc.getElementsByAttributeValue("class", "displayTag")) ?? Elements()
@@ -188,5 +188,22 @@ final class JwUrpParser: JwParser {
             }
         }
         return result
+    }
+
+    // MARK: - T8 置信度
+
+    /// URP: td[id=N_M]+class_div 或 displayTag = 100; table-striped = 90
+    var confidenceValue: Int {
+        if source.range(of: #"td[^>]+id="\d+_\d+""#, options: .regularExpression) != nil && source.contains("class_div") { return 100 }
+        if source.contains("displayTag") { return 100 }
+        if source.contains("table-striped") { return 90 }
+        return 0
+    }
+
+    var matchedFeatureList: [String] {
+        var out: [String] = []
+        if source.contains("displayTag") { out.append("class=displayTag") }
+        if source.contains("table-striped") { out.append("class=table table-striped table-bordered") }
+        return out
     }
 }

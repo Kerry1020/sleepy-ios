@@ -20,7 +20,8 @@ struct AllTablesScreen: View {
                     Spacer().frame(height: 4)
                     ForEach(state.tables) { table in
                         let isCurrent = table.id == state.selectedTableId
-                        HStack(spacing: 12) {
+                        // ← Android Row 无 spacedBy, 图标钮自身 40×40 盒提供 10/20 视觉间隙
+                        HStack(spacing: 0) {
                             Button {
                                 if !isCurrent {
                                     viewModel.selectTable(table.id)
@@ -51,7 +52,7 @@ struct AllTablesScreen: View {
                                         // v7.10.15 导入时间(createdAt>0 才显示; v1.0.16 前老表无此值)
                                         if table.createdAt > 0 {
                                             Text(L10n.format("table_created_at", Self.createdAtText(table.createdAt)))
-                                                .font(.system(size: 11))
+                                                .font(.system(size: 12))   // ← bodySmall 12
                                                 .foregroundColor(isCurrent
                                                     ? colors.onPrimaryContainer.opacity(SleepyTheme.Alpha.highContent)
                                                     : colors.onSurfaceVariant)
@@ -70,7 +71,8 @@ struct AllTablesScreen: View {
                                 viewModel.duplicateTable(table.id)
                             } label: {
                                 Image(systemName: "doc.on.doc")
-                                    .font(.system(size: 18))
+                                    .font(.system(size: 20))   // ← ContentCopy size(20.dp)
+                                    .frame(width: 40, height: 40)   // ← M3 IconButton 40×40
                                     .foregroundColor(colors.onSurfaceVariant)
                             }
                             .buttonStyle(SleepyButtonStyle())
@@ -82,6 +84,7 @@ struct AllTablesScreen: View {
                             } label: {
                                 Image(systemName: "gearshape")
                                     .font(.system(size: 20))
+                                    .frame(width: 40, height: 40)   // ← M3 IconButton 40×40
                                     .foregroundColor(colors.onSurfaceVariant)
                             }
                             .buttonStyle(SleepyButtonStyle())
@@ -98,9 +101,10 @@ struct AllTablesScreen: View {
                     Button(action: onCreateNewTable) {
                         HStack(spacing: 8) {
                             Image(systemName: "plus")
+                                .font(.system(size: 24))   // ← Android Icon 默认 24dp
                             Text(L10n.format("all_tables_new"))
+                                .font(.system(size: 14, weight: .medium))   // ← labelLarge 14 Medium
                         }
-                        .font(.system(size: 14, weight: .medium))
                         .foregroundColor(colors.onSecondaryContainer)
                         .frame(maxWidth: .infinity)
                         .frame(height: 48)
@@ -134,23 +138,27 @@ struct SettingsTopBar: View {
     let onBack: () -> Void
 
     var body: some View {
-        HStack {
+        // ← M3 TopAppBar: 容器高 64, 标题 titleLarge 22 Normal,
+        //   导航钮 40×40 + 前 4dp, 标题起点 = 4+40+4 = 48(= Android navIcon 44 + 标题盒 4)
+        HStack(spacing: 0) {
             Button(action: onBack) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 20, weight: .medium))
+                Image(systemName: "chevron.left")   // ← 有意差异: iOS 惯用 chevron, Android 用 ArrowBack 图形
+                    .font(.system(size: 24))   // ← LeadingIconSize 24dp(原 20 Medium)
+                    .frame(width: 40, height: 40)   // ← M3 IconButton 40×40
                     .foregroundColor(colors.onBackground)
             }
             .buttonStyle(SleepyButtonStyle())
             .accessibilityIdentifier("topbar_back")
             // ← Android ArrowBack contentDescription = back
             .accessibilityLabel(L10n.format("back"))
+            .padding(.leading, 4)   // ← TopAppBarHorizontalPadding 4dp
             Text(title)
-                .font(.system(size: 20, weight: .medium))
+                .font(.system(size: 22))   // ← Android TopAppBar titleLarge 22 Normal(去 Medium)
                 .foregroundColor(colors.onBackground)
+                .padding(.leading, 4)   // ← 标题盒水平内边距 4dp
             Spacer()
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .frame(height: 64)   // ← TopAppBarSmallTokens.ContainerHeight 64dp
         .background(colors.background)
     }
 }

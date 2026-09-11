@@ -78,7 +78,7 @@ struct WidgetManagementScreen: View {
                         }
                     }
                     .padding(.horizontal, 16)
-                    .padding(.vertical, 16)
+                    // ← Android WidgetManagementScreen.kt L97 仅 horizontal 16, 无纵向 padding
                 }
             }
         }
@@ -100,7 +100,8 @@ private struct PlacedWidgetRow: View {
     var body: some View {
         Button(action: onClick) {
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
+                // ← Android PlacedWidgetRow L123 Column 无 verticalArrangement → 间距 0
+                VStack(alignment: .leading, spacing: 0) {
                     Text(item.displayName)
                         .font(.system(size: 16))
                         .foregroundColor(colors.onSurface)

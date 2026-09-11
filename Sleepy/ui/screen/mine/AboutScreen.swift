@@ -97,7 +97,7 @@ struct AboutScreen: View {
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 40)
                                 .background(colors.primary)
-                                .cornerRadius(SleepyShapes.large)
+                                .cornerRadius(20) // ← M3 Button 默认 shape=full-round(胶囊), 40 高 → 圆角 20
                             }
                             .buttonStyle(SleepyButtonStyle())
                             .disabled(isChecking)
@@ -227,17 +227,17 @@ struct AboutScreen: View {
         .overlay(alignment: .bottom) {
             if let msg = snackMessage {
                 Text(msg)
-                    .font(.system(size: 13))
+                    .font(.system(size: 14)) // ← Android Snackbar bodyMedium 14
                     .foregroundColor(colors.onSurface)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .background(colors.surfaceContainerHighest)
                     .cornerRadius(8)
                     .padding(.bottom, 12)
-                    .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                            withAnimation { snackMessage = nil }
-                        }
+                    .task(id: msg) {
+                        try? await Task.sleep(nanoseconds: 2_500_000_000)
+                        guard !Task.isCancelled else { return }
+                        withAnimation { snackMessage = nil }
                     }
             }
         }
@@ -384,9 +384,9 @@ private struct UpdateChangelogDialog: View {
         let progress = self.progress
         let failMsg = self.failMsg
 
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 16) {
             Text(dialogTitle(version: version))
-                .font(.system(size: 20, weight: .bold))
+                .font(.system(size: 22, weight: .bold)) // ← Android titleLarge.copy(Bold) 22sp
                 .foregroundColor(colors.onSurface)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -398,11 +398,13 @@ private struct UpdateChangelogDialog: View {
                             .foregroundColor(colors.error)
                     }
                     if progress >= 0 {
-                        ProgressView(value: Double(progress) / 100.0)
-                            .tint(colors.primary)
-                        Text(L10n.format("update_downloading", progress))
-                            .font(.system(size: 12))
-                            .foregroundColor(colors.onSurfaceVariant)
+                        VStack(alignment: .leading, spacing: 4) { // ← Android 进度条与百分比 Spacer(4)
+                            ProgressView(value: Double(progress) / 100.0)
+                                .tint(colors.primary)
+                            Text(L10n.format("update_downloading", progress))
+                                .font(.system(size: 12))
+                                .foregroundColor(colors.onSurfaceVariant)
+                        }
                     }
                     // ★ iOS 等价适配(平台差异表#2): 安装动作降级为提示重新侧载
                     if case .installing = state {
@@ -447,8 +449,10 @@ private struct UpdateChangelogDialog: View {
                 }
             }
             .buttonStyle(SleepyButtonStyle())
+            // ← M3 dialog 按钮 label = labelLarge 14 Medium(TextButton/Button 同字号)
+            .font(.system(size: 14, weight: .medium))
         }
-        .padding(20)
+        .padding(24) // ← M3 AlertDialog dialogPadding 24dp
         .background(colors.surface)
     }
 

@@ -128,7 +128,7 @@ struct ImportSheet: View {
                         MultilineFieldCompat(placeholder: L10n.format("import_paste_hint"), text: $inputText, minLines: 4, maxLines: 8)
                             .padding(12)
                             .frame(height: 160, alignment: .topLeading)
-                            .background(colors.surfaceContainer)
+                            .background(colors.surfaceContainerHighest)   // ← fieldColors 容器色 surfaceContainerHighest
                             .cornerRadius(SleepyTheme.fieldShape)
                             // ← Android filled TextField, 无描边
                             .accessibilityIdentifier("import_paste_input")
@@ -396,11 +396,12 @@ private struct FormatRow: View {
     var onDetail: (() -> Void)? = nil
 
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
+        HStack(alignment: .top, spacing: 0) {
             Text("•")
                 .font(.system(size: 12))
                 .foregroundColor(colors.primary)
                 .padding(.top, 2)
+                .padding(.trailing, 8)
             Text(name)
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(colors.onSurface)
@@ -408,14 +409,16 @@ private struct FormatRow: View {
             Text(desc)
                 .font(.system(size: 12))
                 .foregroundColor(colors.onSurfaceVariant)
-            Spacer(minLength: 4)
+                .frame(maxWidth: .infinity, alignment: .leading)   // ← Android weight(1f)
             if let onDetail {
                 Button(action: onDetail) {
                     Image(systemName: "info.circle")
                         .font(.system(size: 16))   // ← Android Info 16dp
                         .foregroundColor(colors.onSurfaceVariant)   // ← Android tint onSurfaceVariant
+                        .padding(.top, 2)   // ← Android icon padding(top = 2.dp)
                 }
                 .buttonStyle(SleepyButtonStyle())
+                .padding(.leading, 6)   // ← Android icon padding(start = 6.dp)
                 .accessibilityLabel(L10n.format("format_detail_content_desc"))
             }
         }
@@ -448,7 +451,7 @@ private struct FormatDetailDialog: View {
                                 .foregroundColor(colors.primary)
                                 .padding(.top, 2)
                             Text(item)
-                                .font(.system(size: 13))
+                                .font(.system(size: 12)) // ← Android bodySmall 12
                                 .foregroundColor(colors.onSurface)
                         }
                         .listRowBackground(colors.surfaceContainer)
@@ -489,9 +492,9 @@ private struct FormatDetailDialog: View {
                             } label: {
                                 HStack(spacing: 6) {
                                     Image(systemName: "doc.on.doc")
-                                        .font(.system(size: 14))
+                                        .font(.system(size: 16))   // ← Android ContentCopy 16dp
                                     Text(copiedPrompt ? L10n.format("copied") : L10n.format("copy_prompt"))
-                                        .font(.system(size: 14))
+                                        .font(.system(size: 14, weight: .medium))   // ← labelLarge 14sp Medium
                                 }
                                 .foregroundColor(colors.onPrimaryContainer)
                                 .frame(maxWidth: .infinity)
@@ -536,11 +539,11 @@ private struct ImportPreviewDialog: View {
                         VStack(alignment: .leading, spacing: 6) {
                             if preview.targetTableId == 0 {
                                 Text(L10n.format("import_new_table_hint"))
-                                    .font(.system(size: 13))
+                                    .font(.system(size: 12)) // ← Android bodySmall 12
                                     .foregroundColor(colors.primary)
                             } else {
                                 Text(L10n.format("import_target_table", preview.targetTableName))
-                                    .font(.system(size: 13))
+                                    .font(.system(size: 12)) // ← Android bodySmall 12
                                     .foregroundColor(colors.onSurfaceVariant)
                             }
                         }
@@ -635,6 +638,28 @@ private struct ImportPreviewDialog: View {
                                 }
                             }
                             .listRowBackground(colors.errorContainer)
+                        }
+                    }
+
+                    // sleepy-v1 (§7.3): 表级提示(非行级) — T行钳制/节点抬升/chk不符/n=不符/二次表头
+                    if !preview.parseResult.warnings.isEmpty {
+                        Section {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(L10n.format("import_warnings_title"))
+                                    .font(.system(size: 14, weight: .medium))   // ← titleSmall
+                                    .foregroundColor(colors.onSecondaryContainer)
+                                ForEach(preview.parseResult.warnings.prefix(4), id: \.self) { line in
+                                    Text("• \(line)")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(colors.onSecondaryContainer)
+                                }
+                                if preview.parseResult.warnings.count > 4 {
+                                    Text(L10n.format("import_conflict_more", preview.parseResult.warnings.count - 4))
+                                        .font(.system(size: 11))
+                                        .foregroundColor(colors.onSecondaryContainer)
+                                }
+                            }
+                            .listRowBackground(colors.secondaryContainer)
                         }
                     }
 
@@ -831,7 +856,7 @@ private struct ImportConfirmDialog: View {
                         .frame(maxWidth: .infinity)   // ← Android fillMaxWidth()
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
-                        .background(colors.surfaceContainer)
+                        .background(colors.surfaceContainerHighest)   // ← fieldColors 容器色 surfaceContainerHighest
                         .cornerRadius(SleepyTheme.fieldShape)
                         .onChange(of: tableName) { onTableNameChange($0) }
                 }
@@ -992,7 +1017,12 @@ extension ImportSheet {
                 copy.nodesPerDay = preview.parseResult.nodesPerDay > 0 ? preview.parseResult.nodesPerDay : existing.nodesPerDay
                 try? repo.updateTable(copy)
             }
-            try? repo.replaceCourses(preview.targetTableId, preview.parseResult.courses)
+            // sleepy-v1 (§3.4 契约一): 解析端权威 groupId → 绕过 assignGroupIds 再分配
+            if preview.parseResult.groupIdsAuthoritative {
+                try? repo.replaceCoursesKeepingGroups(preview.targetTableId, preview.parseResult.courses)
+            } else {
+                try? repo.replaceCourses(preview.targetTableId, preview.parseResult.courses)
+            }
             onImported()
             return preview.targetTableId
         case .importAsNew:
@@ -1001,7 +1031,7 @@ extension ImportSheet {
             var newTable = TimeTableEntity(
                 name: uniqueImportedTableName(confirmedTableName, existingNames),
                 startDate: confirmedStartDate,
-                maxWeek: base?.maxWeek ?? 20,
+                maxWeek: preview.parseResult.maxWeek > 0 ? preview.parseResult.maxWeek : (base?.maxWeek ?? 20),
                 nodesPerDay: preview.parseResult.nodesPerDay > 0 ? preview.parseResult.nodesPerDay : base?.nodesPerDay ?? 12,
                 timeJson: confirmedTimeJson,
                 isDefault: false)
@@ -1012,7 +1042,12 @@ extension ImportSheet {
                 courses[i].id = 0
                 courses[i].tableId = newTableId
             }
-            _ = try? repo.insertCourses(courses)
+            // sleepy-v1: groupId 权威时保留分区(ImportAsNew 全量落新课表, 等价 replace 语义)
+            if preview.parseResult.groupIdsAuthoritative {
+                _ = try? repo.insertCoursesKeepingGroups(courses)
+            } else {
+                _ = try? repo.insertCourses(courses)
+            }
             try? repo.setDefault(newTableId)
             onImported()
             return newTableId
@@ -1029,7 +1064,11 @@ extension ImportSheet {
                 courses[i].id = 0
                 courses[i].tableId = preview.targetTableId
             }
-            _ = try? repo.insertCourses(courses)
+            if preview.parseResult.groupIdsAuthoritative {
+                _ = try? repo.insertCoursesKeepingGroups(courses)
+            } else {
+                _ = try? repo.insertCourses(courses)
+            }
             onImported()
             return preview.targetTableId
         case .appendAsNew:
@@ -1039,7 +1078,7 @@ extension ImportSheet {
             var newTable = TimeTableEntity(
                 name: uniqueImportedTableName(confirmedTableName, existingNames),
                 startDate: confirmedStartDate,
-                maxWeek: base?.maxWeek ?? 20,
+                maxWeek: preview.parseResult.maxWeek > 0 ? preview.parseResult.maxWeek : (base?.maxWeek ?? 20),
                 nodesPerDay: preview.parseResult.nodesPerDay > 0 ? preview.parseResult.nodesPerDay : base?.nodesPerDay ?? 12,
                 timeJson: confirmedTimeJson,
                 isDefault: false)
@@ -1050,7 +1089,11 @@ extension ImportSheet {
                 courses[i].id = 0
                 courses[i].tableId = newTableId
             }
-            _ = try? repo.insertCourses(courses)
+            if preview.parseResult.groupIdsAuthoritative {
+                _ = try? repo.insertCoursesKeepingGroups(courses)
+            } else {
+                _ = try? repo.insertCourses(courses)
+            }
             onImported()
             return newTableId
         case .appendAll:
@@ -1060,7 +1103,11 @@ extension ImportSheet {
                 courses[i].id = 0
                 courses[i].tableId = preview.targetTableId
             }
-            _ = try? repo.insertCourses(courses)
+            if preview.parseResult.groupIdsAuthoritative {
+                _ = try? repo.insertCoursesKeepingGroups(courses)
+            } else {
+                _ = try? repo.insertCourses(courses)
+            }
             onImported()
             return preview.targetTableId
         }

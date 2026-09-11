@@ -51,9 +51,10 @@ struct MineScreen: View {
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 24))   // ← Android Icon 默认 24dp
                         Text(L10n.format("mine_refresh_widgets"))
+                            .font(.system(size: 14, weight: .medium))   // ← labelLarge 14 Medium
                     }
-                    .font(.system(size: 14, weight: .medium))
                     .foregroundColor(colors.onSecondaryContainer)
                     .frame(maxWidth: .infinity)
                     .frame(height: 48)
@@ -82,7 +83,7 @@ struct MineScreen: View {
         .overlay(alignment: .bottom) {
             if let msg = snackMessage {
                 Text(msg)
-                    .font(.system(size: 13))
+                    .font(.system(size: 14)) // ← Android Snackbar bodyMedium 14
                     .foregroundColor(colors.onSurface)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
@@ -90,10 +91,10 @@ struct MineScreen: View {
                     .cornerRadius(8)
                     .padding(.bottom, 12)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                            withAnimation { snackMessage = nil }
-                        }
+                    .task(id: msg) {
+                        try? await Task.sleep(nanoseconds: 2_000_000_000)
+                        guard !Task.isCancelled else { return }
+                        withAnimation { snackMessage = nil }
                     }
             }
         }
@@ -146,9 +147,10 @@ private struct StatItem: View {
     let identifier: String
 
     var body: some View {
-        VStack(spacing: 2) {
+        // ← Android Column 默认无间距(0)
+        VStack(spacing: 0) {
             Text(value)
-                .font(.system(size: 22, weight: .bold))
+                .font(.system(size: 28, weight: .bold))   // ← Android headlineMedium
                 .foregroundColor(colors.primary)
                 .accessibilityIdentifier("\(identifier)_value")
             Text(label)

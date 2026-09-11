@@ -86,11 +86,14 @@ final class SwipeBackGestureUITests: XCTestCase {
         let midRight = app.coordinate(withNormalizedOffset: CGVector(dx: 0.6, dy: 0.5))
         leftEdge.press(forDuration: 0.05, thenDragTo: midRight, withVelocity: .fast, thenHoldForDuration: 0.3)
 
-        // 期望: 3s 内回到 Mine (mine_about 入口重新可见)
+        // 期望: overlay 消失且回到 Mine; 只检查底层入口不足以证明 dismiss 成功。
+        let dismissed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"),
+            object: backButton)
+        XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 3), .completed,
+                       "左滑手势必须关闭 fullScreenCover overlay 并移除 overlay 顶栏")
         XCTAssertTrue(app.descendants(matching: .any)["mine_about"].firstMatch.waitForExistence(timeout: 3),
-                      "左滑手势必须能关闭 fullScreenCover overlay"
-                      + "\n若失败: 检查 AppRootViewModel overlay 是否用 NavigationView 包装 .fullScreenCover"
-                      + "\n参考: https://developer.apple.com/documentation/swiftui/view/fullscreencover")
+                      "左滑手势关闭后必须回到 Mine，mine_about 入口应重新可见")
     }
 
     // MARK: - 路径 C: NavigationStack push → pop (Schedule 内导航)
