@@ -65,9 +65,10 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 @MainActor
 final class AppRootViewModel: ObservableObject {
     enum Tab: Hashable { case schedule, today, manage, mine }
-    // ★ v7.10.18 原生化: OverlayScreen 用于 presentation(.sheet/.fullScreenCover item:)
-    //   子屏独立呈现,iOS 16+ 自动获得 swipe-to-dismiss,iOS 15 仍有系统 ✕ 按钮。
-    //   GeneralSettingsScreen 内嵌 NavigationView 容纳 HolidaySettings 嵌套跳转。
+    // ★ OverlayScreen: 根浮层容器(自绘 ZStack)驱动; 右滑转场 + 跟手侧滑返回
+    //   一处适配所有页——新增 case 自动获得同一套手势/转场, 无需逐页挂 recognizer。
+    //   GeneralSettingsScreen 内嵌 NavigationView 容纳 HolidaySettings 嵌套跳转,
+    //   其原生 pop 识别器按 UIKit 独占规则优先于容器侧滑。
     enum OverlayScreen: String, Identifiable {
         case addCourse, allTables, editTable, theme, general, export, reminder, about, license
         // holiday 由 GeneralSettings 内部 sheet 呈现,不再出现在根 enum
@@ -190,8 +191,9 @@ struct AppRoot: View {
         //   在 16+ 才稳定生效,15 上是 best-effort) → 所有页面顶栏上方 112pt 纯空白。
         //   AppRoot 没有 NavigationLink 需求 → 直接 root,不要 NavigationView 壳。
         //   JwImportFlow 内部仍保留 NavigationView(那里有真正的 nav stack 行为)。
+        // ★ 键盘避让只在 tab 层忽略(旧 fullScreenCover 时代对整个 mainContent 忽略);
+        //   浮层走自绘 ZStack 容器, 保留键盘避让 → AddCourse 输入框自动避开键盘。
         mainContent
-            .ignoresSafeArea(.keyboard, edges: .bottom)
         // ← Activity.recreate(): 语言切换 → L10n.didChange → languageReload+1 → 全树重建
         .id(root.languageReload)
         .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey))
@@ -259,16 +261,13 @@ struct AppRoot: View {
 
     @ViewBuilder
     private var mainContent: some View {
-        // ★ v7.10.18 原生化重构:
-        //   9 个独立 overlay 子页 → .fullScreenCover(item:) / .sheet(item:)
-        //   - iOS 16+: 享有系统 swipe-to-dismiss / pull-down dismiss(原生手势)
-        //   - iOS 15 (6sp 真机): 系统 ✕ 按钮 + 下拉 dismiss(无 edge swipe,但仍是原生)
+        // ★ 根浮层 = 自绘 ZStack 容器(PresentOverlay):
+        //   - 所有 OverlayScreen 页共用一份右滑转场 + 跟手侧滑返回驱动
+        //   - 状态机(handleBack/pendingNewTable 丢弃链/深链)时序不变
         //   - holiday 子页由 GeneralSettings 内部 NavigationView 承载,不再列根
-        //   - .sheet(item:) 用 OverlayScreen: Identifiable + rawValue 区分 item
-        //   - 不再有 if/else if 条件树 → 渲染条件回到 tabs 即可
-        // ★ v7.10.18 type-check v3: 9 个独立 PresentXxx ViewModifier, 每个子树
-        //   独立类型推导, 避免 9 个 modifier 链触发 SwiftUI "unable to type-check"。
+        // ★ type-check: 浮层内容仍走单一 PresentOverlay ViewModifier, 子树独立推导
         tabs
+            .ignoresSafeArea(.keyboard, edges: .bottom)
             .modifier(PresentOverlay(
                 isDark: isDark,
                 themeKey: themeKey,
@@ -493,19 +492,74 @@ private struct PresentOverlay: ViewModifier {
         themeMode == AppPrefs.THEME_MODE_SYSTEM ? nil : (isDark ? .dark : .light)
     }
 
+    // 浮层容器状态: shownScreen 镜像 activeScreen(带转场生命周期),
+    // dragX = 侧滑跟手位移, dismissSeq 防过期定时器串页。
+    @State private var shownScreen: AppRootViewModel.OverlayScreen?
+    @State private var dragX: CGFloat = 0
+    @State private var dismissSeq = 0
+
+    // ← 原 fullScreenCover(item:) get 闭包语义: 深链直接置 editingCourse 也能呈现 addCourse
+    private var activeScreen: AppRootViewModel.OverlayScreen? {
+        if overlayScreen != nil { return overlayScreen }
+        return editingCourse == nil ? nil : .addCourse
+    }
+
     func body(content: Content) -> some View {
-        content.fullScreenCover(item: Binding<AppRootViewModel.OverlayScreen?>(
-            get: {
-                if overlayScreen != nil { return overlayScreen }
-                return editingCourse == nil ? nil : .addCourse
-            },
-            set: { newValue in
-                if newValue == nil { onDismiss() }
+        // ★ 系统性手势适配: 所有 overlay 页共用一个自绘容器, 右滑转场 + 跟手侧滑返回。
+        //   不再逐页挂 recognizer——以后新增 OverlayScreen case 自动获得同一套手势。
+        ZStack {
+            content
+            if let screen = shownScreen {
+                overlayContent(screen)
+                    .offset(x: dragX)
+                    .transition(.move(edge: .trailing))
             }
-        )) { screen in
-            overlayContent(screen)
+        }
+        .onChange(of: activeScreen) { syncPresentation($0) }
+    }
+
+    private func syncPresentation(_ active: AppRootViewModel.OverlayScreen?) {
+        if let screen = active {
+            guard shownScreen != screen else { return }
+            if shownScreen == nil {
+                // 打开: 右缘滑入(对齐安卓 Activity 转场方向)
+                dragX = 0
+                withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) { shownScreen = screen }
+            } else {
+                // 极端竞态: 未经过 nil 直接换页 → 无动画切换, 复位位移
+                shownScreen = screen
+                dragX = 0
+            }
+        } else if shownScreen != nil {
+            // 关闭路径①: 程序化关闭(✕ 按钮/保存/删除) → 右滑出动画后移除
+            if dragX > 60 {
+                shownScreen = nil
+                dragX = 0
+            } else {
+                animateOutThen(then: {})
+            }
         }
     }
+
+    /// 关闭路径②: 侧滑过阈值 → 页面跟手滑出全程, 动画结束才回调 onBack(保持
+    /// handleBack/createNewTableThenEdit 的状态机时序不变)。
+    private func commitGestureDismiss(_ then: @escaping () -> Void) {
+        animateOutThen(then: then)
+    }
+
+    private func animateOutThen(then: @escaping () -> Void) {
+        let width = UIScreen.main.bounds.width
+        withAnimation(.spring(response: 0.26, dampingFraction: 0.9)) { dragX = width + 60 }
+        dismissSeq += 1
+        let seq = dismissSeq
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
+            guard seq == dismissSeq else { return }
+            shownScreen = nil
+            dragX = 0
+            then()
+        }
+    }
+
 
     @ViewBuilder
     private func overlayContent(_ screen: AppRootViewModel.OverlayScreen) -> some View {
@@ -517,7 +571,7 @@ private struct PresentOverlay: ViewModifier {
                 onSaved: onSavedAdd,
                 editingCourse: editingCourse)
                 .themedOverlay(isDark: isDark, themeKey: themeKey, schemeOverride: schemeOverride)
-                .interactiveEdgeBack(onBack: onDismiss)
+                .edgeBackGesture(dragX: $dragX, onBack: onDismiss, onCommit: commitGestureDismiss)
         case .allTables:
             AllTablesScreen(
                 viewModel: scheduleViewModel,
@@ -525,7 +579,7 @@ private struct PresentOverlay: ViewModifier {
                 onCreateNewTable: onCreateNewTable,
                 onOpenEditTable: onOpenEditTable)
                 .themedOverlay(isDark: isDark, themeKey: themeKey, schemeOverride: schemeOverride)
-                .interactiveEdgeBack(onBack: onDismiss)
+                .edgeBackGesture(dragX: $dragX, onBack: onDismiss, onCommit: commitGestureDismiss)
         case .editTable:
             EditTableScreen(
                 viewModel: scheduleViewModel,
@@ -536,11 +590,11 @@ private struct PresentOverlay: ViewModifier {
                 onSaved: onSavedTable,
                 onDeleted: onDeletedTable)
                 .themedOverlay(isDark: isDark, themeKey: themeKey, schemeOverride: schemeOverride)
-                .interactiveEdgeBack(onBack: onBack)
+                .edgeBackGesture(dragX: $dragX, onBack: onBack, onCommit: commitGestureDismiss)
         case .general:
             GeneralSettingsScreen(onDismiss: onDismiss)
                 .themedOverlay(isDark: isDark, themeKey: themeKey, schemeOverride: schemeOverride)
-                .interactiveEdgeBack(onBack: onDismiss)
+                .edgeBackGesture(dragX: $dragX, onBack: onDismiss, onCommit: commitGestureDismiss)
         case .theme:
             AppearanceScreen(
                 onDismiss: onDismiss,
@@ -548,23 +602,23 @@ private struct PresentOverlay: ViewModifier {
                 onThemeModeChange: onThemeModeChange,
                 onThemeKeyChange: onThemeKeyChange)
                 .themedOverlay(isDark: isDark, themeKey: themeKey, schemeOverride: schemeOverride)
-                .interactiveEdgeBack(onBack: onDismiss)
+                .edgeBackGesture(dragX: $dragX, onBack: onDismiss, onCommit: commitGestureDismiss)
         case .export:
             ExportScreen(viewModel: scheduleViewModel, onDismiss: onDismiss)
                 .themedOverlay(isDark: isDark, themeKey: themeKey, schemeOverride: schemeOverride)
-                .interactiveEdgeBack(onBack: onDismiss)
+                .edgeBackGesture(dragX: $dragX, onBack: onDismiss, onCommit: commitGestureDismiss)
         case .reminder:
             ReminderScreen(onDismiss: onDismiss)
                 .themedOverlay(isDark: isDark, themeKey: themeKey, schemeOverride: schemeOverride)
-                .interactiveEdgeBack(onBack: onDismiss)
+                .edgeBackGesture(dragX: $dragX, onBack: onDismiss, onCommit: commitGestureDismiss)
         case .about:
             AboutScreen(onDismiss: onDismiss, onOpenLicense: onOpenLicense)
                 .themedOverlay(isDark: isDark, themeKey: themeKey, schemeOverride: schemeOverride)
-                .interactiveEdgeBack(onBack: onDismiss)
+                .edgeBackGesture(dragX: $dragX, onBack: onDismiss, onCommit: commitGestureDismiss)
         case .license:
             LicenseScreen(onDismiss: onDismiss)
                 .themedOverlay(isDark: isDark, themeKey: themeKey, schemeOverride: schemeOverride)
-                .interactiveEdgeBack(onBack: onDismiss)
+                .edgeBackGesture(dragX: $dragX, onBack: onDismiss, onCommit: commitGestureDismiss)
         }
     }
 }
@@ -575,42 +629,32 @@ private extension View {
             .preferredColorScheme(schemeOverride)
     }
 }
+// ★ 系统性侧滑返回驱动: 一个 UIKit 边缘 pan 识别器桥接 SwiftUI 容器位移。
+//   页面跟手移动、可取消;内层 UINavigationController(HolidaySettings)的
+//   原生 pop 识别器按 UIKit 独占规则优先, 本识别器自动失败, 无双重返回。
+private struct OverlayBackDriver: UIViewControllerRepresentable {
+    let onProgress: (CGFloat) -> Void
+    let onFinish: (Bool) -> Void
 
-// Root overlays use fullScreenCover/sheet for state-driven presentation. Those
-// presentations support pull-down dismissal, but not UINavigationController's
-// left-edge interactive pop. Bridge that native gesture to the existing close
-// callback without changing overlay state ownership or pending-table cleanup.
-private struct InteractiveEdgeBackModifier: ViewModifier {
-    let onBack: () -> Void
+    func makeUIViewController(context: Context) -> EdgeBackDriverVC {
+        EdgeBackDriverVC(onProgress: onProgress, onFinish: onFinish)
+    }
 
-    func body(content: Content) -> some View {
-        content.overlay {
-            InteractiveEdgeBackHost(onBack: onBack)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .allowsHitTesting(false)
-        }
+    func updateUIViewController(_ controller: EdgeBackDriverVC, context: Context) {
+        controller.onProgress = onProgress
+        controller.onFinish = onFinish
     }
 }
 
-private struct InteractiveEdgeBackHost: UIViewControllerRepresentable {
-    let onBack: () -> Void
-
-    func makeUIViewController(context: Context) -> EdgeBackViewController {
-        EdgeBackViewController(onBack: onBack)
-    }
-
-    func updateUIViewController(_ controller: EdgeBackViewController, context: Context) {
-        controller.onBack = onBack
-    }
-}
-
-private final class EdgeBackViewController: UIViewController, UIGestureRecognizerDelegate {
-    var onBack: () -> Void
+private final class EdgeBackDriverVC: UIViewController, UIGestureRecognizerDelegate {
+    var onProgress: (CGFloat) -> Void
+    var onFinish: (Bool) -> Void
     private weak var installedView: UIView?
-    private var didDismiss = false
+    private var committed = false
 
-    init(onBack: @escaping () -> Void) {
-        self.onBack = onBack
+    init(onProgress: @escaping (CGFloat) -> Void, onFinish: @escaping (Bool) -> Void) {
+        self.onProgress = onProgress
+        self.onFinish = onFinish
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -621,6 +665,7 @@ private final class EdgeBackViewController: UIViewController, UIGestureRecognize
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        committed = false
         installRecognizerIfNeeded()
     }
 
@@ -648,21 +693,27 @@ private final class EdgeBackViewController: UIViewController, UIGestureRecognize
         return point.x <= 30
     }
 
+    // 独占: 内层原生 pop(HolidaySettings)先 begin 则本识别器失败, 避免双重返回
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                           shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+        false
+    }
+
     @objc private func handleEdgePan(_ recognizer: UIPanGestureRecognizer) {
         switch recognizer.state {
-        case .began:
-            didDismiss = false
+        case .changed:
+            guard !committed else { return }
+            onProgress(recognizer.translation(in: recognizer.view).x)
         case .ended:
+            guard !committed else { return }
             let translation = recognizer.translation(in: recognizer.view)
             let velocity = recognizer.velocity(in: recognizer.view)
             let width = max(recognizer.view?.bounds.width ?? 1, 1)
-            let progress = translation.x / width
-            if !didDismiss && (progress > 0.25 || velocity.x > 600) {
-                didDismiss = true
-                onBack()
-            }
+            let commit = translation.x / width > 0.25 || velocity.x > 600
+            committed = commit
+            onFinish(commit)
         case .cancelled, .failed:
-            didDismiss = false
+            if !committed { onFinish(false) }
         default:
             break
         }
@@ -670,7 +721,26 @@ private final class EdgeBackViewController: UIViewController, UIGestureRecognize
 }
 
 private extension View {
-    func interactiveEdgeBack(onBack: @escaping () -> Void) -> some View {
-        modifier(InteractiveEdgeBackModifier(onBack: onBack))
+    /// 浮层页统一接入: 跟手位移写入容器 dragX, 过阈值由容器滑出后回调 onBack。
+    func edgeBackGesture(dragX: Binding<CGFloat>,
+                         onBack: @escaping () -> Void,
+                         onCommit: @escaping (@escaping () -> Void) -> Void) -> some View {
+        overlay {
+            OverlayBackDriver(
+                onProgress: { translation in
+                    guard translation > 0 else { return }
+                    dragX.wrappedValue = translation
+                },
+                onFinish: { commit in
+                    if commit {
+                        onCommit(onBack)
+                    } else {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.86)) {
+                            dragX.wrappedValue = 0
+                        }
+                    }
+                })
+                .allowsHitTesting(false)
+        }
     }
 }
