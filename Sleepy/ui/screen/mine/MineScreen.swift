@@ -51,9 +51,10 @@ struct MineScreen: View {
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 24))   // ← Android Icon 默认 24dp
                         Text(L10n.format("mine_refresh_widgets"))
+                            .font(.system(size: 14, weight: .medium))   // ← labelLarge 14 Medium
                     }
-                    .font(.system(size: 14, weight: .medium))
                     .foregroundColor(colors.onSecondaryContainer)
                     .frame(maxWidth: .infinity)
                     .frame(height: 48)
@@ -146,7 +147,8 @@ private struct StatItem: View {
     let identifier: String
 
     var body: some View {
-        VStack(spacing: 2) {
+        // ← Android Column 默认无间距(0)
+        VStack(spacing: 0) {
             Text(value)
                 .font(.system(size: 28, weight: .bold))   // ← Android headlineMedium
                 .foregroundColor(colors.primary)

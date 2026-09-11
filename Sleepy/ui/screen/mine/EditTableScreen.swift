@@ -112,7 +112,7 @@ struct EditTableScreen: View {
                             withAnimation { timeSlotsExpanded.toggle() }
                         } label: {
                             HStack {
-                                VStack(alignment: .leading, spacing: 2) {
+                                VStack(alignment: .leading, spacing: 0) {   // ← Android Column 默认无间距
                                     Text(L10n.format("edit_table_time_slots"))
                                         .font(.system(size: 16, weight: .semibold))
                                         .foregroundColor(colors.onSurface)
@@ -123,6 +123,7 @@ struct EditTableScreen: View {
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.down")
+                                    .font(.system(size: 24))   // ← Android ExpandMore Icon 默认 24dp
                                     .foregroundColor(colors.onSurfaceVariant)
                                     .rotationEffect(.degrees(timeSlotsExpanded ? 180 : 0))
                             }
@@ -156,9 +157,10 @@ struct EditTableScreen: View {
                     Button(action: { save(table: table) }) {
                         HStack(spacing: 8) {
                             Image(systemName: "checkmark")
+                                .font(.system(size: 24))   // ← Android Check Icon 默认 24dp
                             Text(L10n.format("edit_table_save"))
+                                .font(.system(size: 14, weight: .medium))   // ← labelLarge 14 Medium
                         }
-                        .font(.system(size: 14, weight: .medium))
                         .foregroundColor(colors.onPrimary)
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
@@ -173,9 +175,10 @@ struct EditTableScreen: View {
                         Button(action: { showDeleteConfirm = true }) {
                             HStack(spacing: 8) {
                                 Image(systemName: "trash")
+                                    .font(.system(size: 24))   // ← Android Delete Icon 默认 24dp
                                 Text(L10n.format("edit_table_delete"))
+                                    .font(.system(size: 14, weight: .medium))   // ← labelLarge 14 Medium
                             }
-                            .font(.system(size: 14, weight: .medium))
                             .foregroundColor(colors.onErrorContainer)
                             .frame(maxWidth: .infinity)
                             .frame(height: 48)
@@ -293,8 +296,9 @@ struct FieldTextField: View {
         TextField(placeholder.isEmpty ? label : placeholder, text: $text)
             .keyboardType(keyboardType)
             .font(.system(size: 16))
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 16)   // ← M3 filled TextField 内边距 16dp(原 12)
             .padding(.vertical, 10)
+            .frame(minHeight: 56, alignment: .bottom)   // ← M3 TextField MinHeight 56dp, 文字贴底(原约 40)
             .background(colors.surfaceContainerLowest)
             .cornerRadius(SleepyTheme.fieldShape)
             // ← Android filled TextField, 无描边
