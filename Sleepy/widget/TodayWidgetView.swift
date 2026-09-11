@@ -57,6 +57,7 @@ struct TodayWidgetEntryView: View {
     }
 
     // ← renderTodayRegular: 常规/中大档全量排版
+    @ViewBuilder
     private var regularBody: some View {
         let data = entry.data
         let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: data.isDark)

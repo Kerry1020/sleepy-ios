@@ -49,6 +49,7 @@ struct WeekGridWidgetEntryView: View {
     }
 
     // ← 常规/中大尺寸: 网格渲染(冲突分栏走 ConflictLayoutEngine.gridDayLanes)
+    @ViewBuilder
     private var gridBody: some View {
         let data = entry.data
         let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: data.isDark)
