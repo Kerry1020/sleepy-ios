@@ -128,7 +128,7 @@ struct ImportSheet: View {
                         MultilineFieldCompat(placeholder: L10n.format("import_paste_hint"), text: $inputText, minLines: 4, maxLines: 8)
                             .padding(12)
                             .frame(height: 160, alignment: .topLeading)
-                            .background(colors.surfaceContainer)
+                            .background(colors.surfaceContainerHighest)   // ← fieldColors 容器色 surfaceContainerHighest
                             .cornerRadius(SleepyTheme.fieldShape)
                             // ← Android filled TextField, 无描边
                             .accessibilityIdentifier("import_paste_input")
@@ -396,11 +396,12 @@ private struct FormatRow: View {
     var onDetail: (() -> Void)? = nil
 
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
+        HStack(alignment: .top, spacing: 0) {
             Text("•")
                 .font(.system(size: 12))
                 .foregroundColor(colors.primary)
                 .padding(.top, 2)
+                .padding(.trailing, 8)
             Text(name)
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(colors.onSurface)
@@ -408,14 +409,16 @@ private struct FormatRow: View {
             Text(desc)
                 .font(.system(size: 12))
                 .foregroundColor(colors.onSurfaceVariant)
-            Spacer(minLength: 4)
+                .frame(maxWidth: .infinity, alignment: .leading)   // ← Android weight(1f)
             if let onDetail {
                 Button(action: onDetail) {
                     Image(systemName: "info.circle")
                         .font(.system(size: 16))   // ← Android Info 16dp
                         .foregroundColor(colors.onSurfaceVariant)   // ← Android tint onSurfaceVariant
+                        .padding(.top, 2)   // ← Android icon padding(top = 2.dp)
                 }
                 .buttonStyle(SleepyButtonStyle())
+                .padding(.leading, 6)   // ← Android icon padding(start = 6.dp)
                 .accessibilityLabel(L10n.format("format_detail_content_desc"))
             }
         }
@@ -489,9 +492,9 @@ private struct FormatDetailDialog: View {
                             } label: {
                                 HStack(spacing: 6) {
                                     Image(systemName: "doc.on.doc")
-                                        .font(.system(size: 14))
+                                        .font(.system(size: 16))   // ← Android ContentCopy 16dp
                                     Text(copiedPrompt ? L10n.format("copied") : L10n.format("copy_prompt"))
-                                        .font(.system(size: 14))
+                                        .font(.system(size: 14, weight: .medium))   // ← labelLarge 14sp Medium
                                 }
                                 .foregroundColor(colors.onPrimaryContainer)
                                 .frame(maxWidth: .infinity)
@@ -853,7 +856,7 @@ private struct ImportConfirmDialog: View {
                         .frame(maxWidth: .infinity)   // ← Android fillMaxWidth()
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
-                        .background(colors.surfaceContainer)
+                        .background(colors.surfaceContainerHighest)   // ← fieldColors 容器色 surfaceContainerHighest
                         .cornerRadius(SleepyTheme.fieldShape)
                         .onChange(of: tableName) { onTableNameChange($0) }
                 }

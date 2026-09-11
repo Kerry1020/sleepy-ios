@@ -678,3 +678,5 @@
 
 "schedule_empty_import" = "Importar primer horario";
 "schedule_empty_create_table" = "Crear primer horario";
+"irregular_options_section" = "Opciones avanzadas";
+"irregular_options_section_sub" = "Huecos de borde / horarios personalizados para casos especiales; no hace falta expandirlos en cursos normales";

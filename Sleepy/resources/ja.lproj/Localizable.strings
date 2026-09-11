@@ -678,3 +678,5 @@
 
 "schedule_empty_import" = "最初の時間割をインポート";
 "schedule_empty_create_table" = "最初の時間割を作成";
+"irregular_options_section" = "詳細設定";
+"irregular_options_section_sub" = "端の枠 / 時刻の上書きなど特殊な設定。通常の授業では開く必要なし";

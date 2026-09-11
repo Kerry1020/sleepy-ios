@@ -92,7 +92,7 @@ struct SchoolSelectScreen: View {
                 .accessibilityIdentifier("school_search")
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
-                .background(colors.surfaceContainer)
+                .background(colors.surfaceContainerHighest)   // ← fieldColors 容器色 surfaceContainerHighest
                 .cornerRadius(SleepyTheme.fieldShape)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)

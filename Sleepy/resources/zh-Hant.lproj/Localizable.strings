@@ -678,3 +678,5 @@
 
 "schedule_empty_import" = "匯入第一張課表";
 "schedule_empty_create_table" = "手動建立第一張課表";
+"irregular_options_section" = "非常規選項";
+"irregular_options_section_sub" = "邊緣槽位 / 自訂時間等特殊排課，普通課程無需展開";

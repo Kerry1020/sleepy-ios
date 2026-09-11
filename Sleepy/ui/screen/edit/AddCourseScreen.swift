@@ -111,6 +111,15 @@ struct AddCourseScreen: View {
 
     private var canSave: Bool { !courseName.trimmingCharacters(in: .whitespaces).isEmpty && !meetingBlocks.isEmpty }
 
+    // ← Android conflict AlertDialog 正文: "• " 前缀行, 最多 6 条, 多余折叠提示
+    private var conflictDetailMessage: String {
+        var lines = pendingConflictDetails.prefix(6).map { "• \($0)" }
+        if pendingConflictDetails.count > 6 {
+            lines.append(L10n.format("more_unexpanded", pendingConflictDetails.count - 6))
+        }
+        return lines.joined(separator: "\n")
+    }
+
     /// issue#9/issue#23: 生效时间表 = 课表 timeJson + 本次会话暂存的新建槽位 + 槽位时间编辑。
     /// 候选集合/槽位时间展示/校验/落库全部以它为唯一依据。
     private var effectiveTimeJson: String {
@@ -171,10 +180,9 @@ struct AddCourseScreen: View {
                             onDeselectEdge: { released in deselectEdge(from: index, released: released) })
                     }
 
-                    // 新增时段按钮
-                    VStack(spacing: 10) {
-                        Button {
-                            meetingBlocks.append(MeetingBlockDraft(
+                    // 新增时段按钮 (← Android: LazyColumn 独立 item, spacing 14)
+                    Button {
+                        meetingBlocks.append(MeetingBlockDraft(
                             id: nextBlockId, days: [2], mode: .byNode,
                             startNode: 3, step: 2, startTime: "10:00", endTime: "11:40",
                             startWeek: min(startWeek, endWeek), endWeek: max(startWeek, endWeek), weekType: 0))
@@ -182,6 +190,7 @@ struct AddCourseScreen: View {
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "plus")
+                                .font(.system(size: 24))
                             Text(L10n.format("add_slot"))
                         }
                         .font(.system(size: 14, weight: .medium))
@@ -194,31 +203,11 @@ struct AddCourseScreen: View {
                     .buttonStyle(SleepyButtonStyle())
                     .accessibilityIdentifier("course_add_slot")
 
-                    Button {
-                        for index in meetingBlocks.indices {
-                            meetingBlocks[index].startWeek = min(startWeek, endWeek)
-                            meetingBlocks[index].endWeek = max(startWeek, endWeek)
-                        }
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "arrow.down.to.line.compact")
-                            Text(L10n.format("apply_to_all_slots"))
-                        }
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(colors.onSecondaryContainer)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 48)
-                        .background(colors.secondaryContainer)
-                        .cornerRadius(SleepyShapes.large)
-                    }
-                    .buttonStyle(SleepyButtonStyle())
-                    .accessibilityIdentifier("course_apply_to_all_slots")
-                    }
-
                     // 保存
                     Button(action: { save(state: state) }) {
                         HStack(spacing: 8) {
                             Image(systemName: "checkmark")
+                                .font(.system(size: 24))
                             Text(L10n.format(editingCourse != nil ? "save_course" : "create_course_btn"))
                         }
                         .font(.system(size: 14, weight: .medium))
@@ -237,6 +226,7 @@ struct AddCourseScreen: View {
                         Button(action: { showDeleteConfirm = true }) {
                             HStack(spacing: 8) {
                                 Image(systemName: "trash")
+                                    .font(.system(size: 24))
                                 Text(L10n.format("delete_course"))
                             }
                             .font(.system(size: 14, weight: .medium))
@@ -278,7 +268,7 @@ struct AddCourseScreen: View {
                 showConflictConfirm = false
             }
         } message: {
-            Text(pendingConflictDetails.joined(separator: "\n"))
+            Text(conflictDetailMessage)
         }
         // ── issue#23 逐卡: 候选弹层 / 新建槽位弹窗 / 槽位默认时间编辑弹窗 ──
         .sheet(item: $edgePickTarget) { _ in
@@ -360,8 +350,27 @@ struct AddCourseScreen: View {
                     subtitle: L10n.format("week_range_sub")) {
             HStack(spacing: 12) {
                 NumberStepperField(label: L10n.format("start_week"), value: $startWeek, minV: 1, maxV: 30)
+                    .frame(maxWidth: .infinity)
                 NumberStepperField(label: L10n.format("end_week"), value: $endWeek, minV: 1, maxV: 30)
+                    .frame(maxWidth: .infinity)
             }
+            // ← Android 周次卡内「显式应用」按钮 (无图标, regularHeight 48, 卡内 spacing 12)
+            Button {
+                for index in meetingBlocks.indices {
+                    meetingBlocks[index].startWeek = min(startWeek, endWeek)
+                    meetingBlocks[index].endWeek = max(startWeek, endWeek)
+                }
+            } label: {
+                Text(L10n.format("apply_to_all_slots"))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(colors.onSecondaryContainer)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 48)
+                    .background(colors.secondaryContainer)
+                    .cornerRadius(SleepyShapes.large)
+            }
+            .buttonStyle(SleepyButtonStyle())
+            .accessibilityIdentifier("course_apply_to_all_slots")
         }
     }
 
@@ -789,6 +798,16 @@ private struct MeetingBlockEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            // issue#9 延伸: 输入超界被夹紧时, 卡顶提示 (← Android clamped hint 在卡首)
+            if block.clamped {
+                Text(L10n.format(
+                    "slot_step_clamped_hint",
+                    block.startNode,
+                    block.startNode + block.step - 1,
+                    maxStd))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(colors.onErrorContainer)
+            }
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
@@ -805,6 +824,7 @@ private struct MeetingBlockEditor: View {
                 if canRemove {
                     Button(action: onRemove) {
                         Image(systemName: "xmark")
+                            .font(.system(size: 24))
                             .foregroundColor(colors.onSurfaceVariant)
                     }
                     .buttonStyle(SleepyButtonStyle())
@@ -815,47 +835,16 @@ private struct MeetingBlockEditor: View {
                 if block.days.contains(day) { block.days.remove(day) } else { block.days.insert(day) }
             }
 
-            // issue#23 逐卡: 卡内两个独立开关 — 非常规节次 / 非常规时间 (§4 逐卡开关设计)
-            SwitchRow(label: L10n.format("irregular_node_switch"),
-                      sub: L10n.format("irregular_node_switch_sub"),
-                      checked: Binding(
-                        get: { block.isIrregularNode },
-                        set: { on in
-                            if on {
-                                block.isIrregularNode = true
-                                onPickEdge()
-                            } else {
-                                let released = block.selectedEdgeNode
-                                block.isIrregularNode = false
-                                block.selectedEdgeNode = 0
-                                onDeselectEdge(released)
-                            }
-                            block.clamped = false
-                        }))
+            // issue#23 逐卡: 非常规节次 / 非常规时间 — 收进同一折叠栏 (2026-09-09 折叠栏改版)
+            IrregularOptionsSection(
+                block: $block,
+                timeJson: timeJson,
+                initiallyExpanded: block.isIrregularNode || block.isIrregularTime,
+                onPickEdge: onPickEdge,
+                onEditSlot: onEditSlot,
+                onDeselectEdge: onDeselectEdge)
 
-            if block.isIrregularNode {
-                // 非常规节次卡: 槽位摘要 + 已有槽位默认时间编辑入口
-                let selected = candidates.first { $0.node == block.selectedEdgeNode }
-                HStack(spacing: 10) {
-                    Text(selected.flatMap { s in s.exists
-                            ? L10n.format("edge_node_range", s.node, s.start, s.end)
-                            : nil }
-                         ?? L10n.format("edge_node_label", block.selectedEdgeNode))
-                        .font(.system(size: 14))
-                        .foregroundColor(colors.onSurface)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    if let s = selected, s.exists {
-                        Button {
-                            onEditSlot(s.node, s.start, s.end)
-                        } label: {
-                            Image(systemName: "square.and.pencil")
-                                .foregroundColor(colors.onSurfaceVariant)
-                        }
-                        .buttonStyle(SleepyButtonStyle())
-                        .accessibilityLabel(L10n.format("irregular_slot_edit_title"))
-                    }
-                }
-            } else if block.mode == .byNode {
+            if !block.isIrregularNode && block.mode == .byNode {
                 // 标准卡: startNode/step, 1..maxStd
                 HStack(spacing: 12) {
                     NumberStepperField(label: L10n.format("start_node"), value: Binding(
@@ -868,82 +857,21 @@ private struct MeetingBlockEditor: View {
                             }
                         }), minV: 1, maxV: maxStd,
                         onClamp: { block.clamped = true })
+                        .frame(maxWidth: .infinity)
                     // startNode 上调 → step 上限同步收紧, 避免越界
                     NumberStepperField(label: L10n.format("step_count"), value: Binding(
                         get: { block.step }, set: { block.step = $0 }),
                         minV: 1, maxV: Swift.max(1, maxStd - block.startNode + 1),
                         onClamp: { block.clamped = true })
+                        .frame(maxWidth: .infinity)
                 }
-            }
-
-            // issue#23 逐卡: 非常规时间开关 (吞并旧 ByClock 模式)
-            SwitchRow(label: L10n.format("irregular_time_switch"),
-                      sub: L10n.format("irregular_time_switch_sub"),
-                      checked: Binding(
-                        get: { block.isIrregularTime },
-                        set: { on in
-                            if on {
-                                block.isIrregularTime = true
-                                block.mode = .byClock
-                                if block.startTime.isEmpty || block.endTime.isEmpty {
-                                    // 首次开启: 预填本卡生效时间 (槽位默认 / 标准节次时间), §4 B 规则
-                                    if let r = block.effectiveRange(timeJson: timeJson) {
-                                        block.startTime = r.0
-                                        block.endTime = r.1
-                                    }
-                                }
-                                if block.durationText.isEmpty {
-                                    let d = AddCourseScreen.minutesBetween(block.startTime, block.endTime) ?? 0
-                                    block.durationText = d > 0 ? String(d) : ""
-                                }
-                            } else {
-                                // 关闭覆盖时间 → 回落槽位默认 / 标准节次时间
-                                block.isIrregularTime = false
-                                block.mode = .byNode
-                                block.startTime = ""
-                                block.endTime = ""
-                                block.durationText = ""
-                            }
-                        }))
-            if block.isIrregularTime {
-                // §2.4 B 规则: 起止/时长三输入, 最后编辑的输入对为权威 — 改起止重算时长, 改时长反推结束
-                HStack(spacing: 12) {
-                    TimePickerField(value: block.startTime, onValueChange: { v in
-                        block.startTime = v
-                        let d = AddCourseScreen.minutesBetween(block.startTime, block.endTime) ?? 0
-                        block.durationText = d > 0 ? String(d) : ""
-                    }, label: L10n.format("start_time"))
-                    TimePickerField(value: block.endTime, onValueChange: { v in
-                        block.endTime = v
-                        let d = AddCourseScreen.minutesBetween(block.startTime, block.endTime) ?? 0
-                        block.durationText = d > 0 ? String(d) : ""
-                    }, label: L10n.format("end_time"))
-                }
-                NumberStepperField(label: L10n.format("irregular_duration_label"),
-                                   value: Binding(
-                                    get: { Int(block.durationText) ?? 0 },
-                                    set: { mins in
-                                        guard mins > 0 else { return }
-                                        block.durationText = String(mins)
-                                        if let s = AddCourseScreen.parseHm(block.startTime) {
-                                            let end = s + mins
-                                            if end < 24 * 60 {
-                                                block.endTime = String(format: "%02d:%02d", end / 60, end % 60)
-                                            }
-                                            // 跨午夜 → 回退清空交由校验报错
-                                            let diff = AddCourseScreen.minutesBetween(block.startTime, block.endTime) ?? -1
-                                            if diff != mins || end >= 24 * 60 {
-                                                block.endTime = ""
-                                                block.durationText = ""
-                                            }
-                                        }
-                                    }),
-                                   minV: 1, maxV: 24 * 60)
             }
 
             HStack(spacing: 12) {
                 NumberStepperField(label: L10n.format("slot_week_range") + " " + L10n.format("start_week"), value: $block.startWeek, minV: 1, maxV: 30)
+                    .frame(maxWidth: .infinity)
                 NumberStepperField(label: L10n.format("slot_week_range") + " " + L10n.format("end_week"), value: $block.endWeek, minV: 1, maxV: 30)
+                    .frame(maxWidth: .infinity)
             }
             SegmentedSwitcher(options: [
                 (0, L10n.format("week_every")),
@@ -960,29 +888,20 @@ private struct MeetingBlockEditor: View {
                 MultilineFieldCompat(placeholder: L10n.format("course_note"), text: $block.note, minLines: 2, maxLines: 4)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
-                    .background(colors.surfaceContainerLowest)
+                    .background(colors.surfaceContainerHighest)   // ← fieldColors 容器色 surfaceContainerHighest
                     .cornerRadius(SleepyTheme.fieldShape)
                     // ← Android filled TextField, 无描边
                 ColorSection(block: $block)
             }
 
-            // 尾部两条 if 合并进一个 Group, 防外层 builder 超 10 子视图
+            // 尾部 if 合并进 Group, 防外层 builder 超 10 子视图
             Group {
-                if block.clamped {
-                    Text(L10n.format(
-                        "slot_step_clamped_hint",
-                        block.startNode,
-                        block.startNode + block.step - 1,
-                        maxStd))
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(colors.onErrorContainer)
-                }
                 if !issues.isEmpty {
                     VStack(alignment: .leading, spacing: 4) {
                         ForEach(issues, id: \.self) { issue in
                             Text(issue)
                                 .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(colors.onErrorContainer)
+                                .foregroundColor(colors.error)
                         }
                     }
                 }
@@ -996,6 +915,215 @@ private struct MeetingBlockEditor: View {
     }
 }
 
+// ← IrregularOptionsSection (2026-09-09 折叠栏改版): 「非常规节次」「非常规时间」两个开关
+// 绑到一起收进可展开区块, 默认折叠; 编辑已启用任一非常规项的卡时自动展开 (initiallyExpanded)。
+// Android: Column clip medium + bg surfaceContainerHighest, 栏头 padding h12 v10 spacedBy 10,
+// 展开内容 padding start/end/bottom 12 spacedBy 12, chevron 20dp 随展开旋转 180°。
+private struct IrregularOptionsSection: View {
+    @Environment(\.localWakeUpColors) private var colors
+    @Binding var block: MeetingBlockDraft
+    let timeJson: String
+    let initiallyExpanded: Bool
+    let onPickEdge: () -> Void
+    let onEditSlot: (_ node: Int, _ start: String, _ end: String) -> Void
+    let onDeselectEdge: (_ releasedNode: Int) -> Void
+    @State private var expanded: Bool
+
+    private var candidates: [TimeTableUtils.EdgeCandidate] {
+        TimeTableUtils.edgeCandidates(timeJson)
+    }
+
+    // ← irregularOptionsExpanded 由构造参数派生 (isIrregularNode || isIrregularTime)
+    init(block: Binding<MeetingBlockDraft>, timeJson: String, initiallyExpanded: Bool,
+         onPickEdge: @escaping () -> Void,
+         onEditSlot: @escaping (_ node: Int, _ start: String, _ end: String) -> Void,
+         onDeselectEdge: @escaping (_ releasedNode: Int) -> Void) {
+        _block = block
+        self.timeJson = timeJson
+        self.initiallyExpanded = initiallyExpanded
+        self.onPickEdge = onPickEdge
+        self.onEditSlot = onEditSlot
+        self.onDeselectEdge = onDeselectEdge
+        _expanded = State(initialValue: initiallyExpanded)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // 栏头: 标题 + 摘要 + chevron, 整行可点
+            Button {
+                expanded.toggle()
+            } label: {
+                HStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L10n.format("irregular_options_section"))
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(colors.onSurface)
+                        Text(headerSub)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(colors.onSurfaceVariant)
+                            .lineLimit(2)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 20))
+                        .foregroundColor(colors.onSurfaceVariant)
+                        .rotationEffect(.degrees(expanded ? 180 : 0))
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+            }
+            .buttonStyle(SleepyButtonStyle())
+
+            if expanded {
+                VStack(alignment: .leading, spacing: 12) {
+                    // 开关一 — 非常规节次 (§4 逐卡开关设计, 行为原样保留)
+                    SwitchRow(label: L10n.format("irregular_node_switch"),
+                              sub: L10n.format("irregular_node_switch_sub"),
+                              checked: Binding(
+                                get: { block.isIrregularNode },
+                                set: { on in
+                                    if on {
+                                        block.isIrregularNode = true
+                                        onPickEdge()
+                                    } else {
+                                        let released = block.selectedEdgeNode
+                                        block.isIrregularNode = false
+                                        block.selectedEdgeNode = 0
+                                        onDeselectEdge(released)
+                                    }
+                                    block.clamped = false
+                                }))
+
+                    if block.isIrregularNode {
+                        // 非常规节次卡: 槽位摘要 + 已有槽位默认时间编辑入口
+                        let selected = candidates.first { $0.node == block.selectedEdgeNode }
+                        HStack(spacing: 10) {
+                            Text(selected.flatMap { s in s.exists
+                                    ? L10n.format("edge_node_range", s.node, s.start, s.end)
+                                    : nil }
+                                 ?? L10n.format("edge_node_label", block.selectedEdgeNode))
+                                .font(.system(size: 14))
+                                .foregroundColor(colors.onSurface)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            if let s = selected, s.exists {
+                                Button {
+                                    onEditSlot(s.node, s.start, s.end)
+                                } label: {
+                                    Image(systemName: "square.and.pencil")
+                                        .font(.system(size: 24))
+                                        .foregroundColor(colors.onSurfaceVariant)
+                                }
+                                .buttonStyle(SleepyButtonStyle())
+                                .accessibilityLabel(L10n.format("irregular_slot_edit_title"))
+                            }
+                        }
+                    }
+
+                    // 开关二 — 非常规时间 (吞并旧 ByClock 模式, 行为原样保留)
+                    SwitchRow(label: L10n.format("irregular_time_switch"),
+                              sub: L10n.format("irregular_time_switch_sub"),
+                              checked: Binding(
+                                get: { block.isIrregularTime },
+                                set: { on in
+                                    if on {
+                                        block.isIrregularTime = true
+                                        block.mode = .byClock
+                                        if block.startTime.isEmpty || block.endTime.isEmpty {
+                                            // 首次开启: 预填本卡生效时间 (槽位默认 / 标准节次时间), §4 B 规则
+                                            if let r = block.effectiveRange(timeJson: timeJson) {
+                                                block.startTime = r.0
+                                                block.endTime = r.1
+                                            }
+                                        }
+                                        if block.durationText.isEmpty {
+                                            let d = AddCourseScreen.minutesBetween(block.startTime, block.endTime) ?? 0
+                                            block.durationText = d > 0 ? String(d) : ""
+                                        }
+                                    } else {
+                                        // 关闭覆盖时间 → 回落槽位默认 / 标准节次时间
+                                        block.isIrregularTime = false
+                                        block.mode = .byNode
+                                        block.startTime = ""
+                                        block.endTime = ""
+                                        block.durationText = ""
+                                    }
+                                }))
+
+                    if block.isIrregularTime {
+                        // §2.4 B 规则: 起止/时长三输入 — 改起止重算时长, 改时长反推结束
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack(spacing: 12) {
+                                TimePickerField(value: block.startTime, onValueChange: { v in
+                                    block.startTime = v
+                                    let d = AddCourseScreen.minutesBetween(block.startTime, block.endTime) ?? 0
+                                    block.durationText = d > 0 ? String(d) : ""
+                                }, label: L10n.format("start_time"))
+                                .frame(maxWidth: .infinity)
+                                TimePickerField(value: block.endTime, onValueChange: { v in
+                                    block.endTime = v
+                                    let d = AddCourseScreen.minutesBetween(block.startTime, block.endTime) ?? 0
+                                    block.durationText = d > 0 ? String(d) : ""
+                                }, label: L10n.format("end_time"))
+                                .frame(maxWidth: .infinity)
+                            }
+                            NumberStepperField(label: L10n.format("irregular_duration_label"),
+                                               value: Binding(
+                                                get: { Int(block.durationText) ?? 0 },
+                                                set: { mins in
+                                                    guard mins > 0 else { return }
+                                                    block.durationText = String(mins)
+                                                    if let s = AddCourseScreen.parseHm(block.startTime) {
+                                                        let end = s + mins
+                                                        if end < 24 * 60 {
+                                                            block.endTime = String(format: "%02d:%02d", end / 60, end % 60)
+                                                        }
+                                                        // 跨午夜 → 回退清空交由校验报错
+                                                        let diff = AddCourseScreen.minutesBetween(block.startTime, block.endTime) ?? -1
+                                                        if diff != mins || end >= 24 * 60 {
+                                                            block.endTime = ""
+                                                            block.durationText = ""
+                                                        }
+                                                    }
+                                                }),
+                                               minV: 1, maxV: 24 * 60)
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+                }
+                .padding(.leading, 12)
+                .padding(.trailing, 12)
+                .padding(.bottom, 12)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(colors.surfaceContainerHighest)
+        .cornerRadius(SleepyShapes.medium)
+    }
+
+    // ← irregularOptionsSummary: 折叠态摘要 — 收起但已启用选项时, 栏头露出启用了什么
+    private var headerSub: String {
+        if expanded { return L10n.format("irregular_options_section_sub") }
+        var parts: [String] = []
+        if block.isIrregularNode {
+            // 与 Android 一致: 未选槽位时 edgeNodeLabel 为空串仍拼入
+            let nodeLabel = block.selectedEdgeNode != 0
+                ? L10n.format("edge_node_label", block.selectedEdgeNode) : ""
+            parts.append([L10n.format("irregular_node_switch"), nodeLabel].joined(separator: " · "))
+        }
+        if block.isIrregularTime {
+            // 起止齐全才拼区间; 缺一(如跨午夜回退清空)只显示开关名
+            if !block.startTime.isEmpty && !block.endTime.isEmpty {
+                parts.append([L10n.format("irregular_time_switch"), "\(block.startTime)–\(block.endTime)"]
+                    .joined(separator: " · "))
+            } else {
+                parts.append(L10n.format("irregular_time_switch"))
+            }
+        }
+        let summary = parts.joined(separator: " / ")
+        return summary.isEmpty ? L10n.format("irregular_options_section_sub") : summary
+    }
+}
+
 // issue#22: 颜色三态 — 开关 OFF = 跟组色(GROUP);开关 ON 后可切 AUTO/CUSTOM
 private struct ColorSection: View {
     @Environment(\.localWakeUpColors) private var colors
@@ -1006,7 +1134,7 @@ private struct ColorSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
+            HStack(spacing: 8) {
                 Text(L10n.format("course_color"))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(colors.onSurfaceVariant)
@@ -1123,7 +1251,7 @@ struct NumberStepperField: View {
             .multilineTextAlignment(.center)
             .padding(.horizontal, 8)
             .padding(.vertical, 8)
-            .background(colors.surfaceContainerLowest)
+            .background(colors.surfaceContainerHighest)   // ← fieldColors 容器色 surfaceContainerHighest
             .cornerRadius(SleepyTheme.fieldShape)
             // ← Android filled TextField, 无描边
         }
@@ -1146,7 +1274,8 @@ private struct EdgeCandidatePickerDialog: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(L10n.format("irregular_node_pick"))
-                .font(.system(size: 16, weight: .semibold))
+                // ← AlertDialog title = headlineSmall 24sp regular
+                .font(.system(size: 24))
                 .foregroundColor(colors.onSurface)
             ScrollView {
                 VStack(spacing: 4) {
@@ -1169,9 +1298,14 @@ private struct EdgeCandidatePickerDialog: View {
                     }
                 }
             }
-            Button(L10n.format("cancel")) { onDismiss() }
-                .frame(maxWidth: .infinity)
-                .buttonStyle(SleepyButtonStyle())
+            HStack {
+                Spacer()
+                // ← AlertDialog confirmButton(cancel): labelLarge 14sp Medium, 右对齐
+                Button(L10n.format("cancel")) { onDismiss() }
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(colors.primary)
+                    .buttonStyle(SleepyButtonStyle())
+            }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1195,18 +1329,24 @@ private struct NewEdgeSlotDialog: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(L10n.format("irregular_node_new_title", candidate.node))
-                .font(.system(size: 16, weight: .semibold))
+                // ← AlertDialog title = headlineSmall 24sp regular
+                .font(.system(size: 24))
                 .foregroundColor(colors.onSurface)
             TimePickerField(value: start, onValueChange: { start = $0 },
                             label: L10n.format("edge_insert_start_label"))
             TimePickerField(value: end, onValueChange: { end = $0 },
                             label: L10n.format("edge_insert_end_label"))
+            // ← AlertDialog 动作区: dismissButton(cancel) 在左, confirmButton(ok) 在右, 右对齐, labelLarge 14 Medium
             HStack {
-                Button(L10n.format("edge_insert_ok")) { onConfirm(start, end) }
-                    .disabled(!valid)
-                    .buttonStyle(SleepyButtonStyle())
                 Spacer()
                 Button(L10n.format("cancel")) { onDismiss() }
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(colors.primary)
+                    .buttonStyle(SleepyButtonStyle())
+                Button(L10n.format("edge_insert_ok")) { onConfirm(start, end) }
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(colors.primary)
+                    .disabled(!valid)
                     .buttonStyle(SleepyButtonStyle())
             }
         }
@@ -1245,18 +1385,24 @@ private struct SlotEditDialog: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(L10n.format("irregular_slot_edit_title", node))
-                .font(.system(size: 16, weight: .semibold))
+                // ← AlertDialog title = headlineSmall 24sp regular
+                .font(.system(size: 24))
                 .foregroundColor(colors.onSurface)
             TimePickerField(value: start, onValueChange: { start = $0 },
                             label: L10n.format("edge_insert_start_label"))
             TimePickerField(value: end, onValueChange: { end = $0 },
                             label: L10n.format("edge_insert_end_label"))
+            // ← AlertDialog 动作区: dismissButton(cancel) 在左, confirmButton(ok) 在右, 右对齐, labelLarge 14 Medium
             HStack {
-                Button(L10n.format("edge_insert_ok")) { onConfirm(start, end) }
-                    .disabled(!valid)
-                    .buttonStyle(SleepyButtonStyle())
                 Spacer()
                 Button(L10n.format("cancel")) { onDismiss() }
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(colors.primary)
+                    .buttonStyle(SleepyButtonStyle())
+                Button(L10n.format("edge_insert_ok")) { onConfirm(start, end) }
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(colors.primary)
+                    .disabled(!valid)
                     .buttonStyle(SleepyButtonStyle())
             }
         }

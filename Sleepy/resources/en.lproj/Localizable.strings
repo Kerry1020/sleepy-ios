@@ -678,3 +678,5 @@
 
 "schedule_empty_import" = "Import first timetable";
 "schedule_empty_create_table" = "Create first timetable";
+"irregular_options_section" = "Advanced options";
+"irregular_options_section_sub" = "Edge slots / custom times for special scheduling — no need to expand for regular courses";

@@ -678,3 +678,5 @@
 /* issue#empty 空态两按钮 — ← Android schedule_empty_import / schedule_empty_create_table */
 "schedule_empty_import" = "导入第一张课表";
 "schedule_empty_create_table" = "手动创建第一张课表";
+"irregular_options_section" = "非常规选项";
+"irregular_options_section_sub" = "边缘槽位 / 自定时间等特殊排课，普通课程无需展开";
