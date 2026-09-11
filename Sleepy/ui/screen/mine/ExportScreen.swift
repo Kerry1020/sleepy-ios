@@ -1,5 +1,5 @@
 // ExportScreen.swift — ← ui/screen/mine/ExportScreen.kt
-// 导出课表页: WakeUp JSON / WakeUp 分享文本 / ICS 日历。
+// 导出课表页: WakeUp JSON / WakeUp 分享文本 / ICS 日历 / Sleepy 原生格式(.sleepy 文件)。
 // 平台映射: MediaStore Downloads + ACTION_SEND → ShareLink/UIActivityViewController +
 // 写临时文件(tmp)经 UIActivityViewController 分享(等价适配:iOS 沙箱无公共 Downloads)。
 
@@ -88,6 +88,21 @@ struct ExportScreen: View {
                                 exportFile(table: table, courses: courses,
                                            ext: "ics", mime: "text/calendar",
                                            content: ScheduleExporter.exportIcs(table, courses))
+                            }
+                            // ← Android 第 4 行: Sleepy 原生格式 — 文件形态(末尾 z|chk=crc32 尾注),
+                            //   .sleepy 文件经系统分享; 图标 Star → SF "star"(与 ShareScheduleSheet 同映射)
+                            RowDivider()
+                            ExportItem(icon: "star",
+                                       title: L10n.format("export_native_title"),
+                                       subtitle: L10n.format("export_native_subtitle"),
+                                       id: "export_native_row") {
+                                // MIME 用 text/plain 规避 ImportReceiverActivity MIME 收窄问题(调查报告 P3)
+                                exportFile(table: table, courses: courses,
+                                           ext: "sleepy", mime: "text/plain",
+                                           content: SleepyNativeExporter.exportFile(
+                                               tableName: table.name, startDate: table.startDate,
+                                               maxWeek: table.maxWeek, nodesPerDay: table.nodesPerDay,
+                                               timeJson: table.timeJson, courses: courses))
                             }
                         }
                         .background(colors.surfaceContainer)
