@@ -282,7 +282,7 @@ private struct ScheduleTopBar: View {
             .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .background(colors.surface)
     }
@@ -387,14 +387,14 @@ private struct TableSwitcherSheet: View {
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                 if isCurrent {
                                     Image(systemName: "checkmark")
-                                        .font(.system(size: 15))
+                                        .font(.system(size: 18))
                                         .foregroundColor(colors.primary)
                                 }
                             }
                             .padding(.vertical, 10)
                             .padding(.horizontal, 8)
                             .background(isCurrent ? colors.primaryContainer : colors.surfaceContainer)
-                            .cornerRadius(SleepyShapes.medium)
+                            .cornerRadius(SleepyShapes.small)
                         }
                         .buttonStyle(SleepyButtonStyle())
                         .accessibilityIdentifier("switch_table_\(table.id)")
@@ -522,5 +522,9 @@ private struct EmptyState: View {
         .padding(.vertical, 24)
         .background(colors.surfaceContainer)
         .cornerRadius(SleepyShapes.extraLarge)
+        // ← Android EmptyState Column 链首 .padding(horizontal = 22.dp)(clip/background 之前 = 卡片外水平边距)
+        .padding(.horizontal, 22)
+        // ← Android 外层 Box .align(Alignment.Center): 空态卡在剩余空间垂直/水平居中
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

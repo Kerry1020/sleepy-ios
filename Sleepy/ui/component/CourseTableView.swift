@@ -61,10 +61,11 @@ struct CardsGridView: View {
         let rowH = slotH + gapH
 
         GeometryReader { geo in
-            // 根据容器宽度计算列宽；窄屏优先压缩时间栏和间距，避免卡片向右溢出。(× scale)
+            // 列宽计算: 侧边留白 16(= Android 外层 padding 8×2) + 固定 timeW 68 / gapW 5
+            // (× scale, ← Android d(68f)/d(5f), 不做窄屏自适应压缩)
             let sideInset: CGFloat = 16
-            let timeW = min(68, max(52, geo.size.width * 0.16)) * gridScale
-            let gapW = min(5, max(3, geo.size.width * 0.012)) * gridScale
+            let timeW = 68 * gridScale
+            let gapW = 5 * gridScale
             let contentW = max(geo.size.width - sideInset - timeW - gapW * CGFloat(dayCount), 0)
             let colW = max(contentW / CGFloat(dayCount), 28)
             // issue#23: grid 高度按 timeSlots 行数算(maxNode 已不反映边缘节点总数)
@@ -73,8 +74,8 @@ struct CardsGridView: View {
             ScrollView(.vertical) {
                 VStack(spacing: 0) {
                     // ---- 表头 ----
-                    // 首列留白 = timeW + gapW，与下方 grid 的 cardX 对齐；高度随日期行自适应
-                    let hasDateRow = showDate && !startDate.isEmpty
+                    // 首列留白 = timeW + gapW，与下方 grid 的 cardX 对齐；高度恒 headH
+                    // (← Android Row height(headH), 含日期行也是 52 — cell 自身 56 被 Row 约束收平)
                     HStack(spacing: gapW) {
                         Spacer().frame(width: timeW + gapW)
                         ForEach(sortedDays, id: \.self) { day in
@@ -92,7 +93,7 @@ struct CardsGridView: View {
                                 .frame(maxHeight: .infinity)
                         }
                     }
-                    .frame(height: hasDateRow ? d(56) : headH)
+                    .frame(height: headH)
 
                     Spacer().frame(height: gapH)
 
@@ -311,8 +312,8 @@ private struct CourseOverlayCard: View {
         let effectiveFg = isGrey ? fg.opacity(SleepyTheme.Alpha.inactive) : fg
         let strikethrough = isGrey && AppPrefs.shared.getHolidayStyle() == "strikethrough"
         // 副信息(教室/教师/无) — grid_sub_info 设置决定
-        // issue#8: 卡高阈值与字号随 scale 联动(← Android fontSize = 10*scale/11*scale)
-        let bodyFont = (cardHeight >= 110 * scale ? 10.0 : 11.0) * scale
+        // 课程名字号恒 10(× scale)(← Android fontSize = (10*scale).sp, 两分支同值, 无卡高档位)
+        let bodyFont = 10.0 * scale
         let subInfo = AppPrefs.shared.getGridSubInfo()
         // issue#26: 网格场景别名 — 网格设置开且别名非空才显示别名, 否则原名
         let name = CourseDisplayUtil.displayName(course, AppPrefs.shared.isGridUseAlias())
@@ -343,7 +344,7 @@ private struct CourseOverlayCard: View {
                             .font(.system(size: bodyFont, weight: .semibold))
                             .foregroundColor(effectiveFg)
                             .strikethrough(strikethrough)
-                            .lineLimit(4)
+                            .lineLimit(6)
                             .minimumScaleFactor(0.6)
                             .allowsTightening(true)
                             .multilineTextAlignment(.center)
@@ -416,10 +417,9 @@ private struct DayHeadCell: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.vertical, 6 * scale)
         .background(bg)
         .cornerRadius(16 * scale * cornerRatio)
-        .padding(.horizontal, 1)
-        .padding(.vertical, 6 * scale)
     }
 }
 
@@ -507,7 +507,7 @@ private struct DaySummaryCell: View {
         let fg = isGrey ? colors.onSurfaceVariant.opacity(SleepyTheme.Alpha.inactive)
                         : (isToday ? colors.onPrimaryContainer : colors.onSurface)
 
-        VStack(spacing: 4 * scale) {
+        VStack(spacing: 0) {
             // 日期
             Text(DateUtils.localizedDay(day))
                 .font(.system(size: 13 * scale, weight: .semibold))
@@ -540,8 +540,9 @@ private struct DaySummaryCell: View {
 
             Spacer().frame(height: 4 * scale)
 
-            // Mini-list: 前 5 门课名(别名开启时显示别名 ← issue#26)
-            VStack(spacing: 2 * scale) {
+            // Mini-list: 前 5 门课名(别名开启时显示别名 ← issue#26) —
+            // 左对齐(← Android fillMaxWidth Column + Text 默认 Start)
+            VStack(alignment: .leading, spacing: 2 * scale) {
                 ForEach(courses.prefix(5)) { c in
                     Text(CourseDisplayUtil.displayName(c, useAlias))
                         .font(.system(size: 9 * scale))
@@ -549,9 +550,10 @@ private struct DaySummaryCell: View {
                             ? colors.onPrimaryContainer.opacity(SleepyTheme.Alpha.highContent)
                             : colors.onSurfaceVariant)
                         .lineLimit(2)
-                        .multilineTextAlignment(.center)
+                        .multilineTextAlignment(.leading)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity)
@@ -692,7 +694,8 @@ private struct DetailDayCard: View {
             // 头部: 星期 + 今天标记
             HStack {
                 Text(DateUtils.localizedDay(day) + (isToday ? L10n.format("today_suffix") : ""))
-                    .font(.system(size: 14 * scale, weight: .semibold))
+                    // ← Android titleSmall.copy(SemiBold): 14sp 不随 weekScale 缩放
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(isGrey ? greyFg : colors.onSurface)
                 Spacer()
             }
@@ -830,33 +833,35 @@ private struct LessonRow: View {
         }()
 
         Button(action: onClick) {
-            HStack(alignment: .top, spacing: 8 * scale) {
+            HStack(alignment: .top, spacing: 8 * effScale) {
                 if !hideSideLabel {
                     if let parts = timeParts {
                         Text("\(parts.0)-\n\(parts.1)")
                             .font(.system(size: 12 * effScale, weight: .semibold))
                             .foregroundColor(effectiveFg)
                             .strikethrough(strikethrough)
-                            .frame(width: 42 * scale, alignment: .leading)
+                            .frame(width: 42 * effScale, alignment: .leading)
                     } else {
                         Text(nodeLabel)
                             .font(.system(size: 12 * effScale, weight: .semibold))
                             .foregroundColor(effectiveFg)
                             .strikethrough(strikethrough)
-                            .frame(width: 42 * scale, alignment: .leading)
+                            .frame(width: 42 * effScale, alignment: .leading)
                             .lineLimit(1)
                     }
                 }
-                VStack(alignment: .leading, spacing: 2 * scale) {
+                // ← Android Column(weight(1f)) 无 spacing(0)
+                VStack(alignment: .leading, spacing: 0) {
                     Text(name)
                         .font(.system(size: 12 * effScale, weight: .semibold))
                         .foregroundColor(effectiveFg)
                         .strikethrough(strikethrough)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
-                    if !meta.isEmpty {
+                    // 极窄 lane 下副信息(教师/教室)也让位给课名(← Android !hideSideLabel)
+                    if !meta.isEmpty && !hideSideLabel {
                         Text(meta)
-                            .font(.system(size: 10 * effScale))
+                            .font(.system(size: 11 * effScale))
                             .foregroundColor(effectiveFg.opacity(SleepyTheme.Alpha.highContent))
                             .strikethrough(strikethrough)
                             .lineLimit(2)
@@ -865,10 +870,10 @@ private struct LessonRow: View {
                 }
                 Spacer(minLength: 0)
             }
-            .padding(9 * scale)
+            .padding(9 * effScale)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(effectiveBg)
-            .cornerRadius(12 * scale * cornerRatio)
+            .cornerRadius(12 * effScale * cornerRatio)
         }
         .buttonStyle(SleepyButtonStyle())
         .accessibilityIdentifier("lesson_\(course.id)")   // ← G5: 详情锚点
