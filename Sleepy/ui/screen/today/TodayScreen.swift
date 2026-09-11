@@ -252,7 +252,6 @@ private struct TodayCourseCard: View {
                     Text(course.nodeString(isShort: true))
                         .font(.system(size: 16, weight: .bold))
                         .foregroundColor(fg)
-                        .lineLimit(1)
                     if let time = time {
                         Text(time)
                             .font(.system(size: 11, weight: .medium))
