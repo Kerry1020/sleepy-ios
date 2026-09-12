@@ -66,7 +66,7 @@ Grid column widths, row heights, and font scaling now use the same formulas as A
 
 - Unit tests: 363 passed, 0 failed (iPhone 14 Pro simulator).
 - Version 1.0.43, build 36.
-- Asset: Sleepy.ipa, 8,272,264 bytes, SHA-256 `362560894d730af7ab51a3a05379632013cd110737e3cce54435afa2fa4b91b8`.
+- Asset: Sleepy.ipa, 8,350,121 bytes, SHA-256 `7738e13a3745288cba995249d8d9b97110808153f33096b24865fe5d5c8070ed`.
 
 ---
 
@@ -138,4 +138,4 @@ Grid column widths, row heights, and font scaling now use the same formulas as A
 
 - 单元测试:363 通过 / 0 失败(iPhone 14 Pro 模拟器)。
 - 版本 1.0.43,build 36。
-- 资产:Sleepy.ipa,8,272,264 字节,SHA-256 `362560894d730af7ab51a3a05379632013cd110737e3cce54435afa2fa4b91b8`。
+- 资产:Sleepy.ipa,8,350,121 字节,SHA-256 `7738e13a3745288cba995249d8d9b97110808153f33096b24865fe5d5c8070ed`。
