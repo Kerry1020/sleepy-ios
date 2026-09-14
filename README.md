@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lingion/sleepy-ios/releases">下载 IPA</a>
+  <a href="https://github.com/lingion/sleepy-ios/releases">下载 IPA</a> · <a href="https://sleepy.qdp.qzz.io">在线体验</a>
 </p>
 
 ---
@@ -229,6 +229,10 @@ xcodebuild -project Sleepy.xcodeproj \
 ## Android 原版
 
 https://github.com/lingion/sleepy
+
+## 在线体验
+
+https://sleepy.qdp.qzz.io — Web 版课表，浏览器打开即用，无需安装；支持多格式导入（WakeUp 分享文本 / ICS / CSV / Excel），数据仅存本地
 
 ---
 
