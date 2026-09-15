@@ -267,9 +267,16 @@ final class MineSettingsUITests: XCTestCase {
     func testHolidayEntryOpensHolidayScreen() {
         app.descendants(matching: .any)["mine_general"].tap()
         XCTAssertTrue(app.staticTexts["General"].waitForExistence(timeout: 5))
-        app.swipeUp()
         let entry = app.descendants(matching: .any)["settings_holiday_entry"].firstMatch
         XCTAssertTrue(entry.waitForExistence(timeout: 5), "General 页应有节假日入口卡")
+        // issue#26 别名开关折叠进 pill 卡后 General 页整体变矮, 固定 swipeUp 会把入口
+        // 划出视口上沿(tap 落空)→ 按需双向滚动把入口送进可视区再点
+        let screenH = app.frame.height
+        for _ in 0..<4 {
+            let f = entry.frame
+            if f.minY > 80 && f.maxY < screenH - 80 { break }
+            if f.minY <= 80 { app.swipeDown() } else { app.swipeUp() }
+        }
         entry.tap()
         // 二级页标题 "Holidays & Make-up Days"
         let title = app.staticTexts["Holidays & Make-up Days"].firstMatch
