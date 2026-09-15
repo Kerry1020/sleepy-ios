@@ -336,15 +336,45 @@ final class JwImportViewModelLogicTests: XCTestCase {
         XCTAssertThrowsError(try JwImportViewModel.importAsNewTable(db, courses: [], tableName: "x"))
     }
 
-    func testSchoolsJsonLoadsAndParses() throws {
-        // ← parseSchoolsJson 走 app bundle 的 schools.json; 校数闸门随安卓 schools.json 联动
+    // MARK: schools.json 载入工具
+
+    /// ← parseSchoolsJson 走 app bundle 的 schools.json
+    private func loadSchools() throws -> [JwSchoolInfo] {
         let bundle = Bundle(for: JwImportViewModel.self) // @testable → 用 app 类型
         let url = Bundle.main.url(forResource: "schools", withExtension: "json")
             ?? bundle.url(forResource: "schools", withExtension: "json")
         let raw = try String(contentsOf: url!, encoding: .utf8)
-        let list = JwImportViewModel.parseSchoolsJson(raw)
-        XCTAssertEqual(184, list.count)
+        return JwImportViewModel.parseSchoolsJson(raw)
+    }
+
+    private func entryOf(_ list: [JwSchoolInfo], _ name: String) -> JwSchoolInfo? {
+        list.first { $0.name == name }
+    }
+
+    func testSchoolsJsonLoadsAndParses() throws {
+        // 校数闸门随安卓 schools.json 联动
+        // 2026-09-10 安卓收录燕山大学(博雅研究生平台, 首个 grad_supported) → 185
+        let list = try loadSchools()
+        XCTAssertEqual(185, list.count)
         let first = list[0]
         XCTAssertFalse(first.name.isEmpty)
+    }
+
+    // ← Schools179CrossValidationTest.kt `ysu entry pinned to collector and replay evidence`
+    func testYsuEntryPinnedToCollectorAndReplayEvidence() throws {
+        // 采集包 sleepy-adapt (2026-09-06) + token 重放实采: yjsxt.ysu.edu.cn/pp 研究生平台
+        // (博雅研究生 V6.0, fid=41571), 逐周 byStudent 390 行, termBeginTime=2026-08-31。
+        // 入口 = 燕大统一身份认证 CAS, service 回调 yjsxt /api/casLogin/ysu (实测 302 链路)。
+        // 研究生入口, status=grad_supported; 首个 boya_pp 协议校。
+        let list = try loadSchools()
+        let e = try XCTUnwrap(entryOf(list, "燕山大学"), "燕山大学 条目缺失")
+        XCTAssertTrue(e.url.contains("cer.ysu.edu.cn/authserver/login"),
+                      "入口应为 cer.ysu.edu.cn 统一身份认证")
+        XCTAssertTrue(e.url.contains("yjsxt.ysu.edu.cn%2Fapi%2FcasLogin%2Fysu"),
+                      "service 应回调 yjsxt casLogin")
+        XCTAssertEqual("boya_pp", e.type, "应为 boya_pp (博雅研究生平台实锤)")
+        XCTAssertEqual(JwSchoolInfo.STATUS_GRAD_SUPPORTED, e.status,
+                       "应为 grad_supported (研究生入口)")
+        XCTAssertTrue(e.isGrad)
     }
 }
