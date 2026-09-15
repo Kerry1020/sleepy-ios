@@ -58,11 +58,13 @@ struct TodayWidgetProvider: TimelineProvider {
 
 struct TodayWidgetEntryView: View {
     @Environment(\.widgetFamily) var widgetFamily
+    @Environment(\.colorScheme) private var widgetColorScheme
     let entry: TodayWidgetEntry
 
     var body: some View {
         let data = entry.data
-        let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: data.isDark)
+        let isDark = effectiveWidgetIsDark(themeMode: data.themeMode, snapshotIsDark: data.isDark, envScheme: widgetColorScheme)
+        let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: isDark)
         let prefs = AppPrefs.shared
         let colorless = prefs.isWidgetColorless()
         let displayMode = prefs.getDisplayMode()   // ★ 用户显示设置 (决策 D5-12)

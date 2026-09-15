@@ -24,6 +24,8 @@ struct WidgetData {
     var isDark: Bool = false
     /// 跟 app 主题色(ThemePresets key)
     var themeKey: String = ThemePresets.KEY_DEFAULT
+    /// 主题跟随模式(light/dark/system); system 时渲染端用环境色域覆盖 isDark
+    var themeMode: String? = nil
     /// ★ 学期状态(学期外时 Today 渲染状态文案不渲染课程)
     var semesterStatus: DateUtils.SemesterStatus = .inRange
 
@@ -53,6 +55,14 @@ struct WidgetScheme {
 /// ★ "custom:<id>" 走 CustomThemeStore + CustomSchemeDeriver —— 与 App 内
 ///   SleepyThemeProvider 同一个派生函数,保证小组件与界面配色同源;id 读不到
 ///   (已删)回落 ThemePresets.byKey(null) 默认套(Android 同语义)。
+/// system 模式 → 渲染期取系统深浅(WidgetKit \.colorScheme, 对齐 Android
+/// isSystemInDarkTheme 渲染期取值); 锁定 light/dark 用快照 isDark。
+/// 旧快照无 themeMode 字段(nil)沿用原行为。
+func effectiveWidgetIsDark(themeMode: String?, snapshotIsDark: Bool, envScheme: ColorScheme) -> Bool {
+    guard let mode = themeMode else { return snapshotIsDark }
+    return mode == AppPrefs.THEME_MODE_SYSTEM ? envScheme == .dark : snapshotIsDark
+}
+
 func resolveWidgetScheme(themeKey: String, isDark: Bool) -> WidgetScheme {
     let s: WakeUpColorScheme
     if themeKey.hasPrefix(ThemePresets.CUSTOM_KEY_PREFIX) {
@@ -106,6 +116,8 @@ struct WeekData {
     var hasTable: Bool
     var isDark: Bool = false
     var themeKey: String = ThemePresets.KEY_DEFAULT
+    /// 主题跟随模式(light/dark/system); system 时渲染端用环境色域覆盖 isDark
+    var themeMode: String? = nil
     // displayMode 死字段已删(Android 侧 renderer 各自直读 AppPrefs)
     var showDate: Bool = false
     var visibleDays: Set<Int> = Set(1...7)
@@ -119,6 +131,8 @@ struct TwoDayData {
     var hasTable: Bool
     var isDark: Bool = false
     var themeKey: String = ThemePresets.KEY_DEFAULT
+    /// 主题跟随模式(light/dark/system); system 时渲染端用环境色域覆盖 isDark
+    var themeMode: String? = nil
     /// ★ 学期状态(学期外时渲染状态文案不渲染课程)
     var semesterStatus: DateUtils.SemesterStatus = .inRange
 }

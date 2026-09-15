@@ -38,21 +38,22 @@ enum TodayWidgetLoader {
         let prefs = AppPrefs.shared
         let isDark = prefs.isDarkMode()
         let themeKey = prefs.getThemeKey()
+        let themeMode = prefs.getThemeMode()
         do {
             guard let repo = WidgetLoader.makeRepo(),
                   let table = WidgetLoader.tableFor(kind: kind, repo: repo) else {
                 return WidgetData(date: today, courses: [], timeJson: TimeTableUtils.DEFAULT_TIME_JSON,
-                                  hasTable: false, isDark: isDark, themeKey: themeKey)
+                                  hasTable: false, isDark: isDark, themeKey: themeKey, themeMode: themeMode)
             }
             let week = DateUtils.currentWeek(startDate: table.startDate, today: today)
             let status = DateUtils.semesterStatus(startDate: table.startDate, maxWeek: table.maxWeek, today: today)
             let all = try repo.getCoursesByDay(table.id, day: dayOfWeek)
             let visible = all.filter { $0.inWeek(week) }.sorted { $0.startNode < $1.startNode }
             return WidgetData(date: today, courses: visible, timeJson: table.timeJson,
-                              hasTable: true, isDark: isDark, themeKey: themeKey, semesterStatus: status)
+                              hasTable: true, isDark: isDark, themeKey: themeKey, themeMode: themeMode, semesterStatus: status)
         } catch {
             return WidgetData(date: today, courses: [], timeJson: TimeTableUtils.DEFAULT_TIME_JSON,
-                              hasTable: false, isDark: isDark, themeKey: themeKey)
+                              hasTable: false, isDark: isDark, themeKey: themeKey, themeMode: themeMode)
         }
     }
 }
@@ -65,10 +66,11 @@ enum WeekListWidgetLoader {
         let prefs = AppPrefs.shared
         let isDark = prefs.isDarkMode()
         let themeKey = prefs.getThemeKey()
+        let themeMode = prefs.getThemeMode()
         do {
             guard let repo = WidgetLoader.makeRepo(),
                   let table = WidgetLoader.tableFor(kind: kind, repo: repo) else {
-                return WeekData(days: [], hasTable: false, isDark: isDark, themeKey: themeKey)
+                return WeekData(days: [], hasTable: false, isDark: isDark, themeKey: themeKey, themeMode: themeMode)
             }
             let week = DateUtils.currentWeek(startDate: table.startDate, today: today)
             let status = DateUtils.semesterStatus(startDate: table.startDate, maxWeek: table.maxWeek, today: today)
@@ -78,9 +80,9 @@ enum WeekListWidgetLoader {
                 let visible = all.filter { $0.inWeek(week) }.sorted { $0.startNode < $1.startNode }
                 return DayData(date: date, dayOfWeek: dayOfWeek, courses: visible, timeJson: table.timeJson)
             }
-            return WeekData(days: days, hasTable: true, isDark: isDark, themeKey: themeKey, semesterStatus: status)
+            return WeekData(days: days, hasTable: true, isDark: isDark, themeKey: themeKey, themeMode: themeMode, semesterStatus: status)
         } catch {
-            return WeekData(days: [], hasTable: false, isDark: isDark, themeKey: themeKey)
+            return WeekData(days: [], hasTable: false, isDark: isDark, themeKey: themeKey, themeMode: themeMode)
         }
     }
 }
@@ -94,10 +96,11 @@ enum TwoDayWidgetLoader {
         let prefs = AppPrefs.shared
         let isDark = prefs.isDarkMode()
         let themeKey = prefs.getThemeKey()
+        let themeMode = prefs.getThemeMode()
         do {
             guard let repo = WidgetLoader.makeRepo(),
                   let table = WidgetLoader.tableFor(kind: kind, repo: repo) else {
-                return TwoDayData(days: [], hasTable: false, isDark: isDark, themeKey: themeKey)
+                return TwoDayData(days: [], hasTable: false, isDark: isDark, themeKey: themeKey, themeMode: themeMode)
             }
             let week = DateUtils.currentWeek(startDate: table.startDate, today: today)
             let status = DateUtils.semesterStatus(startDate: table.startDate, maxWeek: table.maxWeek, today: today)
@@ -112,9 +115,9 @@ enum TwoDayWidgetLoader {
                     DayData(date: today, dayOfWeek: todayDow, courses: todayCourses, timeJson: table.timeJson),
                     DayData(date: tomorrow, dayOfWeek: tomorrowDow, courses: tomorrowCourses, timeJson: table.timeJson)
                 ],
-                hasTable: true, isDark: isDark, themeKey: themeKey, semesterStatus: status)
+                hasTable: true, isDark: isDark, themeKey: themeKey, themeMode: themeMode, semesterStatus: status)
         } catch {
-            return TwoDayData(days: [], hasTable: false, isDark: isDark, themeKey: themeKey)
+            return TwoDayData(days: [], hasTable: false, isDark: isDark, themeKey: themeKey, themeMode: themeMode)
         }
     }
 }
@@ -127,12 +130,13 @@ enum WeekGridWidgetLoader {
         let prefs = AppPrefs.shared
         let isDark = prefs.isDarkMode()
         let themeKey = prefs.getThemeKey()
+        let themeMode = prefs.getThemeMode()
         let showDate = prefs.isShowDate()
         let visibleDays = prefs.getVisibleDays()
         do {
             guard let repo = WidgetLoader.makeRepo(),
                   let table = WidgetLoader.tableFor(kind: kind, repo: repo) else {
-                return WeekData(days: [], hasTable: false, isDark: isDark, themeKey: themeKey,
+                return WeekData(days: [], hasTable: false, isDark: isDark, themeKey: themeKey, themeMode: themeMode,
                                 showDate: showDate, visibleDays: visibleDays)
             }
             let week = DateUtils.currentWeek(startDate: table.startDate, today: today)
@@ -143,10 +147,10 @@ enum WeekGridWidgetLoader {
                 let date = DateUtils.dateOfWeekDay(ref: today, dayOfWeek: dow)
                 return DayData(date: date, dayOfWeek: dow, courses: visible, timeJson: table.timeJson)
             }
-            return WeekData(days: days, hasTable: true, isDark: isDark, themeKey: themeKey,
+            return WeekData(days: days, hasTable: true, isDark: isDark, themeKey: themeKey, themeMode: themeMode,
                             showDate: showDate, visibleDays: visibleDays, semesterStatus: status)
         } catch {
-            return WeekData(days: [], hasTable: false, isDark: isDark, themeKey: themeKey,
+            return WeekData(days: [], hasTable: false, isDark: isDark, themeKey: themeKey, themeMode: themeMode,
                             showDate: showDate, visibleDays: visibleDays)
         }
     }

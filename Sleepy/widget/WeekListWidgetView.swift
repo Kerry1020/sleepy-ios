@@ -51,11 +51,13 @@ func shownDays(_ data: WeekData) -> [DayData] {
 
 struct WeekListWidgetEntryView: View {
     @Environment(\.widgetFamily) private var widgetFamily
+    @Environment(\.colorScheme) private var widgetColorScheme
     let entry: WeekListWidgetEntry
 
     var body: some View {
         let data = entry.data
-        let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: entry.data.isDark)
+        let isDark = effectiveWidgetIsDark(themeMode: data.themeMode, snapshotIsDark: entry.data.isDark, envScheme: widgetColorScheme)
+        let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: isDark)
         let colorless = AppPrefs.shared.isWidgetColorless()
         // issue#26: widget 全局一档别名开关
         let useAlias = AppPrefs.shared.isWidgetUseAlias()

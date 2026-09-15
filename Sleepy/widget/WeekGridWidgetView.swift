@@ -37,6 +37,7 @@ struct WeekGridWidgetProvider: TimelineProvider {
 struct WeekGridWidgetEntryView: View {
     let entry: WeekGridWidgetEntry
     @Environment(\.widgetFamily) private var widgetFamily
+    @Environment(\.colorScheme) private var widgetColorScheme
 
     var body: some View {
         // issue#26: SMALL 档 — 仅渲染今日紧凑面(复用 Today compact face)
@@ -52,7 +53,8 @@ struct WeekGridWidgetEntryView: View {
     @ViewBuilder
     private var gridBody: some View {
         let data = entry.data
-        let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: data.isDark)
+        let isDark = effectiveWidgetIsDark(themeMode: data.themeMode, snapshotIsDark: data.isDark, envScheme: widgetColorScheme)
+        let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: isDark)
         let colorless = AppPrefs.shared.isWidgetColorless()
         let todayDow = DateUtils.todayDayOfWeek(today: Date())
         // issue#22: 同名课程多地点 — 跨天汇总 course 全集, 传取色入口做 AUTO/CUSTOM 按行判
@@ -603,6 +605,7 @@ private struct WeekGridMinimumTodayFace: View {
                           hasTable: data.hasTable,
                           isDark: data.isDark,
                           themeKey: data.themeKey,
+                          themeMode: data.themeMode,
                           semesterStatus: data.semesterStatus)
     }
 }

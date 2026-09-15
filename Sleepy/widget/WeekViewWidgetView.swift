@@ -34,11 +34,13 @@ struct WeekViewWidgetProvider: TimelineProvider {
 
 struct WeekViewWidgetEntryView: View {
     @Environment(\.widgetFamily) private var widgetFamily
+    @Environment(\.colorScheme) private var widgetColorScheme
     let entry: WeekViewWidgetEntry
 
     var body: some View {
         let data = entry.data
-        let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: data.isDark)
+        let isDark = effectiveWidgetIsDark(themeMode: data.themeMode, snapshotIsDark: data.isDark, envScheme: widgetColorScheme)
+        let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: isDark)
         let showSeparator = AppPrefs.shared.isWidgetSeparator()
         let todayDow = DateUtils.todayDayOfWeek(today: Date())
         // SMALL 紧凑档 ← renderWeekViewCompact: 复用 Regular 渲染器, 数据侧换列(列少每列自然变宽)
