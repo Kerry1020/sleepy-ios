@@ -682,3 +682,35 @@
 "schedule_empty_create_table" = "Create first timetable";
 "irregular_options_section" = "Advanced options";
 "irregular_options_section_sub" = "Edge slots / custom times for special scheduling — no need to expand for regular courses";
+
+/* Custom theme editor (migrated from sleepy Android strings.xml) */
+"theme_custom_edit" = "Edit theme";
+"theme_custom_name_label" = "Theme name";
+"theme_custom_default_name" = "Theme %1$d";
+"theme_editor_delete_confirm" = "Delete this custom theme?";
+"theme_editor_delete_confirm_body" = "Pages and widgets using it will fall back to the default \"Lilac\" theme.";
+"theme_editor_from_seed" = "Build from a primary color";
+"theme_editor_from_seed_desc" = "Pick one primary color and get a coordinated full set";
+"theme_editor_manual" = "Pick roles manually";
+"theme_editor_manual_desc" = "Set primary, secondary, tertiary and surface colors one by one";
+"theme_editor_preview" = "Preview";
+"theme_editor_preview_card_room" = "Bldg 1 · 302";
+"theme_editor_preview_card_title" = "Advanced Math";
+"theme_editor_random" = "Randomize";
+"theme_editor_random_desc" = "Generate a random palette; tap again if it does not fit";
+"theme_role_primary" = "Primary";
+"theme_role_primary_desc" = "Buttons, selection, current-week pill, links";
+"theme_role_secondary" = "Secondary";
+"theme_role_secondary_desc" = "Chips and secondary containers";
+"theme_role_surface" = "Surface neutral";
+"theme_role_surface_desc" = "Background and card tint tendency";
+"theme_role_tertiary" = "Tertiary";
+"theme_role_tertiary_desc" = "Accent chips such as period tags";
+"theme_new" = "New theme";
+
+/* Custom theme editor — iOS-only controls (surface sliders + discard guard) */
+"theme_editor_surface_hue" = "Surface hue";
+"theme_editor_surface_chroma" = "Surface saturation";
+"theme_editor_discard_confirm" = "Discard unsaved changes?";
+"theme_editor_discard" = "Discard";
+"theme_editor_discard_confirm_body" = "This theme has unsaved changes. They will be lost if you leave now.";

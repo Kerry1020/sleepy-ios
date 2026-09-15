@@ -46,17 +46,29 @@ struct WidgetScheme {
     var isDark: Bool = false
 }
 
-/// 按 themeKey + isDark 派生小组件配色。 ← resolveSchemePublic
+/// 按 themeKey + isDark 派生小组件配色。 ← resolveWidgetScheme
 ///
 /// ★ themeKey == "system" 走 iOS 语义色(等价适配:Android Material You 动态取色
 ///   在 iOS 无对应 API,降级为系统语义色),与 SleepyThemeProvider 的处理对齐。
+/// ★ "custom:<id>" 走 CustomThemeStore + CustomSchemeDeriver —— 与 App 内
+///   SleepyThemeProvider 同一个派生函数,保证小组件与界面配色同源;id 读不到
+///   (已删)回落 ThemePresets.byKey(null) 默认套(Android 同语义)。
 func resolveWidgetScheme(themeKey: String, isDark: Bool) -> WidgetScheme {
-    let s: WakeUpColorScheme = themeKey == ThemePresets.KEY_SYSTEM
-        ? SleepyThemeProvider.dynamicSystemScheme(dark: isDark)
-        : {
-            let preset = ThemePresets.byKey(themeKey)
-            return isDark ? preset.dark : preset.light
-        }()
+    let s: WakeUpColorScheme
+    if themeKey.hasPrefix(ThemePresets.CUSTOM_KEY_PREFIX) {
+        let id = String(themeKey.dropFirst(ThemePresets.CUSTOM_KEY_PREFIX.count))
+        if let theme = CustomThemeStore.getById(id) {
+            s = CustomSchemeDeriver.derive(theme: theme, isDark: isDark)
+        } else {
+            let preset = ThemePresets.byKey(ThemePresets.KEY_DEFAULT)
+            s = isDark ? preset.dark : preset.light
+        }
+    } else if themeKey == ThemePresets.KEY_SYSTEM {
+        s = SleepyThemeProvider.dynamicSystemScheme(dark: isDark)
+    } else {
+        let preset = ThemePresets.byKey(themeKey)
+        s = isDark ? preset.dark : preset.light
+    }
     return WidgetScheme(
         bg: s.surface,
         surface: s.surface,

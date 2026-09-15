@@ -682,3 +682,35 @@
 "schedule_empty_create_table" = "最初の時間割を作成";
 "irregular_options_section" = "詳細設定";
 "irregular_options_section_sub" = "端の枠 / 時刻の上書きなど特殊な設定。通常の授業では開く必要なし";
+
+/* Custom theme editor (migrated from sleepy Android strings.xml) */
+"theme_custom_edit" = "テーマを編集";
+"theme_custom_name_label" = "テーマ名";
+"theme_custom_default_name" = "テーマ %1$d";
+"theme_editor_delete_confirm" = "このカスタムテーマを削除しますか?";
+"theme_editor_delete_confirm_body" = "使用中のページとウィジェットは既定の「ライラック」に戻ります。";
+"theme_editor_from_seed" = "メイン色から一式生成";
+"theme_editor_from_seed_desc" = "1 色選ぶと、全体が調和した配色を自動生成";
+"theme_editor_manual" = "ロールごとに手動選択";
+"theme_editor_manual_desc" = "プライマリ・セカンダリ・ターシャリ・サーフェスを個別に指定";
+"theme_editor_preview" = "プレビュー";
+"theme_editor_preview_card_room" = "1 号館 · 302";
+"theme_editor_preview_card_title" = "解析学";
+"theme_editor_random" = "ランダム生成";
+"theme_editor_random_desc" = "ランダムな配色を生成。気に入らなければもう一度";
+"theme_role_primary" = "プライマリ";
+"theme_role_primary_desc" = "ボタン・選択状態・今週カプセル・リンク色";
+"theme_role_secondary" = "セカンダリ";
+"theme_role_secondary_desc" = "チップやセカンダリ コンテナ";
+"theme_role_surface" = "サーフェス中立色";
+"theme_role_surface_desc" = "背景とカードの色味の傾向";
+"theme_role_tertiary" = "ターシャリ";
+"theme_role_tertiary_desc" = "時限チップなどの差し色";
+"theme_new" = "新しいテーマ";
+
+/* Custom theme editor — iOS-only controls (surface sliders + discard guard) */
+"theme_editor_surface_hue" = "表面の色相";
+"theme_editor_surface_chroma" = "表面の彩度";
+"theme_editor_discard_confirm" = "未保存の変更を破棄しますか?";
+"theme_editor_discard" = "破棄";
+"theme_editor_discard_confirm_body" = "未保存の変更があります。今離れると失われます。";
