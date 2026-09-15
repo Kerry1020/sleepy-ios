@@ -156,6 +156,24 @@ final class ScheduleRepository {
         onDataChanged()
     }
 
+    /// 改组色(issue#22 spec §6.2 "改组色"按钮的落库路径):
+    /// 把选中色写到同 groupId 所有 colorMode=GROUP 行的 color 字段。
+    ///
+    /// 只动 GROUP 行 — AUTO 行 hue 源来自组色源(groupSourceColorHex),组色变则
+    /// 自动行跟着变(spec §5.2"组色变则自动跟随"),不需要写;CUSTOM 行独立色不跟组。
+    /// 落所有 GROUP 行而非只落最小 id 行:避免 RowKeyDiffer 把未改 GROUP 行 diff 出假更新。
+    func setGroupSourceColor(_ tableId: Int64, _ groupId: String, _ hex: String) throws {
+        try captureForUndo()
+        if groupId.trimmingCharacters(in: .whitespaces).isEmpty { return }
+        let group = try courseDao.getByGroupId(tableId, groupId)
+            .filter { $0.colorMode == CourseColorMode.GROUP }
+        if group.isEmpty { return }
+        var rows = group
+        for i in rows.indices { rows[i].color = hex }
+        try courseDao.updateAll(rows)
+        onDataChanged()
+    }
+
     func deleteCourse(_ id: Int64) throws {
         try captureForUndo()
         try courseDao.deleteById(id)

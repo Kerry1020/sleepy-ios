@@ -682,3 +682,8 @@
 "schedule_empty_create_table" = "最初の時間割を作成";
 "irregular_options_section" = "詳細設定";
 "irregular_options_section_sub" = "端の枠 / 時刻の上書きなど特殊な設定。通常の授業では開く必要なし";
+
+/* 改组色(issue#22 spec §6.2 恢复) */
+"color_group_auto" = "自動（黄金角）";
+"group_color_confirm_title" = "グループ色の変更を確認";
+"group_color_confirm_msg" = "グループ色は、この授業のグループ色に従うすべてのコマに適用されます。";

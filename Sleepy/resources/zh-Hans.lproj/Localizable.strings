@@ -682,3 +682,8 @@
 "schedule_empty_create_table" = "手动创建第一张课表";
 "irregular_options_section" = "非常规选项";
 "irregular_options_section_sub" = "边缘槽位 / 自定时间等特殊排课，普通课程无需展开";
+
+/* 改组色(issue#22 spec §6.2 恢复) */
+"color_group_auto" = "自动（黄金角）";
+"group_color_confirm_title" = "确认修改组色";
+"group_color_confirm_msg" = "组色会影响本课程所有跟随组色的节次。";

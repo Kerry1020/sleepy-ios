@@ -158,4 +158,59 @@ final class CourseColorUtilTests: XCTestCase {
         XCTAssertEqual(0xFF000000, CourseColorUtil.hslToColorInt(200, 0.8, 0))
         XCTAssertEqual(0xFFFFFFFF, CourseColorUtil.hslToColorInt(200, 0.8, 1))
     }
+
+    // ============================ 改组色(issue#22 spec §6.2 恢复) ============================
+
+    private func groupCourse(_ id: Int64, color: String, mode: Int) -> CourseEntity {
+        var c = CourseEntity(groupId: "grp-A", tableId: 1, courseName: "高等数学",
+                             day: 1, startNode: 1, step: 2, startWeek: 1, endWeek: 16, color: color)
+        c.id = id
+        c.colorMode = mode
+        return c
+    }
+
+    /// 同一输入下 hex-only 与实体版判定必须相同 — 哨兵值收敛到 SENTINEL_COLOR 单点
+    func testHasCustomColorHexConsistentWithEntityVersion() {
+        for hex in ["#FF5722", "#FF6750A4", "#ff6750a4", "", "  "] {
+            XCTAssertEqual(CourseColorUtil.hasCustomColor(course(hex)),
+                           CourseColorUtil.hasCustomColorHex(hex),
+                           "hex=\(hex) 两版判定应一致")
+        }
+    }
+
+    func testGroupSourceColorHexTakesMinIdGroupRow() {
+        let rows = [
+            groupCourse(3, color: "#FF0000FF", mode: CourseColorMode.GROUP),
+            groupCourse(1, color: "#FFFF0000", mode: CourseColorMode.GROUP),
+            groupCourse(2, color: "#FF00FF00", mode: CourseColorMode.CUSTOM),
+        ]
+        // 组色源 = GROUP 模式中最小 id 行的 color
+        XCTAssertEqual("#FFFF0000", CourseColorUtil.groupSourceColorHex(rows))
+    }
+
+    func testGroupSourceColorHexFallsBackToMinIdRow() {
+        let rows = [
+            groupCourse(2, color: "#FF00FF00", mode: CourseColorMode.CUSTOM),
+            groupCourse(1, color: "#FFFF0000", mode: CourseColorMode.AUTO),
+        ]
+        XCTAssertEqual("#FFFF0000", CourseColorUtil.groupSourceColorHex(rows))
+    }
+
+    /// spec §5.2"组色变则自动跟随": forRow 的 hue = baseHue(组色源) + idx×黄金角。
+    /// iOS 真 UIColor/parseColor 可用(不像 Android JVM 桩), 直接锁组色源参与 + 行序发散。
+    func testAutoRowHueConsumesGroupSourceAndDiverges() {
+        let rows = [
+            groupCourse(1, color: "#FFFF0000", mode: CourseColorMode.GROUP),
+            groupCourse(2, color: "#FFFF0000", mode: CourseColorMode.GROUP),
+        ]
+        let hue1 = GoldenAngleColor.forRow(rows[0], rows, "#FFFF0000")
+        let hue2 = GoldenAngleColor.forRow(rows[1], rows, "#FFFF0000")
+        // 同输入确定性
+        XCTAssertEqual(hue1, GoldenAngleColor.forRow(rows[0], rows, "#FFFF0000"), accuracy: 0)
+        // 不同行 idx 发散(黄金角 137.508°)
+        XCTAssertEqual(137.508, Double((Double(hue2) - Double(hue1) + 360).truncatingRemainder(dividingBy: 360)), accuracy: 0.01)
+        // 组色源参与 baseHue: 换组色源 → hue 变(Android JVM 不可断言, iOS 真解析可断言)
+        let hue1OtherSource = GoldenAngleColor.forRow(rows[0], rows, "#FF00FF00")
+        XCTAssertNotEqual(hue1, hue1OtherSource, accuracy: 0.001)
+    }
 }
