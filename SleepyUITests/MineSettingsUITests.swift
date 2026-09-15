@@ -25,6 +25,23 @@ final class MineSettingsUITests: XCTestCase {
         app.terminate()   // 隔离: 每用例杀进程重启, 防跨用例状态串扰
     }
 
+    /// 自适应下滑直到元素在视口内(元素全量物化, exists≠可见; 不可见时 tap
+    /// 落点出屏丢失 — 2026-09 基线腐化根因; 页面高度随版本变, 固定次数不可靠)
+    @discardableResult
+    private func scrollUntil(_ element: XCUIElement, maxSwipes: Int = 6) -> Bool {
+        let screenH = app.windows.firstMatch.frame.height
+        func visible() -> Bool {
+            guard element.exists else { return false }
+            let f = element.frame
+            return f.minY >= 0 && f.maxY <= screenH
+        }
+        for _ in 0...maxSwipes {
+            if visible() { return true }
+            app.swipeUp()
+        }
+        return visible()
+    }
+
     // MARK: 刷新小组件按钮 + snackbar 反馈
 
     func testRefreshWidgetsButtonShowsSnackbar() {
@@ -65,8 +82,9 @@ final class MineSettingsUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["我的课表"].firstMatch.exists, "列表应有种子表")
         // 新建按钮存在
         XCTAssertTrue(app.staticTexts["New Schedule"].firstMatch.exists)
-        // 表行的编辑齿轮(图标按钮)
-        let gear = app.buttons.matching(NSPredicate(format: "label CONTAINS 'gear'")).firstMatch
+        // 表行的编辑齿轮(图标按钮)。锚点用 identifier: 6541178 起齿轮加了
+        // accessibilityLabel("Settings"), SF Symbol 默认 "gear" 标签被覆盖 → label 匹配失效
+        let gear = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'table_edit_'")).firstMatch
         XCTAssertTrue(gear.waitForExistence(timeout: 3), "表行应有编辑齿轮")
     }
 
@@ -117,41 +135,32 @@ final class MineSettingsUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Appearance"].exists)
     }
 
-    // MARK: General — 5 张设置卡全部展开收起
+    // MARK: General — 设置卡交互(平卡选项即时点选; 卡已原生化: Time Display/
+    //       Grid sub-info = SettingsFlatCard 分段控件, 选项常显不可折叠 →
+    //       旧"展开/收起"语义过时, 段选项以 button 形式暴露而非 staticText)
 
     func testGeneralCardsExpandCollapse() {
         app.descendants(matching: .any)["mine_general"].tap()
         XCTAssertTrue(app.staticTexts["General"].waitForExistence(timeout: 5))
 
-        // Time Display 卡: 展开 → 2 选项
-        let timeDisplay = app.staticTexts["Time Display"].firstMatch
-        XCTAssertTrue(timeDisplay.waitForExistence(timeout: 3))
-        timeDisplay.tap()
-        XCTAssertTrue(app.staticTexts["Show as periods"].waitForExistence(timeout: 3),
-                      "展开后应显示 periods 选项")
-        XCTAssertTrue(app.staticTexts["Show as times"].exists)
+        // Time Display 卡: 分段控件两选项
+        XCTAssertTrue(scrollUntil(app.buttons["Show as periods"].firstMatch),
+                      "Time Display 卡应有 periods 段选项")
+        XCTAssertTrue(app.buttons["Show as times"].exists)
 
-        // 点选 times 选项
-        app.staticTexts["Show as times"].firstMatch.tap()
-        // 切回 periods
-        app.staticTexts["Show as periods"].firstMatch.tap()
+        // 点选 times 段 → 切回 periods 段
+        app.buttons["Show as times"].firstMatch.tap()
+        app.buttons["Show as periods"].firstMatch.tap()
 
-        // Grid card sub-info 卡
-        let gridCard = app.staticTexts["Grid card sub-info"].firstMatch
-        XCTAssertTrue(gridCard.waitForExistence(timeout: 3))
-        gridCard.tap()
-        XCTAssertTrue(app.staticTexts["Room"].firstMatch.waitForExistence(timeout: 3))
-        XCTAssertTrue(app.staticTexts["Teacher"].firstMatch.exists)
-        XCTAssertTrue(app.staticTexts["None"].firstMatch.exists)
+        // Grid card sub-info 卡(同为平卡): Room / Teacher / None 三段
+        XCTAssertTrue(scrollUntil(app.buttons["Room"].firstMatch),
+                      "副信息卡应有 Room 段选项")
+        XCTAssertTrue(app.buttons["Teacher"].firstMatch.exists)
+        XCTAssertTrue(app.buttons["None"].firstMatch.exists)
         // 三选项轮点
-        app.staticTexts["Room"].firstMatch.tap()
-        app.staticTexts["Teacher"].firstMatch.tap()
-        app.staticTexts["None"].firstMatch.tap()
-
-        // 收起(再点卡头)
-        gridCard.tap()
-        XCTAssertFalse(app.staticTexts["None"].firstMatch.waitForExistence(timeout: 2),
-                       "收起后选项应消失")
+        app.buttons["Room"].firstMatch.tap()
+        app.buttons["Teacher"].firstMatch.tap()
+        app.buttons["None"].firstMatch.tap()
     }
 
     // MARK: General — Visible Days 7 行开关
@@ -177,11 +186,13 @@ final class MineSettingsUITests: XCTestCase {
     func testGeneralToggles() {
         app.descendants(matching: .any)["mine_general"].tap()
         XCTAssertTrue(app.staticTexts["General"].waitForExistence(timeout: 5))
-        app.swipeUp()
-        app.swipeUp()
 
+        // "课表显示日期"行在 Home display 卡内(折叠态不渲染)→ 先展开该卡
+        let pillCard = app.buttons["Home display"].firstMatch
+        XCTAssertTrue(scrollUntil(pillCard, maxSwipes: 8))
+        pillCard.tap()
         let showDateCard = app.staticTexts["Show dates on schedule"].firstMatch
-        XCTAssertTrue(showDateCard.waitForExistence(timeout: 3))
+        XCTAssertTrue(scrollUntil(showDateCard, maxSwipes: 8))
         showDateCard.tap()
         // Toggle switch(switch 元素)
         let sw = app.switches.firstMatch
@@ -216,21 +227,18 @@ final class MineSettingsUITests: XCTestCase {
     func testGeneralLanguageSwitch() {
         app.descendants(matching: .any)["mine_general"].tap()
         XCTAssertTrue(app.staticTexts["General"].waitForExistence(timeout: 5))
-        app.swipeUp()
-        app.swipeUp()
-        app.swipeUp()
-        app.swipeUp()
         let english = app.buttons["English"].firstMatch
-        XCTAssertTrue(english.waitForExistence(timeout: 3), "语言列表应有 English")
+        XCTAssertTrue(scrollUntil(english, maxSwipes: 8), "语言列表应有 English")
         english.tap()
-        // 切日语
+        // 切日语验证多语切换
         let japanese = app.buttons["日本語"].firstMatch
-        XCTAssertTrue(japanese.waitForExistence(timeout: 3))
+        XCTAssertTrue(scrollUntil(japanese, maxSwipes: 8))
         japanese.tap()
-        // 切回简中(保持种子环境一致)
-        let zh = app.buttons["简体中文"].firstMatch
-        XCTAssertTrue(zh.waitForExistence(timeout: 3))
-        zh.tap()
+        // ★ 收尾必须切回 en: applyLanguage 持久化 AppPrefs 且优先于 -AppleLanguages
+        //   启动参数 → 留 zh 会污染后续所有用例(TableSwitch 等英文断言全挂)
+        let englishAgain = app.buttons["English"].firstMatch
+        XCTAssertTrue(scrollUntil(englishAgain, maxSwipes: 8))
+        englishAgain.tap()
     }
 
     // ★ 语言切换即时生效(修复前 L10n 固定 Bundle.main → 只写 prefs 不刷 UI):
@@ -240,24 +248,16 @@ final class MineSettingsUITests: XCTestCase {
     func testLanguageSwitchAppliesImmediately() {
         app.descendants(matching: .any)["mine_general"].tap()
         XCTAssertTrue(app.staticTexts["General"].waitForExistence(timeout: 5))
-        app.swipeUp()
-        app.swipeUp()
-        app.swipeUp()
-        app.swipeUp()
         let zh = app.buttons["简体中文"].firstMatch
-        XCTAssertTrue(zh.waitForExistence(timeout: 3), "语言列表应有 简体中文")
+        XCTAssertTrue(scrollUntil(zh, maxSwipes: 8), "语言列表应有 简体中文")
         zh.tap()
 
         // 整树重建后仍在 General overlay — 标题应立即是 "通用"(即时生效, 无需重启)
         XCTAssertTrue(app.staticTexts["通用"].waitForExistence(timeout: 5),
                       "切简体中文后 General 页标题应立即变 通用(即时生效)")
         // 恢复英文环境(与其他用例的英文断言隔离)
-        app.swipeUp()
-        app.swipeUp()
-        app.swipeUp()
-        app.swipeUp()
         let english = app.buttons["English"].firstMatch
-        XCTAssertTrue(english.waitForExistence(timeout: 3))
+        XCTAssertTrue(scrollUntil(english, maxSwipes: 8))
         english.tap()
         XCTAssertTrue(app.staticTexts["General"].waitForExistence(timeout: 5),
                       "切回 English 后应立即变回 General")
@@ -338,3 +338,4 @@ final class MineSettingsUITests: XCTestCase {
                       "检查更新不应崩溃")
     }
 }
+
