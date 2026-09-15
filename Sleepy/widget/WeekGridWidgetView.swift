@@ -579,17 +579,15 @@ enum VerticalNameTokenizer {
 // MARK: - SMALL 档 ← weekGridMinimumTodayData + pushTodayData(SMALL)
 
 /// WeekGrid systemSmall: 不再"折叠成单列的网格脸", 直接渲染今日课程·小
-/// (数据侧 weekGridMinimumTodayData: WeekData → 今日 WidgetData, 纯函数)
+/// (数据侧 weekGridMinimumTodayData: WeekData → 今日 WidgetData, 纯函数;
+///  Android 今日·小已删纯文本脸改走常规渲染器 → iOS 直接复用 TodayWidgetEntryView)
 private struct WeekGridMinimumTodayFace: View {
     let data: WeekData
 
     var body: some View {
-        let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: data.isDark)
         let todayData = Self.minimumTodayData(data)
-        WidgetCompactFace(scheme: s,
-                          dateLabel: todayData.dateLabel,
-                          lines: TodayWidgetEntryView.todayCompactTexts(data: todayData,
-                                                                        useAlias: AppPrefs.shared.isWidgetUseAlias()))
+        TodayWidgetEntryView(entry: TodayWidgetEntry(date: Date(), data: todayData,
+                                                     nowMin: WidgetWindows.nowMinutes()))
     }
 
     // ← weekGridMinimumTodayData 逐行: 今日 DayData → WidgetData
@@ -613,6 +611,8 @@ struct WeekGridWidget: Widget {
             WeekGridWidgetEntryView(entry: entry)
         }
         .configurationDisplayName(L10n.format("widget_week_grid_label"))
+        // 三档全开: Android 13 变体是「放置预设」(S/M/L),且全部 minResize 40dp + 自由拖拽,
+        // 任何 widget 都能被拖成任意档 → iOS 三 family 全支持,档位由 WidgetLayoutTier 换算
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
