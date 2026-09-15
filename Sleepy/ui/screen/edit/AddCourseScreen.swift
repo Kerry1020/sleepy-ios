@@ -474,7 +474,8 @@ struct AddCourseScreen: View {
             let draftLites = drafts.map(Self.conflictLite)
             let dayNames = (1...7).map { DateUtils.localizedDay($0) }
             let details = ConflictDetailReporter.draftConflictDetails(
-                drafts: draftLites, stored: stored, dayNames: dayNames)
+                drafts: draftLites, stored: stored, dayNames: dayNames,
+                timeJson: table.timeJson)
                 .map { ConflictDetailReporter.formatDetail($0, template: L10n.format("conflict_detail_line")) }
             if !details.isEmpty {
                 pendingConflictDetails = details
@@ -672,7 +673,9 @@ struct AddCourseScreen: View {
         CourseEntityLite(courseName: course.courseName, day: course.day,
                          startNode: course.startNode, step: course.step,
                          startWeek: course.startWeek, endWeek: course.endWeek,
-                         type: course.type)
+                         type: course.type,
+                         ownTime: course.ownTime, startTime: course.startTime,
+                         endTime: course.endTime, isIrregularTime: course.isIrregularTime)
     }
 
     // ← blockRangeMinutes (§3.3 契约的分钟化: 本卡生效起止 → [startMin, endMin))

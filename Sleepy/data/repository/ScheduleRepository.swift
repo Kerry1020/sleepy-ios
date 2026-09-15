@@ -201,7 +201,24 @@ final class ScheduleRepository {
     /// 数据变更后:刷新所有 widget,并在提醒开启时重排通知。
     /// ★ 修复(继承自 Android):之前只刷 widget 不重排通知,导致编辑课表后课前提醒仍按旧时间。
     private func onDataChanged() {
+        pruneDefaultTopPrefs()
         onDataChangedHook?()
+    }
+
+    /// v7.10.16p: 课程集变化后清理指向已失效课程的置顶偏好 — repId 已删/键已不存在
+    /// (锚课被删·簇解体)的条目静默失效还会画出幽灵图层选项, 按现存课全量校验删除。
+    /// 删课/删组/覆盖导入/撤销四条写路径都会走到(全部收敛于 onDataChanged)。
+    /// 用户报障 2026-09-10: liveKeys 与网格聚簇同一时间域, 偏好不被节点域误删。
+    private func pruneDefaultTopPrefs() {
+        let stored = AppPrefs.shared.getConflictDefaultTop()
+        if stored.isEmpty { return }
+        guard let allCourses = try? courseDao.getAllCourses() else { return }
+        let timeJson = try? tableDao.getDefault()?.timeJson
+        let pruned = ConflictLayoutEngine.pruneConflictDefaultTop(
+            stored, allCourses, timeJson: timeJson ?? nil)
+        if pruned.count != stored.count {
+            AppPrefs.shared.setConflictDefaultTop(pruned)
+        }
     }
 
     // ========== Flow 观察 ← observeAllTables / observeCourses(Room Flow) ==========

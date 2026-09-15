@@ -26,6 +26,140 @@ struct TimeSlot {
     var isPlaceholder: Bool { label.isEmpty }
 }
 
+// MARK: - TimeTableUtils 渲染槽位扩展(App target 专属 — 依赖 TimeSlot, Widget target 无)
+// issue#23 §5: 非常规时间胶囊按真实分钟在网格内按比例定位 + 跨空隙占位节次合成。
+extension TimeTableUtils {
+    /// timeJson → 渲染槽位表(每节一个 TimeSlot, 按 node 升序) — ← Android timeSlotsFor(timeJson)
+    static func renderSlots(timeJson: String) -> [TimeSlot] {
+        parseNodes(timeJson).map { n in
+            let sc = Calendar.current.dateComponents([.hour, .minute], from: n.start)
+            let ec = Calendar.current.dateComponents([.hour, .minute], from: n.end)
+            return TimeSlot(label: "\(n.node)", startHour: sc.hour ?? 0, startMinute: sc.minute ?? 0,
+                            endHour: ec.hour ?? 0, endMinute: ec.minute ?? 0, nodeStart: n.node)
+        }
+    }
+
+    /**
+     * 把课程起止时间映射到「槽位行坐标」: 1.0 = 一整行, 小数部分 = 该槽位内按时间的比例。
+     * 返回 (startFrac, endFrac); 时间不可解析 / 结束≤开始 / 映射退化返回 nil,
+     * 调用方应退回整格吸附(timeToNode)。
+     *
+     * 规则:
+     * - 时间落在某槽位 [start, end] 内 → 行下标 + 槽内比例
+     * - 落在两槽位空隙 → 归属下一行顶端
+     * - 早于首槽位 → 0.0; 晚于末槽位 → 槽位总数(网格底边)
+     */
+    static func timeToFractionalRows(_ startTime: String, _ endTime: String,
+                                     slots: [TimeSlot]) -> (Double, Double)? {
+        if slots.isEmpty { return nil }
+        guard let st = hmToSeconds(startTime), let et = hmToSeconds(endTime), et > st else { return nil }
+        func slotStart(_ s: TimeSlot) -> Int { s.startHour * 3600 + s.startMinute * 60 }
+        func slotEnd(_ s: TimeSlot) -> Int { s.endHour * 3600 + s.endMinute * 60 }
+        func pos(_ t: Int) -> Double {
+            if t <= slotStart(slots[0]) { return 0 }
+            if t >= slotEnd(slots[slots.count - 1]) { return Double(slots.count) }
+            if let i = slots.firstIndex(where: { t >= slotStart($0) && t <= slotEnd($0) }) {
+                let dur = max(slotEnd(slots[i]) - slotStart(slots[i]), 60)
+                return Double(i) + Double(t - slotStart(slots[i])) / Double(dur)
+            }
+            // 空隙: 全部归属下一行顶端
+            return Double(slots.firstIndex(where: { slotStart($0) > t }) ?? slots.count)
+        }
+        let startFrac = pos(st)
+        let endFrac = pos(et)
+        if endFrac <= startFrac { return nil }
+        return (startFrac, endFrac)
+    }
+
+    /// 便捷重载: 直接传 timeJson 字符串。
+    static func timeToFractionalRows(_ startTime: String, _ endTime: String,
+                                     timeJson: String) -> (Double, Double)? {
+        timeToFractionalRows(startTime, endTime, slots: renderSlots(timeJson: timeJson))
+    }
+
+    // ------------------------------------------------------------------
+    // 用户反馈 2026-09-09: 非常规课跨节次空隙的渲染期占位节次合成
+    // ------------------------------------------------------------------
+
+    /// 占位行权重可见下限 — 低于它渲染层减 gap/padding 后内容高度 ≤ 0, 时间文字隐形。
+    /// 0.36 行 ≈ 56dp × 0.36 = 20dp, 扣 gap 4dp + cell padding 4dp 后剩 ~12dp, 容一行 micro 文字。
+    static let PLACEHOLDER_MIN_WEIGHT = 0.36
+
+    /**
+     * 渲染期槽位方案 — 标准槽位 + 按当前课程集合合成的**占位节次**(渲染期产物,
+     * 绝不写回 timeJson; 与用户手建边缘节点 insertEdgeNode 机制严格无关)。
+     *
+     * slotWeights 每行渲染权重 = 该行分钟数 / 左邻标准行分钟数(首行对右邻取基准),
+     * nil = 全部标准行(等高)。占位行只有真实分钟占比(如 5/45 ≈ 0.111), 渲染层
+     * 按 y = rowH * 加权前缀和 定位 — 用户反馈 2026-09-09: 整行占位把时间轴拉歪。
+     */
+    struct RenderSlotPlan {
+        let slots: [TimeSlot]
+        let slotWeights: [Double]?
+        init(slots: [TimeSlot], slotWeights: [Double]? = nil) {
+            self.slots = slots
+            self.slotWeights = slotWeights
+        }
+    }
+
+    /**
+     * 为当前可见课程合成渲染槽位表(纯函数):
+     *   1. 非常规课(ownTime)的结束时间**终止在**某节次空隙内(课尾溢出进空隙)时,
+     *      该空隙里合成一个占位节次, 范围 = 各溢出课与空隙交集的贪心并包;
+     *   2. 无溢出 → 槽位表与 renderSlots(timeJson) 完全一致。
+     * 渲染期合成物, 绝不写回 timeJson。
+     */
+    static func buildRenderSlotPlan(courses: [CourseEntity], timeJson: String) -> RenderSlotPlan {
+        let base = renderSlots(timeJson: timeJson)
+        if base.isEmpty { return RenderSlotPlan(slots: base) }
+        func slotStart(_ s: TimeSlot) -> Int { s.startHour * 3600 + s.startMinute * 60 }
+        func slotEnd(_ s: TimeSlot) -> Int { s.endHour * 3600 + s.endMinute * 60 }
+
+        // 空隙下标 → (占位起点, 占位终点)。课的结束时间终止在空隙内 =
+        // 课 end ∈ (左节 end, 右节 start] — 无论课从空隙前延伸过来还是整段落在
+        // 空隙里, 都需要占位行承载(整段空隙课按比例渲染在占位行内)。
+        var placeholderByGap: [Int: (lo: Int, hi: Int)] = [:]
+        for c in courses {
+            guard c.ownTime else { continue }
+            guard let st = hmToSeconds(c.startTime), let et = hmToSeconds(c.endTime), et > st else { continue }
+            for gi in 0..<max(base.count - 1, 0) {
+                let leftEnd = slotEnd(base[gi])
+                let rightStart = slotStart(base[gi + 1])
+                if et > leftEnd && et <= rightStart {
+                    if let cur = placeholderByGap[gi] {
+                        placeholderByGap[gi] = (min(cur.lo, leftEnd), max(cur.hi, et))
+                    } else {
+                        placeholderByGap[gi] = (leftEnd, et)
+                    }
+                }
+            }
+        }
+        if placeholderByGap.isEmpty { return RenderSlotPlan(slots: base) }
+
+        var out: [TimeSlot] = []
+        var weights: [Double] = []
+        for (i, slot) in base.enumerated() {
+            out.append(slot)
+            weights.append(1)
+            if let ph = placeholderByGap[i] {
+                out.append(TimeSlot(
+                    label: "",
+                    startHour: ph.lo / 3600, startMinute: (ph.lo % 3600) / 60,
+                    endHour: ph.hi / 3600, endMinute: (ph.hi % 3600) / 60,
+                    nodeStart: slot.nodeStart))
+                // 占位行权重 = 自身分钟数 / 左邻标准行分钟数 (时间轴按分钟加权, 不占满整行)。
+                // 用户报障 2026-09-10: 5 分钟占位 ≈ 0.111 行, 56dp×0.111−gapH−padding ≤ 0,
+                // 时间文字挤没 = 时间轴上隐形。下限 = 够渲染一行 micro 时间文字(0.36 行),
+                // 行高与 y 前缀和同源, 抬下限后时间轴仍自洽(只是该段略高于真实分钟比例)。
+                let gapMin = max(Double(ph.hi - ph.lo) / 60.0, 1)
+                let leftMin = max(Double(slotEnd(slot) - slotStart(slot)) / 60.0, 1)
+                weights.append(max(gapMin / leftMin, PLACEHOLDER_MIN_WEIGHT))
+            }
+        }
+        return RenderSlotPlan(slots: out, slotWeights: weights)
+    }
+}
+
 // MARK: - CardsGridView ← CardsGridView
 
 struct CardsGridView: View {
@@ -34,6 +168,8 @@ struct CardsGridView: View {
     @Environment(\.localNavExtraBottomPadding) private var navExtra
     let courses: [CourseEntity]
     let timeSlots: [TimeSlot]
+    /// issue#23 §5: 非空 → 渲染期合成占位节次 + 按分钟加权行高(非常规课跨空隙落位)
+    var timeJson: String = ""
     var visibleDays: Set<Int> = Set(1...7)
     var showDate: Bool = false
     var startDate: String = ""
@@ -43,14 +179,20 @@ struct CardsGridView: View {
     var greyDays: Set<Int> = []  // 本周应灰显的星期几 (1-7) — 节假日/周末灰显
 
     var body: some View {
-        let maxNode = timeSlots.map { $0.nodeEnd }.max() ?? 12
+        // 渲染槽位方案: 标准槽位 + 非常规课跨空隙占位节次(渲染期产物, 不写回 timeJson)
+        let renderPlan: TimeTableUtils.RenderSlotPlan? = timeJson.isEmpty
+            ? nil
+            : TimeTableUtils.buildRenderSlotPlan(courses: courses, timeJson: timeJson)
+        let renderSlots = renderPlan?.slots ?? timeSlots
+        let slotWeights = renderPlan?.slotWeights
+        let maxNode = renderSlots.map { $0.nodeEnd }.max() ?? 12
         let sortedDays = visibleDays.sorted()
         let dayCount = sortedDays.count
         // issue#23: 边缘节次节点的"行号"按 timeSlots 自然顺序取(已按 node ASC 排序);
         // 前置节点(-1, 0)排到 grid 顶部, 后置节点(N+1, N+2)排到 grid 底部。
         // 返回 -1 = 该节点不在 timeSlots(数据脏); 调用方判 >= 0 再绘。
         let slotIndexOf: (Int) -> Int = { node in
-            timeSlots.firstIndex { $0.nodeStart == node } ?? -1
+            renderSlots.firstIndex { $0.nodeStart == node } ?? -1
         }
 
         // 布局常量(全 dp) — issue#8: 整体缩放(0.7~1.3) 字号/行高/间距/圆角/内边距等比联动
@@ -62,6 +204,23 @@ struct CardsGridView: View {
         let slotH = d(52)
         let gapH = d(4)
         let rowH = slotH + gapH
+        // 分数行 → y 像素: 加权前缀和(占位行按分钟占比, 标准行权重 1);无权重 = 等高回落
+        let yOfRows: (Double) -> CGFloat = { r in
+            guard let ws = slotWeights else { return rowH * CGFloat(r) }
+            let i = Int(r)
+            var acc = 0.0
+            for k in 0..<min(max(i, 0), ws.count) { acc += ws[k] }
+            if i >= 0 && i < ws.count { acc += ws[i] * (r - Double(i)) }
+            return rowH * CGFloat(acc)
+        }
+        let rowHeightAt: (Int) -> CGFloat = { i in
+            guard let ws = slotWeights, i >= 0, i < ws.count else { return rowH }
+            return rowH * CGFloat(ws[i])
+        }
+        // 行跨度 → 像素高(供簇卡/单卡 frac 落位;起点恒为网格顶 0 行)
+        let spanDpOf: ((Double, Double) -> Double)? = slotWeights == nil ? nil : { f, t in
+            Double(yOfRows(t) - yOfRows(f))
+        }
 
         GeometryReader { geo in
             // 列宽计算: 侧边留白 16(= Android 外层 padding 8×2) + 固定 timeW 68 / gapW 5
@@ -71,8 +230,9 @@ struct CardsGridView: View {
             let gapW = 5 * gridScale
             let contentW = max(geo.size.width - sideInset - timeW - gapW * CGFloat(dayCount), 0)
             let colW = max(contentW / CGFloat(dayCount), 28)
-            // issue#23: grid 高度按 timeSlots 行数算(maxNode 已不反映边缘节点总数)
-            let gridH = rowH * CGFloat(max(timeSlots.count, 1))
+            // issue#23: grid 高度按 timeSlots 行数算(maxNode 已不反映边缘节点总数);
+            // 占位节次行按分钟权重计入总高(时间轴与卡片同一前缀和, 自洽)
+            let gridH = yOfRows(Double(max(renderSlots.count, 1)))
 
             ScrollView(.vertical) {
                 VStack(spacing: 0) {
@@ -102,17 +262,18 @@ struct CardsGridView: View {
 
                     // ---- Grid 主体: 固定高度, 内部绝对定位 ----
                     ZStack(alignment: .topLeading) {
-                        // 时间栏
-                        ForEach(Array(timeSlots.enumerated()), id: \.element.nodeStart) { i, slot in
+                        // 时间栏(占位行按权重行高, 与卡片落位同源)
+                        ForEach(Array(renderSlots.enumerated()), id: \.offset) { i, slot in
                             SingleTimeHeadCell(slot: slot, scale: gridScale, cornerRatio: gridCornerRatio)
-                                .frame(width: timeW, height: slotH)
-                                .offset(y: rowH * CGFloat(i))
+                                .frame(width: timeW, height: max(rowHeightAt(i) - gapH, 0))
+                                .offset(y: yOfRows(Double(i)))
                         }
                         // 课程卡片: 冲突簇整簇走 ConflictClusterCard, 非簇课保持原
                         // CourseOverlayCard 单卡路径(回归保护)(← CourseTableView.kt Grid 主体)
                         GridConflictLayer(
                             courses: courses, visibleDays: visibleDays, sortedDays: sortedDays,
-                            maxNode: maxNode, timeSlots: timeSlots,
+                            maxNode: maxNode, timeSlots: renderSlots,
+                            timeJson: timeJson, spanDpOf: spanDpOf,
                             timeW: timeW, colW: colW, rowH: rowH,
                             gapW: gapW, gapH: gapH, greyDays: greyDays,
                             scale: gridScale, cornerRatio: gridCornerRatio,
@@ -147,6 +308,10 @@ struct GridConflictLayer: View {
     let maxNode: Int
     /// issue#23: 边缘节点行号/步长按 timeSlots 真实行序; 空 = 旧 startNode ∈ [1,maxNode] 行为
     let timeSlots: [TimeSlot]
+    /// issue#23 §5: 非空 → 时间域聚簇 + ownTime 课分数行落位
+    var timeJson: String = ""
+    /// 行跨度(分数行) → 像素高; nil = 等高网格回落 rowH*行数
+    var spanDpOf: ((Double, Double) -> Double)? = nil
     let timeW: CGFloat
     let colW: CGFloat
     let rowH: CGFloat
@@ -168,7 +333,8 @@ struct GridConflictLayer: View {
     var body: some View {
         let conflictStyle = AppPrefs.shared.getConflictStyle()
         let defaultTopMap = defaultTopStore.map
-        let clusters = ConflictLayoutEngine.findClusters(courses)
+        let clusters = ConflictLayoutEngine.findClusters(
+            courses, timeJson: timeJson.isEmpty ? nil : timeJson)
         let clusteredIds = Set(clusters.flatMap { $0.courses.map { $0.id } })
         // issue#23: 边缘节点用 slotIndexOf 兜底,数据脏返回 -1 直接过滤
         let slotIndexOf: (Int) -> Int = timeSlots.isEmpty
@@ -186,7 +352,12 @@ struct GridConflictLayer: View {
                         let anchor = cluster.courses.first! // 主课判定序首位,决定簇基点
                         let dayIdx = sortedDays.firstIndex(of: cluster.day) ?? 0
                         let cardX = timeW + gapW + (colW + gapW) * CGFloat(dayIdx)
-                        let cardY = rowH * CGFloat(max(slotIndexOf(anchor.startNode), 0))
+                        // issue#23 §5: ownTime 锚课按真实分钟比例落位, 常规课整格吸附
+                        let anchorFrac = (anchor.ownTime && !anchor.startTime.isEmpty && !anchor.endTime.isEmpty)
+                            ? TimeTableUtils.timeToFractionalRows(anchor.startTime, anchor.endTime, slots: timeSlots)
+                            : nil
+                        let anchorRow = anchorFrac?.0 ?? Double(max(slotIndexOf(anchor.startNode), 0))
+                        let cardY = spanDpOf.map { $0(0, anchorRow) }.map { CGFloat($0) } ?? rowH * CGFloat(anchorRow)
                         let clusterKey = ConflictLayoutEngine.conflictClusterKey(cluster)
                         ConflictClusterCard(
                             cluster: cluster,
@@ -197,6 +368,7 @@ struct GridConflictLayer: View {
                             colW: colW, rowH: rowH, maxNode: maxNode,
                             gapW: gapW, gapH: gapH,
                             timeSlots: timeSlots,
+                            spanDpOf: spanDpOf,
                             isGrey: greyDays.contains(cluster.day),
                             rotationStep: rotationSteps[clusterKey],
                             onRotate: {
@@ -219,8 +391,21 @@ struct GridConflictLayer: View {
                     // 步长上限按剩余行数算(边缘节点也按 timeSlots 总行数取模)
                     let steps = min(max(course.step, 1), timeSlots.count - nodeIdx)
                     let cardX = timeW + gapW + (colW + gapW) * CGFloat(dayIdx)
-                    let cardY = rowH * CGFloat(nodeIdx)
-                    let cardH = rowH * CGFloat(steps) - gapH
+                    // issue#23 §5: ownTime 单卡按真实分钟比例落位(可落在占位行内),
+                    // 时间不可解析 → 回落整格吸附
+                    let frac = (course.ownTime && !course.startTime.isEmpty && !course.endTime.isEmpty)
+                        ? TimeTableUtils.timeToFractionalRows(course.startTime, course.endTime, slots: timeSlots)
+                        : nil
+                    let cardGeom: (y: CGFloat, h: CGFloat) = {
+                        guard let frac else {
+                            return (rowH * CGFloat(nodeIdx), rowH * CGFloat(steps) - gapH)
+                        }
+                        let y = CGFloat(spanDpOf?(0, frac.0) ?? Double(rowH) * frac.0)
+                        let spanPx = CGFloat(spanDpOf?(frac.0, frac.1) ?? Double(rowH) * (frac.1 - frac.0))
+                        return (y, max(spanPx, rowH * 0.3) - gapH)
+                    }()
+                    let cardY = cardGeom.y
+                    let cardH = cardGeom.h
                     CourseOverlayCard(course: course, cardHeight: cardH,
                                       isDark: isDark,
                                       isGrey: greyDays.contains(course.day),
@@ -716,7 +901,8 @@ private struct DetailDayCard: View {
                 // v7.10.6 行分组下沉引擎 + v7.10.10 栏间浅细竖分隔线:
                 // mergeOverlapping 区域是划分(每课恰属一区域), 冲突区域整区域一行
                 // (横向 laneCount 栏,同栏多门课纵向堆叠), 无冲突课一行一门全宽。
-                let rows = ConflictLayoutEngine.weekLaneRows(courses)
+                let rows = ConflictLayoutEngine.weekLaneRows(
+                    courses, timeJson: timeJson.isEmpty ? nil : timeJson)
                 VStack(spacing: 7 * scale) {
                     ForEach(rows, id: \.courses.first!.id) { row in
                         if row.laneCount == 1, let only = row.courses.first {

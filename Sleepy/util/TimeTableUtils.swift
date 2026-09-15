@@ -108,7 +108,10 @@ enum TimeTableUtils {
     ///
     /// 规则：
     /// - startNode = 时间表中 start ≤ courseStart 的最大节点（向下取）
-    /// - endNode   = 时间表中 end   ≥ courseEnd   的最小节点（向上取）
+    /// - endNode   = 从 startNode 起沿节点序连续延伸的最后一节 — 课程在节次空隙内
+    ///   结束时停在空隙前的那一节, 绝不跨过空隙吸附到下一节 (用户 2026-09-09:
+    ///   12:30 结束跨午间空隙被吸进 14:00 节 = 报障本体; 旧行为 "end ≥ courseEnd
+    ///   的最小节点" 会跨空隙撑大 step, 已否决)
     /// - step      = endNode - startNode + 1
     /// - 若 StartTime 早于第一节，用第1节；endTime 晚于最后一节，用最后一节
     /// 返回 nil 表示无法映射（时间格式错误或时间表为空）。
@@ -119,13 +122,30 @@ enum TimeTableUtils {
         guard let st = parseTime(startTime, base: refDay),
               let et = parseTime(endTime, base: refDay) else { return nil }
 
-        let startNode = nodes.filter { $0.start <= st }.max { $0.node < $1.node }?.node
-            ?? nodes.first!.node
-        let endNode = nodes.filter { $0.end >= et }.min { $0.node < $1.node }?.node
-            ?? nodes.last!.node
+        let startIdx = nodes.lastIndex { $0.start <= st } ?? -1
+        let sIdx = max(startIdx, 0)
+        var endIdx = sIdx
+        var i = sIdx + 1
+        while i < nodes.count && nodes[i].start < et {
+            endIdx = i
+            i += 1
+        }
 
+        let startNode = nodes[sIdx].node
+        let endNode = nodes[endIdx].node
         if endNode < startNode { return nil }
         return (startNode, endNode - startNode + 1)
+    }
+
+    // ------------------------------------------------------------------
+    // issue#23 §5 渲染: 非常规时间胶囊按真实分钟在网格内按比例定位
+    // ------------------------------------------------------------------
+
+    /// "HH:mm"/"HH:mm:ss" → 自午夜起秒数; 非法 → nil
+    static func hmToSeconds(_ s: String) -> Int? {
+        let parts = s.split(separator: ":").compactMap { Int($0) }
+        guard parts.count >= 2, (0...23).contains(parts[0]), (0...59).contains(parts[1]) else { return nil }
+        return parts[0] * 3600 + parts[1] * 60 + (parts.count > 2 ? parts[2] : 0)
     }
 
     /// 便捷: 拿 TimeTableEntity 直接出 rows

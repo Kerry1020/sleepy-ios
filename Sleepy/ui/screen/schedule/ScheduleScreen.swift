@@ -155,7 +155,8 @@ struct ScheduleScreen: View {
                 onEdit: { c in
                     selectedCourse = nil
                     onEditCourse(c)
-                })
+                },
+                timeJson: state.currentTable?.timeJson)
         }
     }
 }
@@ -209,6 +210,7 @@ private struct WeekPager: View {
                     case .cards:
                         CardsGridView(courses: weekCourses,
                                       timeSlots: cardTimeSlots(table: state.currentTable),
+                                      timeJson: state.currentTable?.timeJson ?? "",
                                       visibleDays: visibleDays,
                                       showDate: showDate,
                                       startDate: state.currentTable?.startDate ?? "",

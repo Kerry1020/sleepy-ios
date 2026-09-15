@@ -233,7 +233,9 @@ private struct WeekGridDayColumn: View {
                 Rectangle()
                     .fill(scheme.primaryContainer.opacity(40.0 / 255.0))
             }
-            ForEach(ConflictLayoutEngine.gridDayLanes(dayData.courses), id: \.course.id) { rect in
+            ForEach(ConflictLayoutEngine.gridDayLanes(
+                dayData.courses, timeJson: dayData.timeJson.isEmpty ? nil : dayData.timeJson
+            ), id: \.course.id) { rect in
                 WeekGridLaneCard(rect: rect, scheme: scheme, colorless: colorless,
                                  maxNode: maxNode, slotH: slotH, dayW: dayW, gapH: gapH,
                                  allCourses: allCourses, useAlias: useAlias)

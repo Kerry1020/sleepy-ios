@@ -35,23 +35,34 @@ public enum ConflictDetailReporter {
     /**
      * 找出草稿与存量课的全部冲突(同 day + 节次区间相交 + 公共上课周)。
      * 每对(草稿, 存量)至多一条明细;多条草稿多条存量的组合逐对展开, 按存量课
-     * 节次起点升序(表单从上往下读的顺序)。
+     * 真实节点位置升序(表单从上往下读的顺序)。
+     *
+     * issue#23 Fix 3: 接受 timeJson 以便 ownTime 课程在比对前归一化到真实节点号。
+     * 用户反馈 2026-09-09: 重叠判定升级为**真实时间区间(分钟级)**相交 —
+     * ownTime 课用自身起止, 常规课用节次真实起止(effectiveCourseTime 同一契约)。
+     * 跨节次空隙反算出的节点范围不再制造假冲突(12:30 结束跨午间空隙被吸进
+     * 14:00 节 = 报障本体)。时间无法解析的课对回落节点区间判定(数据脏时保守)。
      */
     public static func draftConflictDetails(
         drafts: [CourseEntityLite],
         stored: [CourseEntityLite],
-        dayNames: [String]
+        dayNames: [String],
+        timeJson: String = ""
     ) -> [ConflictDetail] {
+        let timeJson = timeJson.isEmpty ? TimeTableUtils.DEFAULT_TIME_JSON : timeJson
         guard !drafts.isEmpty, !stored.isEmpty else { return [] }
-        let byDay = Dictionary(grouping: stored, by: { $0.day })
+        let normalizedDrafts = drafts.map { $0.normalizedForCompare(timeJson) }
+        let normalizedStored = stored.map { $0.normalizedForCompare(timeJson) }
+        let byDay = Dictionary(grouping: normalizedStored, by: { $0.day })
         var out: [ConflictDetail] = []
-        for draft in drafts {
-            guard let candidates = byDay[draft.day] else { continue }
+        for (idx, draft) in drafts.enumerated() {
+            let nDraft = normalizedDrafts[idx]
+            guard let candidates = byDay[nDraft.day] else { continue }
             // (existing course, (node range, parity?))
             var hits: [(CourseEntityLite, (ClosedRange<Int>, Int?))] = []
             for s in candidates {
-                guard let commonWeeks = commonWeeks(draft, s) else { continue }
-                if nodesOverlap(draft, s) {
+                guard let commonWeeks = commonWeeks(nDraft, s) else { continue }
+                if coursesOverlap(nDraft, s, timeJson) {
                     hits.append((s, commonWeeks))
                 }
             }
@@ -63,7 +74,7 @@ public enum ConflictDetailReporter {
                     draftName: draft.courseName,
                     day: draft.day,
                     dayText: dayText,
-                    nodeRangeText: nodeRangeText(draft, s),
+                    nodeRangeText: nodeRangeText(nDraft, s),
                     weekText: weekText(weeks)
                 ))
             }
@@ -82,6 +93,28 @@ public enum ConflictDetailReporter {
         let aEnd = a.startNode + a.step - 1
         let bEnd = b.startNode + b.step - 1
         return a.startNode <= bEnd && b.startNode <= aEnd
+    }
+
+    /**
+     * 重叠判定(分钟级优先): 两课都能解析出真实时间区间 → 分钟域半开区间相交;
+     * 任一解析失败 → 回落节点区间(数据脏时保守, 不静默漏报)。
+     */
+    private static func coursesOverlap(_ a: CourseEntityLite, _ b: CourseEntityLite, _ timeJson: String) -> Bool {
+        if let ivA = realIntervalOf(a, timeJson), let ivB = realIntervalOf(b, timeJson) {
+            return ivA.0 < ivB.1 && ivB.0 < ivA.1
+        }
+        return nodesOverlap(a, b)
+    }
+
+    /// 课的真实时间区间(秒, 自午夜起) — ownTime 用自身起止, 常规课用节次起止。
+    private static func realIntervalOf(_ c: CourseEntityLite, _ timeJson: String) -> (Int, Int)? {
+        guard let eff = TimeTableUtils.effectiveCourseTime(
+            isIrregularTime: c.isIrregularTime || c.ownTime,
+            startTime: c.startTime, endTime: c.endTime,
+            startNode: c.startNode, step: c.step, timeJson: timeJson) else { return nil }
+        guard let s = TimeTableUtils.hmToSeconds(eff.0),
+              let e = TimeTableUtils.hmToSeconds(eff.1), e > s else { return nil }
+        return (s, e)
     }
 
     /// 节次交集(闭区间), 无交集返回 nil
@@ -158,9 +191,16 @@ public struct CourseEntityLite {
     public let startWeek: Int
     public let endWeek: Int
     public let type: Int          // CourseWeekType.rawValue
+    // issue#23 Fix 3: ownTime 课比对前须 normalizeNode + 分钟域重叠判定 — 需要真实起止
+    public let ownTime: Bool
+    public let startTime: String
+    public let endTime: String
+    public let isIrregularTime: Bool
 
     public init(courseName: String, day: Int, startNode: Int, step: Int,
-                startWeek: Int, endWeek: Int, type: Int) {
+                startWeek: Int, endWeek: Int, type: Int,
+                ownTime: Bool = false, startTime: String = "", endTime: String = "",
+                isIrregularTime: Bool = false) {
         self.courseName = courseName
         self.day = day
         self.startNode = startNode
@@ -168,5 +208,21 @@ public struct CourseEntityLite {
         self.startWeek = startWeek
         self.endWeek = endWeek
         self.type = type
+        self.ownTime = ownTime
+        self.startTime = startTime
+        self.endTime = endTime
+        self.isIrregularTime = isIrregularTime
+    }
+
+    /// issue#23 Fix 3: ownTime 课程/草稿的 startNode 只是 UI 占位, 真实网格位置
+    /// 由 startTime/endTime 反算(normalizeNode)。比较前必须先 normalize, 否则
+    /// ownTime 草稿按占位 startNode 比对会漏报/误报冲突。
+    func normalizedForCompare(_ timeJson: String) -> CourseEntityLite {
+        guard ownTime, !startTime.isEmpty, !endTime.isEmpty else { return self }
+        guard let mapped = TimeTableUtils.timeToNode(startTime, endTime, timeJson) else { return self }
+        return CourseEntityLite(courseName: courseName, day: day, startNode: mapped.0, step: mapped.1,
+                                startWeek: startWeek, endWeek: endWeek, type: type,
+                                ownTime: ownTime, startTime: startTime, endTime: endTime,
+                                isIrregularTime: isIrregularTime)
     }
 }

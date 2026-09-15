@@ -25,13 +25,23 @@ struct TodayScreen: View {
             DateUtils.semesterStatus(startDate: $0.startDate, maxWeek: $0.maxWeek, today: today)
         } ?? .inRange
         let isOutOfSemester = semesterStatus != .inRange
-        let todayCourses = (isOutOfSemester ? [] : state.courses.filter {
-            $0.day == dayOfWeek && $0.inWeek(actualWeek)
-        })
-            .sorted { $0.startNode < $1.startNode }
+        let todayCourses: [CourseEntity] = {
+            let list = isOutOfSemester ? [] : state.courses.filter {
+                $0.day == dayOfWeek && $0.inWeek(actualWeek)
+            }
+            // 用户报障 2026-09-10: ownTime 课渲染前按真实时间归一化节点(与网格同一
+            // 预处理), 落库的表单占位节点不再影响今日页分组与显示。
+            guard let tj = state.currentTable?.timeJson else {
+                return list.sorted { $0.startNode < $1.startNode }
+            }
+            return list.map { $0.normalizeNode(timeJson: tj) }.sorted { $0.startNode < $1.startNode }
+        }()
         // v7.10.10 今日页冲突分栏 — 与周视图同一引擎同一分组(weekLaneRows):
         // 冲突区域一行内并排分栏(栏间浅细竖线), 无冲突课整宽单行。
-        let laneRows = ConflictLayoutEngine.weekLaneRows(todayCourses)
+        // 用户报障 2026-09-10: 分组走时间域(带 timeJson), 时间零交集的 ownTime 课对
+        // 不再因节点占位值相同被并成假冲突行。
+        let laneRows = ConflictLayoutEngine.weekLaneRows(
+            todayCourses, timeJson: state.currentTable?.timeJson)
 
         ScrollView {
             VStack(spacing: 16) {
@@ -75,7 +85,8 @@ struct TodayScreen: View {
                 onEdit: { c in
                     selectedCourse = nil
                     onEditCourse?(c)
-                })
+                },
+                timeJson: state.currentTable?.timeJson)
         }
     }
 }
