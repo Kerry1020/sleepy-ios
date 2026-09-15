@@ -4,7 +4,7 @@
 
 import SwiftUI
 
-private enum ViewMode: Hashable {
+enum ViewMode: Hashable {
     case full   // ← ViewMode.Full (周视图)
     case cards  // ← ViewMode.Cards (网格)
 }
@@ -12,13 +12,14 @@ private enum ViewMode: Hashable {
 struct ScheduleScreen: View {
     @Environment(\.localWakeUpColors) private var colors
     @ObservedObject var viewModel: ScheduleViewModel
+    // ← Android b96c865b: 视图模式提升到 AppRoot 会话层(切 tab/开 overlay 不再弹回启动默认),
+    // 顶部手动切换只改会话态, 不回写启动偏好(KEY_START_VIEW 既有分离设计)
+    @Binding var viewMode: ViewMode
     var onGoImport: () -> Void = {}
     var onManualAdd: () -> Void = {}
     var onCreateTable: () -> Void = {}
     var onEditCourse: (CourseEntity) -> Void = { _ in }
 
-    // ← AppPrefs.getStartView Android; 顶部手动切换仍只改本地页面状态,不写回启动偏好
-    @State private var viewMode: ViewMode = AppPrefs.shared.getStartView() == "cards" ? .cards : .full
     @State private var selectedCourse: CourseEntity? = nil
     // v7.10.16: 无可撤回时 toast 提示(按钮不隐藏保持布局稳定)
     @State private var showUndoNoneToast = false

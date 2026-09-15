@@ -1055,11 +1055,18 @@ extension ImportSheet {
             let cleanCourses = preview.parseResult.courses.filter { incoming in
                 !preview.existingCourses.contains { Self.coursesConflict(incoming, $0) }
             }
-            if cleanCourses.isEmpty {
+            // v7.10.16x 三层闸门改相对判定(用户 2026-09-10 报"预览 8 门全不冲突,
+            // 仅追加不冲突却 toast 全部冲突"): 旧绝对判定连坐原表已有超层天上的无辜候选。
+            // 与 AppendAsNew(v7.10.16j)同规: 只剔**让某天新超 2 层**的候选(因它而恶化才拦)。
+            let baseExceeding = ConflictLayoutEngine.daysExceedingTwoLanes(preview.existingCourses)
+            let survivors = cleanCourses.filter { cand in
+                ConflictLayoutEngine.daysExceedingTwoLanes(preview.existingCourses + [cand]) == baseExceeding
+            }
+            if survivors.isEmpty {
                 onError(L10n.format("import_all_conflict"))
                 return nil
             }
-            var courses = cleanCourses
+            var courses = survivors
             for i in courses.indices {
                 courses[i].id = 0
                 courses[i].tableId = preview.targetTableId

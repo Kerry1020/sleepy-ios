@@ -1,5 +1,5 @@
 // ManagementPage.swift — ← ui/screen/manage/ManagementPage.kt
-// 课表管理页: 当前课表摘要卡 + 4 管理卡(导入/新建/手动添加/编辑) + ImportSheet。
+// 课表管理页: 当前课表摘要卡 + 5 管理卡(导入/新建/手动添加/编辑/导出) + ImportSheet。
 
 import SwiftUI
 
@@ -12,6 +12,7 @@ struct ManagementPage: View {
     let onCreateNewTableRequested: () -> Void
     let onManualAdd: () -> Void
     let onEditCurrentTable: () -> Void
+    var onExportRequested: () -> Void = {}
     var onImported: () -> Void = {}
     var onOpenEditTable: (Int64) -> Void = { _ in }
 
@@ -23,6 +24,7 @@ struct ManagementPage: View {
          onCreateNewTableRequested: @escaping () -> Void,
          onManualAdd: @escaping () -> Void,
          onEditCurrentTable: @escaping () -> Void,
+         onExportRequested: @escaping () -> Void = {},
          onImported: @escaping () -> Void = {},
          onOpenEditTable: @escaping (Int64) -> Void = { _ in }) {
         self.viewModel = viewModel
@@ -31,6 +33,7 @@ struct ManagementPage: View {
         self.onCreateNewTableRequested = onCreateNewTableRequested
         self.onManualAdd = onManualAdd
         self.onEditCurrentTable = onEditCurrentTable
+        self.onExportRequested = onExportRequested
         self.onImported = onImported
         self.onOpenEditTable = onOpenEditTable
         _showImportSheet = State(initialValue: autoShowImportSheet)
@@ -87,6 +90,10 @@ struct ManagementPage: View {
                                title: L10n.format("manage_edit_current"),
                                subtitle: L10n.format("manage_edit_current_sub"),
                                onClick: onEditCurrentTable)
+                    ManageCard(id: "manage_export", icon: "square.and.arrow.up.on.square",
+                               title: L10n.format("manage_export"),
+                               subtitle: L10n.format("manage_export_sub"),
+                               onClick: onExportRequested)
                 }
             }
             .padding(16)

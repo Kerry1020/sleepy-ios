@@ -99,6 +99,12 @@ struct AddCourseScreen: View {
     @State private var validationIssues: [ValidationIssue] = []
     @State private var meetingBlocks: [MeetingBlockDraft] = []
     @State private var showDeleteConfirm = false
+    // 改组色弹层状态(issue#22 spec §6.2 恢复): 编辑模式才有组色源, 新建模式无组
+    @State private var showGroupColorPicker = false
+    // 组色源色值: 同组 colorMode=GROUP 中 id 最小行的 color — UI 显示 + 改组色弹层初值
+    @State private var groupSourceColorHex = ""
+    // 改组色两段式: 调色盘选中 → 暂存 → 确认对话框(spec §6.3)→ 落库
+    @State private var pendingGroupColorHex: String? = nil
     @State private var showConflictConfirm = false
     @State private var pendingConflictDetails: [String] = []
     @State private var groupLoaded = false
@@ -174,6 +180,8 @@ struct AddCourseScreen: View {
                             timeJson: effectiveTimeJson,
                             canRemove: meetingBlocks.count > 1,
                             issues: validationIssues.filter { $0.blockId == meetingBlocks[index].id }.map { $0.message },
+                            groupSourceColorHex: groupSourceColorHex,
+                            onChangeGroupColor: { showGroupColorPicker = true },
                             onRemove: { meetingBlocks.remove(at: index) },
                             onPickEdge: { edgePickTargetIndex = index },
                             onEditSlot: { node, s, e in slotEditTarget = SlotEditTarget(node: node, start: s, end: e) },
@@ -247,6 +255,27 @@ struct AddCourseScreen: View {
         }
         .background(colors.background)
         .onAppear { loadIfNeeded(state: state) }
+        // 改组色弹层(issue#22 spec §6.2/§6.3 恢复): 调色盘 + 全组影响确认。
+        // 编辑模式才弹(新建模式无 groupId, showGroupColorPicker 永远不会置 true)
+        .sheet(isPresented: $showGroupColorPicker) {
+            NativeColorPicker(initialHex: groupSourceColorHex.isEmpty ? "#FF6750A4" : groupSourceColorHex) { hex in
+                showGroupColorPicker = false
+                pendingGroupColorHex = hex
+            }
+        }
+        .alert(L10n.format("group_color_confirm_title"), isPresented: Binding(
+            get: { pendingGroupColorHex != nil },
+            set: { if !$0 { pendingGroupColorHex = nil } }
+        )) {
+            Button(L10n.format("action_confirm")) { confirmGroupColor() }
+            Button(L10n.format("cancel"), role: .cancel) { pendingGroupColorHex = nil }
+        } message: {
+            if let hex = pendingGroupColorHex {
+                Text(hex + "\n" + L10n.format("group_color_confirm_msg"))
+            } else {
+                Text(L10n.format("group_color_confirm_msg"))
+            }
+        }
         .alert(L10n.format("confirm_delete"), isPresented: $showDeleteConfirm) {
             Button(L10n.format("delete"), role: .destructive) {
                 showDeleteConfirm = false
@@ -400,6 +429,8 @@ struct AddCourseScreen: View {
         if let eg = editingCourse, !eg.groupId.isEmpty, let tid = state.selectedTableId {
             let repo = ScheduleRepository(AppDatabase.getShared())
             if let groupCourses = try? repo.getGroupCourses(tid, eg.groupId), !groupCourses.isEmpty {
+                // 组色源: 同组 colorMode=GROUP 中 id 最小行的 color (CourseColorUtil 单点)
+                groupSourceColorHex = CourseColorUtil.groupSourceColorHex(groupCourses)
                 // 按完整时段特征分组; issue#22: room/teacher 进分组 key
                 let slots = Dictionary(grouping: groupCourses) {
                     "\($0.ownTime)-\($0.startNode)-\($0.step)-\($0.startTime)-\($0.endTime)-\($0.startWeek)-\($0.endWeek)-\($0.type)-\($0.room)-\($0.teacher)"
@@ -445,6 +476,18 @@ struct AddCourseScreen: View {
     }
 
     // ← 保存: 校验 → 冲突报告 → 编辑行级 diff / 新建共享 groupId + 槽位暂存写回
+    /// 改组色确认落库: 只写组色源(GROUP 行 color), 刷新编辑回填的组色源显示
+    private func confirmGroupColor() {
+        guard let hex = pendingGroupColorHex else { return }
+        pendingGroupColorHex = nil
+        guard let eg = editingCourse, !eg.groupId.isEmpty, let tid = viewModel.state.selectedTableId else { return }
+        let repo = ScheduleRepository(AppDatabase.getShared())
+        try? repo.setGroupSourceColor(tid, eg.groupId, hex)
+        if let fresh = try? repo.getGroupCourses(tid, eg.groupId), !fresh.isEmpty {
+            groupSourceColorHex = CourseColorUtil.groupSourceColorHex(fresh)
+        }
+    }
+
     private func save(state: ScheduleState, forceAfterConflict: Bool = false) {
         let timeJson = effectiveTimeJson
         let issues = Self.validateCourseDraft(courseName: courseName, blocks: meetingBlocks,
@@ -503,9 +546,13 @@ struct AddCourseScreen: View {
         }
         // issue#23: 新建槽位 / 槽位时间编辑先在编辑页暂存, 课程落库成功后再写回课表 timeJson。
         // 顺序串接保证一次添加多个槽位时编号连续且方向元数据不丢失。
+        // v7.10.16v 撤回: 课程行 + timeJson 写回是一个动作 — beginBatch 让快照
+        // 固定在动作前, 撤回一次整步回退(否则第二写覆盖快照, 只回退一半)。
         if !pendingEdgeInserts.isEmpty || !pendingEdgeEdits.isEmpty {
             let repo2 = ScheduleRepository(AppDatabase.getShared())
             let base = ((try? repo2.getTable(tableId))?.timeJson) ?? TimeTableUtils.DEFAULT_TIME_JSON
+            UndoManager.shared.beginBatch()
+            defer { UndoManager.shared.endBatch() }
             var updated = base
             for insert in pendingEdgeInserts {
                 updated = TimeTableUtils.insertEdgeNode(timeJson: updated, edgeClass: insert.edgeClass,
@@ -790,6 +837,8 @@ private struct MeetingBlockEditor: View {
     let timeJson: String
     let canRemove: Bool
     let issues: [String]
+    let groupSourceColorHex: String
+    let onChangeGroupColor: () -> Void
     let onRemove: () -> Void
     let onPickEdge: () -> Void
     let onEditSlot: (_ node: Int, _ start: String, _ end: String) -> Void
@@ -894,7 +943,8 @@ private struct MeetingBlockEditor: View {
                     .background(colors.surfaceContainerHighest)   // ← fieldColors 容器色 surfaceContainerHighest
                     .cornerRadius(SleepyTheme.fieldShape)
                     // ← Android filled TextField, 无描边
-                ColorSection(block: $block)
+                ColorSection(block: $block, groupSourceColorHex: groupSourceColorHex,
+                             onChangeGroupColor: onChangeGroupColor)
             }
 
             // 尾部 if 合并进 Group, 防外层 builder 超 10 子视图
@@ -1131,6 +1181,8 @@ private struct IrregularOptionsSection: View {
 private struct ColorSection: View {
     @Environment(\.localWakeUpColors) private var colors
     @Binding var block: MeetingBlockDraft
+    let groupSourceColorHex: String
+    let onChangeGroupColor: () -> Void
     @State private var showColorPicker = false
 
     private var useDifferent: Bool { block.colorMode != CourseColorMode.GROUP }
@@ -1153,6 +1205,23 @@ private struct ColorSection: View {
                     }
                 ))
                 .labelsHidden()
+            }
+            if !useDifferent {
+                // spec §6.1 GROUP 模式行: 跟随组色 [色块] [改组色]
+                HStack(spacing: 8) {
+                    GroupColorSwatch(hex: groupSourceColorHex)
+                    Text(CourseColorUtil.hasCustomColorHex(groupSourceColorHex)
+                         ? groupSourceColorHex
+                         : L10n.format("color_group_auto"))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(colors.onSurfaceVariant)
+                    Spacer()
+                    Button(action: onChangeGroupColor) {
+                        Text(L10n.format("change_group_color"))
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(colors.primary)
+                    }
+                }
             }
             if useDifferent {
                 HStack(spacing: 10) {
@@ -1181,6 +1250,25 @@ private struct ColorSection: View {
                 showColorPicker = false
             }
         }
+    }
+}
+
+/// GROUP 模式组色色块 — 有自定义组色显示色块, 无则显示 AUTO 黄金角中性色
+private struct GroupColorSwatch: View {
+    @Environment(\.localWakeUpColors) private var colors
+    let hex: String
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 10)
+            .fill(swatchColor)
+            .frame(width: 20, height: 20)
+    }
+
+    private var swatchColor: Color {
+        if CourseColorUtil.hasCustomColorHex(hex), let argb = CourseColorUtil.parseColor(hex) {
+            return Color(uiArgb: UInt32(argb))
+        }
+        return colors.surfaceVariant
     }
 }
 

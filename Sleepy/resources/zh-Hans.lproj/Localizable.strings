@@ -33,6 +33,8 @@
 "manage_new_table_sub" = "创建一张空白课表，手动添加课程";
 "manage_edit_current" = "编辑当前课表";
 "manage_edit_current_sub" = "编辑当前课表名称、日期、节次时间";
+"manage_export" = "导出当前课表";
+"manage_export_sub" = "以文件分享当前课表";
 "manage_manual_add" = "手动添加课程";
 "manage_manual_add_sub" = "直接添加一门课程到当前课表";
 "table_info" = "开始日期: %1$@  |  第%2$d周  |  %3$d门课";
@@ -714,3 +716,7 @@
 "theme_editor_discard_confirm" = "放弃未保存的修改?";
 "theme_editor_discard" = "放弃修改";
 "theme_editor_discard_confirm_body" = "这个主题有未保存的修改，现在离开将会丢失。";
+/* 改组色(issue#22 spec §6.2 恢复) */
+"color_group_auto" = "自动（黄金角）";
+"group_color_confirm_title" = "确认修改组色";
+"group_color_confirm_msg" = "组色会影响本课程所有跟随组色的节次。";

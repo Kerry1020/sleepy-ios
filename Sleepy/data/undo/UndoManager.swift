@@ -34,6 +34,8 @@ final class UndoManager: ObservableObject {
     private var slotStorage: UndoSnapshot? = nil
     private let lock = NSLock()
     private var batchDepth: Int = 0
+    /// 本批首拍是否已落: 批内多次 capture 只保第一次 — 但锚定的是本批开始前(非旧快照)
+    private var batchCaptured: Bool = false
     /// 恢复动作进行中标记(语义同 Kotlin @Volatile 单开关)
     var restoring: Bool = false
 
@@ -44,16 +46,24 @@ final class UndoManager: ObservableObject {
 
     private init() {}
 
-    func beginBatch() { batchDepth += 1 }
+    func beginBatch() {
+        batchDepth += 1
+        // 批边界 = 新用户动作开始 — 旧动作的快照对新动作是过期锚点, 立即作废。
+        // 若真要嵌套批(当前无此用法), 内层 begin 不清 batchCaptured(只在 0→1 清)。
+        if batchDepth == 1 { batchCaptured = false }
+    }
 
     func endBatch() { batchDepth = max(batchDepth - 1, 0) }
 
     func capture(tables: [TimeTableEntity], courses: [CourseEntity], defaultTableId: Int64?) {
         if restoring { return }
         lock.lock()
-        if batchDepth > 0 && slotStorage != nil {
-            lock.unlock()
-            return // 批内已有快照 — 保动作链起点
+        if batchDepth > 0 {
+            if batchCaptured {
+                lock.unlock()
+                return // 批内已有本动作快照 — 保动作链起点
+            }
+            batchCaptured = true
         }
         slotStorage = UndoSnapshot(tables: tables, courses: courses, defaultTableId: defaultTableId)
         lock.unlock()

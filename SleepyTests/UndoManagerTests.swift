@@ -72,6 +72,32 @@ final class UndoManagerTests: XCTestCase {
         XCTAssertNil(UndoManager.shared.poll())
         XCTAssertFalse(UndoManager.shared.hasSnapshot)
     }
+
+    /// 用户 2026-09-10 报: 复制课表(动作A留旧快照) → 追加导入(动作B开批) → 撤回 → 副本被撤没。
+    /// 语义: 每个新动作的快照必须锚定本动作开始前, 旧快照不得复用。
+    func testStaleSnapshotNotReusedByNewBatch() {
+        UndoManager.shared.clear()
+        // 动作A: 复制课表(非批) — 留下指向"复制前"的快照
+        UndoManager.shared.capture(tables: [table(1)], courses: [], defaultTableId: 1)
+        _ = RunLoop.spin(until: { UndoManager.shared.hasSnapshot })
+        // 动作B: 追加导入 — beginBatch 开批, 首个 capture 必须落到"动作B开始前"的库态
+        UndoManager.shared.beginBatch()
+        UndoManager.shared.capture(tables: [table(1), table(2)], courses: [], defaultTableId: 1)
+        let snap = UndoManager.shared.poll()
+        UndoManager.shared.endBatch()
+        // 旧实现: 槽里已有快照 → 跳过, poll 出来的是动作A的快照(无 id=2 副本) — 错
+        // 正确: 动作B首拍生效, 快照含副本表 — 撤回只回退动作B, 副本保留
+        XCTAssertNotNil(snap?.tables.first { $0.id == 2 })
+    }
+
+    /// 同族: 动作A留快照 → 动作B非批单写 → B 的 capture 也必须生效。单写语义 = 总是覆盖。
+    func testSingleWriteAfterAnotherActionRecapturesFresh() {
+        UndoManager.shared.clear()
+        UndoManager.shared.capture(tables: [table(1)], courses: [], defaultTableId: 1)
+        UndoManager.shared.capture(tables: [table(1), table(3)], courses: [], defaultTableId: 1)
+        let snap = UndoManager.shared.poll()
+        XCTAssertNotNil(snap?.tables.first { $0.id == 3 })
+    }
 }
 
 /// RunLoop 等待辅助: UndoManager.capture 走 DispatchQueue.main.async,测试需泵主循环

@@ -108,6 +108,9 @@ enum RowKeyDiffer {
     /// 比较除 id/groupId/RowKey 包含字段外的其他字段是否相同
     private static func fieldsDiffer(_ a: CourseEntity, _ b: CourseEntity) -> Bool {
         if a.courseName != b.courseName { return true }
+        // 用户报障 2026-09-11: 别名无法保存 — RowKey 不含 alias(展示名非身份)但 fieldsDiffer 必须含。
+        // 漏掉一行 → diff 判"完全相同"跳过 update, 旧 alias 永远进不去。
+        if a.alias != b.alias { return true }
         if a.note != b.note { return true }
         if a.color != b.color { return true }
         if a.colorMode != b.colorMode { return true }

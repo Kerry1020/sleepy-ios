@@ -78,6 +78,9 @@ final class AppRootViewModel: ObservableObject {
     @Published var currentTab: Tab = .schedule
     @Published var overlayScreen: OverlayScreen? = nil
     @Published var editingCourse: CourseEntity? = nil
+    // ← Android b96c865b: 课表视图模式(周/网格)会话级真值, 与 currentTab 同级 —
+    // tab 切换/overlay 都会整页移除 ScheduleScreen, 状态必须提层才存活; 初始化读启动默认
+    @Published var scheduleViewMode: ViewMode = AppPrefs.shared.getStartView() == "cards" ? .cards : .full
     // ← rememberSaveable 导航参数(旋转恢复语义 — iOS 状态默认保留)
     @Published var editTableId: Int64? = nil
     @Published var pendingNewTableId: Int64? = nil
@@ -360,6 +363,7 @@ struct AppRoot: View {
         case .schedule:
             ScheduleScreen(
                 viewModel: root.scheduleViewModel,
+                viewMode: $root.scheduleViewMode,
                 onGoImport: { root.currentTab = .manage },
                 onManualAdd: { root.overlayScreen = .addCourse },
                 onCreateTable: { root.createNewTableThenEdit() },
@@ -379,11 +383,12 @@ struct AppRoot: View {
                     root.pendingNewTableId = nil
                     root.overlayScreen = .editTable
                 },
+                onExportRequested: { root.overlayScreen = .export },
                 // ★ 导入完成链(← Android onImported: 关导入框+切课表 Tab;
                 //   onOpenEditTable: 新导入表 → 打开表编辑页)
                 onImported: {
+                    // ← Android ce7f7924: 导入完成留在管理页(摘要卡就地刷新), 不再硬跳课表 Tab
                     PendingImportText.value = nil
-                    root.currentTab = .schedule
                 },
                 onOpenEditTable: { tableId in
                     PendingImportText.value = nil

@@ -185,6 +185,10 @@ final class ScheduleViewModel: ObservableObject {
             copy.name = name
             copy.isDefault = false
             copy.createdAt = Int64(Date().timeIntervalSince1970 * 1000)
+            // v7.10.16w: 建表+插课是一个撤回动作 — beginBatch 保首快照, 撤回一次整步回退
+            // (此前两步写两次覆盖快照, 撤回只删掉课程行留下空表壳)。
+            UndoManager.shared.beginBatch()
+            defer { UndoManager.shared.endBatch() }
             let newId = (try? repo.insertTable(copy)) ?? 0
             if newId != 0 && !courses.isEmpty {
                 // groupId 整组映射到新 UUID — 同一门课的节次共享新组 ID, 副本内仍可整组编辑

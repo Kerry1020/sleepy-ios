@@ -71,8 +71,6 @@ struct GeneralSettingsScreen: View {
 
                                     displayModeCard
                                     gridSubInfoCard
-                                    weekAliasCard
-                                    gridAliasCard
                                     pillCard
                                     conflictStyleCard
                                     visibleDaysCard
@@ -289,55 +287,14 @@ struct GeneralSettingsScreen: View {
         }
     }
 
-    // ★ issue#26 课程别名: 周视图场景 原名/别名 二选一(← Android SettingsFlatCard)
-    private var weekAliasCard: some View {
-        SettingsFlatCard(
-            title: L10n.format("settings_week_alias"),
-            options: [
-                L10n.format("settings_name_original"),
-                L10n.format("settings_name_alias")
-            ],
-            selectedIndex: Binding(
-                get: { weekUseAlias ? 1 : 0 },
-                set: { idx in
-                    let v = idx == 1
-                    guard v != weekUseAlias else { return }
-                    weekUseAlias = v
-                    prefs.setWeekUseAlias(v)
-                }
-            ),
-            onSelect: { _ in }
-        )
-    }
-
-    // ★ issue#26 课程别名: 网格场景 原名/别名 二选一
-    private var gridAliasCard: some View {
-        SettingsFlatCard(
-            title: L10n.format("settings_grid_alias"),
-            options: [
-                L10n.format("settings_name_original"),
-                L10n.format("settings_name_alias")
-            ],
-            selectedIndex: Binding(
-                get: { gridUseAlias ? 1 : 0 },
-                set: { idx in
-                    let v = idx == 1
-                    guard v != gridUseAlias else { return }
-                    gridUseAlias = v
-                    prefs.setGridUseAlias(v)
-                }
-            ),
-            onSelect: { _ in }
-        )
-    }
-
     // ★ issue#8 主页显示 pill 组: 网格/周视图缩放 + 圆角比例 + 周视图两栏 + 隐藏无课日
+    // + issue#26 课程别名两开关(自独立卡挪入, 行为零变化)
     // (← Android SettingsCard "settings_pill"; 滑杆 5% 吸附, 拖完落盘)
     private var pillCard: some View {
         SettingsCard(title: L10n.format("settings_pill"),
                      expanded: expandedSections.contains("gridScale"),
                      onToggle: { toggleSection("gridScale") }) {
-            // 内容 10 条 — 包 Group(builder 上限);行间距对齐 Android(标签 bottom 8/8/4)
+            // 内容 14 条 — 拆两 Group(ViewBuilder 10 项上限);行间距对齐 Android(标签 bottom 8/8/4)
             Group {
                 PillSliderRow(label: L10n.format("settings_pill_scale"),
                               value: $gridScale, range: AppPrefs.GRID_SCALE_RANGE) {
@@ -385,6 +342,23 @@ struct GeneralSettingsScreen: View {
                                  checked: weekHideEmptyDays) {
                     weekHideEmptyDays = $0
                     prefs.setWeekHideEmptyDays($0)
+                }
+            }
+            Group {
+                // issue#26 课程别名: 周视图/网格场景 原名/别名 二选一, 关=原名 开=别名(自独立卡挪入, 行为零变化)
+                SubDivider()
+                SettingToggleRow(label: L10n.format("settings_week_alias"),
+                                 subtitle: "",
+                                 checked: weekUseAlias) {
+                    weekUseAlias = $0
+                    prefs.setWeekUseAlias($0)
+                }
+                SubDivider()
+                SettingToggleRow(label: L10n.format("settings_grid_alias"),
+                                 subtitle: "",
+                                 checked: gridUseAlias) {
+                    gridUseAlias = $0
+                    prefs.setGridUseAlias($0)
                 }
             }
             SubDivider()
