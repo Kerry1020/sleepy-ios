@@ -169,7 +169,27 @@ struct JwImportFlow: View {
                                 _ periods: [(Int, String, String)],
                                 _ termStartDate: String) {
         statusMsg = L10n.format("import_parsing")
-        let courses = (try? JwImportViewModel.parseHtml(html, protocolType: sch.type ?? "")) ?? []
+        // UCAS 详情补全要发原生 HTTP, 必须离开主线程; 回来后仍回主线程改 @State
+        Task { @MainActor in
+            await parseAndAdvance(html, sch, periods, termStartDate)
+        }
+    }
+
+    private func parseAndAdvance(_ html: String, _ sch: JwSchoolInfo,
+                                 _ periods: [(Int, String, String)],
+                                 _ termStartDate: String) async {
+        // T6 双层判定: sch.type 已知直接用; 空 → HTML/URL 组合兜底
+        let rawType = sch.type
+        let effectiveType = (rawType?.isEmpty == false ? rawType : nil)
+            ?? JwImportViewModel.detectProtocol(html, url: sch.url.isEmpty ? nil : sch.url)
+        // #18 UCAS: 课程格链到跨源详情站 xkcts:8443 (WebView fetch 被 CORS 挡),
+        // 详情页免登录 → 原生 HTTP 逐课直抓补全周次/教室; 失败降级原 HTML
+        // (parser 落 1-16 占位, 与既有行为一致)
+        let htmlForParse = effectiveType == JwProtocol.TYPE_UCAS
+            ? await UcasDetailFetch.enrich(html)
+            : html
+        let courses = (try? JwImportViewModel.parseHtml(htmlForParse,
+                                                       protocolType: effectiveType ?? "")) ?? []
         if courses.isEmpty {
             errorMsg = L10n.format("jw_parse_empty")
             statusMsg = nil
