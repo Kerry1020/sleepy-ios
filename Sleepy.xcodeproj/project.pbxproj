@@ -159,6 +159,7 @@
 		89B1EC9714416910350CDA3C /* ShareScheduleSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C159F940014161B3F4498898 /* ShareScheduleSheet.swift */; };
 		89FAB921C7D98EA9A507D61A /* JwParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9090ACA661D747DF0AB718 /* JwParser.swift */; };
 		8AAF5A7A3F027E8E1BE88727 /* TimeTableDao.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E5DE7210118C9EC520F007E /* TimeTableDao.swift */; };
+		8AE862E0121B6911D9598A4A /* CustomThemeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E20E86B4FD984D1F80869C5 /* CustomThemeStore.swift */; };
 		8BDE175F3C9FA60A8C6585E5 /* UndoManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D651B0E8CCB723BAB435B4C8 /* UndoManagerTests.swift */; };
 		8F0DCCC39A23A9A6A7093EA5 /* JwCquParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C11210F0D929BD75517DDD5 /* JwCquParser.swift */; };
 		9235B99583013389D06A2934 /* Eams5PathPrefix.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2521BF901963D8A628CE921 /* Eams5PathPrefix.swift */; };
@@ -248,6 +249,7 @@
 		F3C52FFD89C2D0D908A32C89 /* LocaleHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83F0807AB00ED93A168AD2C6 /* LocaleHelper.swift */; };
 		F48DABCC146D655E683D42EF /* WeekViewWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 804FD9B63BCC3C1726B9CAFF /* WeekViewWidgetView.swift */; };
 		F4F3C180248F3621BFF7E4C4 /* TimeTableUtilsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B54C7ABE0AD4B91392A32A1 /* TimeTableUtilsTests.swift */; };
+		F51E496AB4A251ABA1206AF7 /* CustomThemeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E20E86B4FD984D1F80869C5 /* CustomThemeStore.swift */; };
 		F5B6512BFE9EB65E52C1FAD5 /* DateTimePickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = B26C1FC7457815C7A78F9026 /* DateTimePickers.swift */; };
 		F641EDE75578F5F85B651651 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1205376525F575AF970B7CD4 /* Localizable.strings */; };
 		F65B4753901D75DE1D367046 /* ParserAuditTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BCB8B72B49233D52340AB7A /* ParserAuditTests.swift */; };
@@ -341,6 +343,7 @@
 		39EE2EC9F37C40DBBE526D31 /* JwCourse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwCourse.swift; sourceTree = "<group>"; };
 		3C66E6D2ABAEEAC25D75D8C3 /* ExportImportRoundTripTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportImportRoundTripTests.swift; sourceTree = "<group>"; };
 		3CE7034F859FC0E80A0569C9 /* SleepyTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = SleepyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3E20E86B4FD984D1F80869C5 /* CustomThemeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomThemeStore.swift; sourceTree = "<group>"; };
 		3E7AD6CE77CFDEF12C064E61 /* WidgetArchivingUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetArchivingUITests.swift; sourceTree = "<group>"; };
 		3FD5A52D7EC60F78D92780AF /* JwUcasParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwUcasParser.swift; sourceTree = "<group>"; };
 		4025E8D10A574C8F59C29E21 /* TodayWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayWidgetView.swift; sourceTree = "<group>"; };
@@ -888,6 +891,7 @@
 				6F78A798D0386C1C90A17381 /* repository */,
 				66A47DE999366E2F2EDCB8AC /* undo */,
 				FF2B16F1E64028F96C4B5AD5 /* AppDatabase.swift */,
+				3E20E86B4FD984D1F80869C5 /* CustomThemeStore.swift */,
 			);
 			path = data;
 			sourceTree = "<group>";
@@ -1087,6 +1091,7 @@
 				41F5B59C468562763A588C8D /* CourseDisplayUtil.swift in Sources */,
 				75BDBE0C304130911EB16781 /* CourseEntity.swift in Sources */,
 				ED1304B67D86E2778FC7A12F /* CourseTableView.swift in Sources */,
+				F51E496AB4A251ABA1206AF7 /* CustomThemeStore.swift in Sources */,
 				F5B6512BFE9EB65E52C1FAD5 /* DateTimePickers.swift in Sources */,
 				EFBA358CFB2F74092DBDB6CB /* DateUtils.swift in Sources */,
 				207583D1714E56206332B0E0 /* Eams5PathPrefix.swift in Sources */,
@@ -1227,6 +1232,7 @@
 				DF3C38B397BF68B63560316F /* CourseDao.swift in Sources */,
 				4D994AF69C97E9EDE3A981FB /* CourseDisplayUtil.swift in Sources */,
 				77BF6566053079C67DBD9122 /* CourseEntity.swift in Sources */,
+				8AE862E0121B6911D9598A4A /* CustomThemeStore.swift in Sources */,
 				1359BA5B59555988AB6494CF /* DateUtils.swift in Sources */,
 				9235B99583013389D06A2934 /* Eams5PathPrefix.swift in Sources */,
 				CF1DA513D5803CD7443912CF /* FeedbackComposer.swift in Sources */,
