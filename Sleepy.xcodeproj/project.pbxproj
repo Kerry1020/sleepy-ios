@@ -24,6 +24,7 @@
 		103E9CD3CC61F913CC87C4CE /* UndoManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D5816F5C0F382110A910D43 /* UndoManager.swift */; };
 		105848ADD6E684DE219C4F90 /* SleepyNativeExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF2317D8ADB299B07E322439 /* SleepyNativeExporter.swift */; };
 		11D7A6FEAD0AED19CF03111F /* SleepyNativeFormatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397DC86E9AB0B03EE79461D2 /* SleepyNativeFormatTests.swift */; };
+		124C150E7516307A12A3F02F /* CustomSchemeDeriver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26F2D8DA1BAD4105612867AE /* CustomSchemeDeriver.swift */; };
 		128824CB5EB4EA4E54EEFF3B /* JwPekingParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6264A390C22B85F9DD9F0CAC /* JwPekingParser.swift */; };
 		1359BA5B59555988AB6494CF /* DateUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D79D23433FE386230D5AB1 /* DateUtils.swift */; };
 		1368361D972F1DC550EFBAD3 /* JwFetchError.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6385BFCE2C0419152DFEAB9 /* JwFetchError.swift */; };
@@ -80,6 +81,7 @@
 		486E763FDB230519E148D20E /* MineScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05A3D362C9894D69BFFCEC3F /* MineScreen.swift */; };
 		488B6FCD75861629BFB511C2 /* JwWebViewBlankTargetUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8A0EF2E319E98B292C560CE /* JwWebViewBlankTargetUITests.swift */; };
 		496DF2875E115783B5201D7F /* ConflictLayoutEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4045004893D9AB9C079A3CF /* ConflictLayoutEngine.swift */; };
+		4ADBE56C6B4087A04783AC85 /* CustomSchemeDeriver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26F2D8DA1BAD4105612867AE /* CustomSchemeDeriver.swift */; };
 		4B0BE4A90A3D8C0E1D17ECD9 /* TimeTableEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 480CB26C5638A20DE5CED8AC /* TimeTableEntity.swift */; };
 		4C11CEA9A518D6F2972027E6 /* ScheduleRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F93B2813DC503FB445168386 /* ScheduleRepository.swift */; };
 		4D12094DB99D2877F409F0FD /* VersionAndUpdateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C69CDDE3F7F1E2BEA3DA3C03 /* VersionAndUpdateTests.swift */; };
@@ -328,6 +330,7 @@
 		24530B6DC99642CD638100EE /* ImportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportSheet.swift; sourceTree = "<group>"; };
 		24CB83AF9B32FF2BC4921DB0 /* SleepyNativeParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepyNativeParser.swift; sourceTree = "<group>"; };
 		26CF08C9ED257788E53D0309 /* JwParserRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwParserRegistry.swift; sourceTree = "<group>"; };
+		26F2D8DA1BAD4105612867AE /* CustomSchemeDeriver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomSchemeDeriver.swift; sourceTree = "<group>"; };
 		290CA376AA06DF914D39E04B /* TimeSlotEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeSlotEditor.swift; sourceTree = "<group>"; };
 		2DDC1DB2898102E2021052B3 /* SleepyNativeExporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepyNativeExporterTests.swift; sourceTree = "<group>"; };
 		32366CDB34A4D30D2E25CFF3 /* JwBnuzParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwBnuzParser.swift; sourceTree = "<group>"; };
@@ -539,6 +542,7 @@
 		0E1D705B83DE0E5F648C69BE /* theme */ = {
 			isa = PBXGroup;
 			children = (
+				26F2D8DA1BAD4105612867AE /* CustomSchemeDeriver.swift */,
 				5FE23E8A9E4FEBC54F0F90DF /* Theme.swift */,
 				4B72E006270ED69703F906F4 /* ThemePresets.swift */,
 			);
@@ -1091,6 +1095,7 @@
 				41F5B59C468562763A588C8D /* CourseDisplayUtil.swift in Sources */,
 				75BDBE0C304130911EB16781 /* CourseEntity.swift in Sources */,
 				ED1304B67D86E2778FC7A12F /* CourseTableView.swift in Sources */,
+				124C150E7516307A12A3F02F /* CustomSchemeDeriver.swift in Sources */,
 				F51E496AB4A251ABA1206AF7 /* CustomThemeStore.swift in Sources */,
 				F5B6512BFE9EB65E52C1FAD5 /* DateTimePickers.swift in Sources */,
 				EFBA358CFB2F74092DBDB6CB /* DateUtils.swift in Sources */,
@@ -1232,6 +1237,7 @@
 				DF3C38B397BF68B63560316F /* CourseDao.swift in Sources */,
 				4D994AF69C97E9EDE3A981FB /* CourseDisplayUtil.swift in Sources */,
 				77BF6566053079C67DBD9122 /* CourseEntity.swift in Sources */,
+				4ADBE56C6B4087A04783AC85 /* CustomSchemeDeriver.swift in Sources */,
 				8AE862E0121B6911D9598A4A /* CustomThemeStore.swift in Sources */,
 				1359BA5B59555988AB6494CF /* DateUtils.swift in Sources */,
 				9235B99583013389D06A2934 /* Eams5PathPrefix.swift in Sources */,
