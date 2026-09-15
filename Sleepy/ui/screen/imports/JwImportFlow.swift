@@ -188,10 +188,12 @@ struct JwImportFlow: View {
         let htmlForParse = effectiveType == JwProtocol.TYPE_UCAS
             ? await UcasDetailFetch.enrich(html)
             : html
-        let courses = (try? JwImportViewModel.parseHtml(htmlForParse,
-                                                       protocolType: effectiveType ?? "")) ?? []
+        let parsed = JwParseDispatch.parse(htmlForParse, effectiveType ?? "")
+        let courses = parsed.courses
+        let attempts = parsed.attempts
         if courses.isEmpty {
-            errorMsg = L10n.format("jw_parse_empty")
+            // T9 诊断壳: classify 先做页面级嗅探再选文案 (← JwImportActivity.kt:302)
+            errorMsg = DiagMapper.diagnosis(html: html, school: sch, attempts: attempts)
             statusMsg = nil
             return
         }
@@ -261,5 +263,88 @@ struct JwImportFlow: View {
             errorMsg = L10n.format("jw_parse_failed", error.localizedDescription)
             statusMsg = nil
         }
+    }
+}
+
+/// 诊断结果 → 用户可见文案 ← JwImportActivity.kt DiagMapper (433-470)。
+///
+/// 0 课不等于"空学期": 会话过期 / 图片课表 / 协议标注错 都会解析出 0 课,
+/// 统一一句"本学期无课"会把用户引向错误方向。先 classify 分类, 再按类选文案,
+/// 最后按学校/协议族补一条网络提示。
+enum DiagMapper {
+
+    /// 完整入口: 分类 + 映射。classify 的 html 非空是硬前置 (Swift 侧是
+    /// precondition 而非可捕获异常) → 空 HTML 直接走兜底文案, 绝不喂进去。
+    static func diagnosis(html: String, school: JwSchoolInfo,
+                          attempts: [ParserAttemptSnapshot]) -> String {
+        guard !html.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return L10n.format("jw_err_empty_semester")
+        }
+        let diag = JwParseDiagnostics.classify(
+            html, "", school, attempts.map { $0.asDiag })
+        return map(diag, school)
+    }
+
+    static func map(_ diag: JwParseDiagnostics.Result, _ school: JwSchoolInfo) -> String {
+        let features = diag.matchedFeatures.prefix(5).joined(separator: "/")
+        let base: String
+        switch diag.category {
+        case .sessionExpired:     base = L10n.format("jw_diag_session_expired", school.name)
+        case .noTableContainer:   base = L10n.format("jw_diag_no_container", school.name)
+        case .headerNoNode:       base = L10n.format("jw_diag_header_no_node", school.name)
+        case .imageOrEmptyCells:  base = L10n.format("jw_diag_image_cells", school.name)
+        case .emptySemester:      base = L10n.format("jw_diag_empty_semester", school.name)
+        case .wrongProtocol:      base = L10n.format("jw_diag_wrong_protocol", school.name)
+        case .unknownEmpty:       base = L10n.format("jw_diag_unknown_empty", school.name, features)
+        }
+        // UNKNOWN_EMPTY 的文案里已内嵌诊断特征占位符, 不再二次追加
+        if diag.category == .unknownEmpty { return base }
+        let hint = schoolHint(school)
+        return hint.isEmpty ? base : base + "\n\n" + hint
+    }
+
+    /// 特殊学校 hint: 临沂大学(校园网限制) / 强智系(会话踢下线) / B 档 985 校
+    /// (校外多须 VPN/WebVPN) ← mapImpl 的 schoolHint
+    static func schoolHint(_ school: JwSchoolInfo) -> String {
+        let campusOnlyHosts = [
+            "jwgl.lyu.edu.cn", "jwxt.lyu.edu.cn",
+            // v1.0.46 B 档新 985 校: 教务域名普遍校外受限, 0 课兜底文案易被误读为学期选错
+            "jwxt.neu.edu.cn",          // 东北大学
+            "newxk.urp.seu.edu.cn",     // 东南大学
+            "xsjw2018.jw.scut.edu.cn",  // 华南理工大学
+            "jxglstu.hfut.edu.cn",      // 合肥工业大学
+            "zdbk.zju.edu.cn",          // 浙江大学
+            "jw.ustc.edu.cn",           // 中国科学技术大学
+            "jwms.bit.edu.cn",          // 北京理工大学 (legacy URL 兼容)
+            "jxzxehallapp.bit.edu.cn",  // 北京理工大学 (现行 URL)
+            "csujwc.its.csu.edu.cn",    // 中南大学
+            "jwxt.whut.edu.cn",         // 武汉理工大学 (登录后偶发限流, 提示换网络)
+            // 2026-09 211 批量收录: 海外探测超时率高/域名校内受限的新校
+            "jwxt.scnu.edu.cn",         // 华南师范大学
+            "hdjw.hnu.edu.cn",          // 湖南大学 (Njw2017)
+            "jw.ruc.edu.cn",            // 中国人民大学 (Njw2017)
+            "jw.dhu.edu.cn",            // 东华大学
+            "jw.ahu.edu.cn",            // 安徽大学 (supwisdom 新版)
+            "jwxt.cumtb.edu.cn",        // 矿大北京 (supwisdom 新版)
+            "jwxt.ybu.edu.cn",          // 延边大学
+            "jwgl.shzu.edu.cn",         // 石河子大学
+            "eams.uestc.edu.cn",        // 电子科技大学 (经典 EAMS, 202 鉴权)
+            "eams.sufe.edu.cn",         // 上海财经大学 (经典 EAMS)
+            "jwglnew.hunnu.edu.cn",     // 湖南师范大学 (经典 EAMS, iframe)
+            "aao-eas.nuaa.edu.cn",      // 南京航空航天大学 (经典 EAMS)
+            "jwgl.gzhmu.edu.cn",        // 广州医科大学 (强智, 教务域公网不解析)
+        ]
+        if campusOnlyHosts.contains(where: { school.url.contains($0) }) {
+            return L10n.format("jw_diag_campus_vpn_hint")
+        }
+        // 四川大学条目 URL 即门户域, 整串相等才判
+        if school.url == "https://scu.edu.cn/" {
+            return L10n.format("jw_diag_campus_vpn_hint")
+        }
+        if [JwProtocol.TYPE_QZ, JwProtocol.TYPE_QZ_CRAZY, JwProtocol.TYPE_QZ_BR,
+            JwProtocol.TYPE_QZ_WITH_NODE, JwProtocol.TYPE_QZ_OLD].contains(school.type) {
+            return L10n.format("jw_diag_qz_vpn_hint")
+        }
+        return ""
     }
 }
