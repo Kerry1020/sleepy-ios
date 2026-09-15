@@ -71,66 +71,6 @@ enum ConflictLayoutEngine {
         }
     }
 
-    /**
-     * 真实时间区间(分钟级)聚簇 — 线性扫按 startNode 排序的课, 相邻课真实时间
-     * 区间相交则合并为一簇(传递闭包)。区间解析: ownTime 课用自身起止, 常规课用
-     * 节次起止; 任一课无法解析出时间 → 回落节点区间判定(数据脏时宁可保守, 不静默丢簇)。
-     */
-    private static func mergeOverlappingByTime(_ sorted: [CourseEntity], _ timeJson: String) -> [[CourseEntity]] {
-        if sorted.isEmpty { return [] }
-        let intervals = sorted.map { realIntervalOf($0, timeJson) }
-        var clusters: [[CourseEntity]] = [[sorted[0]]]
-        var currentEnd = Double(intervals[0]?.1 ?? (sorted[0].startNode + sorted[0].step - 1))
-        var currentEndIsTime = intervals[0] != nil
-        for i in 1..<sorted.count {
-            let c = sorted[i]
-            let iv = intervals[i]
-            let start: Double, end: Double, isTime: Bool
-            if let iv {
-                start = Double(iv.0); end = Double(iv.1); isTime = true
-            } else {
-                start = Double(c.startNode); end = Double(c.startNode + c.step - 1); isTime = false
-            }
-            // 分钟与节点序不可直接比较: 时间基准 vs 节点基准的相邻比较统一换算到
-            // 各自序列 — 两者都能解析成时间 → 分钟域; 否则节点域。
-            // 用户反馈 2026-09-09: 混合域(一方时间不可解析)严禁拿节点数与秒数直接
-            // 比较 — 节点数(1..12)永远 < 秒数(30000+), 时间域簇会把任何脏 ownTime 课
-            // 粘上来。混合域改为**不成簇**(不相交): 没有可靠证据证明重叠,
-            // 宁可漏报不可误报 — 与 coursesOverlap 的"双双可解析才比时间"原则一致。
-            let overlaps: Bool
-            if currentEndIsTime && iv != nil {
-                overlaps = start < currentEnd
-            } else if !currentEndIsTime && iv == nil {
-                overlaps = start <= currentEnd
-            } else {
-                overlaps = false // 混合域无公共可比域 → 不并簇
-            }
-            if overlaps {
-                clusters[clusters.count - 1].append(c)
-                if end > currentEnd { currentEnd = end; currentEndIsTime = isTime }
-            } else {
-                clusters.append([c])
-                currentEnd = end
-                currentEndIsTime = isTime
-            }
-        }
-        return clusters
-    }
-
-    /**
-     * 课的真实时间区间(秒, 自午夜起) — ownTime 课用自身起止, 常规课用节次起止
-     * (effectiveCourseTime 同一契约)。无法解析 → nil, 调用方回落节点区间。
-     */
-    static func realIntervalOf(_ c: CourseEntity, _ timeJson: String) -> (Int, Int)? {
-        guard let eff = TimeTableUtils.effectiveCourseTime(
-            isIrregularTime: c.isIrregularTime || c.ownTime,
-            startTime: c.startTime, endTime: c.endTime,
-            startNode: c.startNode, step: c.step, timeJson: timeJson) else { return nil }
-        guard let s = TimeTableUtils.hmToSeconds(eff.0),
-              let e = TimeTableUtils.hmToSeconds(eff.1), e > s else { return nil }
-        return (s, e)
-    }
-
     /// 主课判定序: step 降 > startNode 升 > id 升。
     static func primaryOrder(_ courses: [CourseEntity]) -> [CourseEntity] {
         courses.sorted(by: primaryComparator)
@@ -367,51 +307,15 @@ enum ConflictLayoutEngine {
     }
 
     /**
-     * 周视图渲染行分组(v7.10.6) — 修复丢课/重复渲染:
-     * mergeOverlapping 区域是划分(每课恰属一个区域),行成员 = 区域全体,每课恰渲染一次。
-     * 行序: 各行按行首课 startNode 升序穿插。
+     * 周视图渲染行分组(v7.10.6 / ← Android 25c943f0 issue #37) — 修复丢课/重复渲染:
+     * 区域划分是划分(每课恰属一个区域),行成员 = 区域全体,每课恰渲染一次。
+     * timeJson 非空时: ownTime 课先按真实时间归一化节点, 区域划分改走分钟域
+     * (mergeOverlappingByTime, 混合域不成簇); 时间零交集的 ownTime 课对不再因
+     * 落库占位节点相同被并成冲突行。行序: 各行按行首课 startNode 升序穿插。
      */
     static func weekLaneRows(_ courses: [CourseEntity], timeJson: String? = nil) -> [WeekLaneRow] {
         if courses.isEmpty { return [] }
-        var rows: [WeekLaneRow] = []
-        let byDay = Dictionary(grouping: courses, by: { $0.day })
-        for (_, dayCourses) in byDay {
-            // 时间域聚簇前先把 ownTime 课反算到节次网格(排序/行首定位用), 与渲染层同源
-            let prepared = timeJson == nil ? dayCourses : dayCourses.map { $0.normalizeNode(timeJson: timeJson!) }
-            let sorted = prepared.sorted {
-                if $0.startNode != $1.startNode { return $0.startNode < $1.startNode }
-                if $0.step != $1.step { return $0.step < $1.step }
-                return $0.id < $1.id
-            }
-            let regions = timeJson == nil
-                ? mergeOverlapping(sorted)
-                : mergeOverlappingByTime(sorted, timeJson!)
-            for region in regions {
-                if region.count < 2 {
-                    for c in region { rows.append(WeekLaneRow(courses: [c], laneOf: [:], laneCount: 1)) }
-                    continue
-                }
-                let lanes = chainGroups(region)
-                var laneOf: [Int64: Int] = [:]
-                for (laneIdx, lane) in lanes.enumerated() {
-                    for c in lane { laneOf[c.id] = laneIdx }
-                }
-                rows.append(WeekLaneRow(courses: region.sorted { $0.startNode < $1.startNode },
-                                        laneOf: laneOf, laneCount: lanes.count))
-            }
-        }
-        return rows.sorted { $0.courses.first!.startNode < $1.courses.first!.startNode }
-    }
-
-    /**
-     * 时间域行分组 (← Android 25c943f0 / issue #37) — timeJson 非空时: ownTime 课先按
-     * 真实时间归一化节点, 区域划分改走分钟域 (mergeOverlappingByTime, 混合域不成簇)。
-     * 时间零交集的 ownTime 课对不再因落库占位节点相同被并成冲突行 (非标准时间被误判冲突)。
-     */
-    static func weekLaneRows(_ courses: [CourseEntity], timeJson: String?) -> [WeekLaneRow] {
-        guard let timeJson = timeJson else { return weekLaneRows(courses) }
-        if courses.isEmpty { return [] }
-        let prepared = courses.map { $0.normalizeNode(timeJson: timeJson) }
+        let prepared = timeJson == nil ? courses : courses.map { $0.normalizeNode(timeJson: timeJson!) }
         var rows: [WeekLaneRow] = []
         // 分组保序 (Kotlin groupBy = LinkedHashMap 语义), 避免跨天同节点行的顺序抖动
         var dayOrder: [Int] = []
@@ -427,7 +331,10 @@ enum ConflictLayoutEngine {
                 if $0.step != $1.step { return $0.step < $1.step }
                 return $0.id < $1.id
             }
-            for region in mergeOverlappingByTime(sorted, timeJson) {
+            let regions = timeJson == nil
+                ? mergeOverlapping(sorted)
+                : mergeOverlappingByTime(sorted, timeJson!)
+            for region in regions {
                 if region.count < 2 {
                     for c in region { rows.append(WeekLaneRow(courses: [c], laneOf: [:], laneCount: 1)) }
                     continue
