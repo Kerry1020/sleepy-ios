@@ -11,6 +11,10 @@ struct CourseDetailSheet: View {
     var timeString: String? = nil
     var allCourses: [CourseEntity] = []
     var onEdit: ((CourseEntity) -> Void)? = nil
+    /// 用户报障 2026-09-10: 非网格面(详情页)聚簇必须与网格同一时间域 —
+    /// ownTime 课落库的 startNode/step 是表单占位值, 节点域聚簇会把时间零交集的
+    /// 两门 ownTime 课(节点区间恰好相同)误判成冲突簇。nil = 旧行为(节点域)。
+    var timeJson: String? = nil
 
     @ObservedObject private var defaultTopStore = ConflictDefaultTopStore.shared
 
@@ -100,10 +104,12 @@ struct CourseDetailSheet: View {
         dismiss()
     }
 
-    /// 找出 course 所在冲突簇(仅当 day 下 ≥2 课区间相交时才返回)
+    /// 找出 course 所在冲突簇(仅当 day 下 ≥2 课区间相交时才返回)。
+    /// 带 timeJson 走分钟域(与网格一致), ownTime 课先归一化。
     private func clusterOf(_ course: CourseEntity) -> ConflictCluster? {
         let sameDay = allCourses.filter { $0.day == course.day }
-        return ConflictLayoutEngine.findClusters(sameDay)
+            .map { timeJson == nil ? $0 : $0.normalizeNode(timeJson: timeJson!) }
+        return ConflictLayoutEngine.findClusters(sameDay, timeJson: timeJson)
             .first { $0.courses.contains { $0.id == course.id } }
             .flatMap { $0.courses.count >= 2 ? $0 : nil }
     }
