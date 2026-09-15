@@ -32,6 +32,15 @@ struct AppearanceScreen: View {
         _currentKey = State(initialValue: AppPrefs.shared.getThemeKey())
     }
 
+    /// 网格顺序不变量(d87eade3 + c1c166f9):预设 → 自定义 → 新建入口,加号永远在整网格
+    /// 末尾且与自定义主题数量无关。抽成纯函数是为了让「顺序本身」被契约测试锁死
+    /// (SleepyTests/CustomThemeTests.swift 的 CustomThemeGridTests),而不是只靠肉眼看 UI。
+    static func gridCells(presets: [ThemePreset], customs: [CustomTheme]) -> [ThemeGridCell] {
+        presets.map { ThemeGridCell.preset($0) }
+            + customs.map { ThemeGridCell.custom($0) }
+            + [ThemeGridCell.newTheme]
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             SettingsTopBar(title: L10n.format("mine_appearance"), onBack: onDismiss)
@@ -50,9 +59,7 @@ struct AppearanceScreen: View {
                     // 2 列网格:5 套预设 → 各自定义卡 → 新建入口(加号)
                     // ★ 顺序不变量(d87eade3 + c1c166f9):预设 → 自定义 → 加号,加号永远
                     //   排在整网格末尾,与自定义主题数量无关;自定义卡与预设卡同尺寸同构。
-                    let cells: [ThemeGridCell] = ThemePresets.all.map { ThemeGridCell.preset($0) }
-                        + customThemes.map { ThemeGridCell.custom($0) }
-                        + [ThemeGridCell.newTheme]
+                    let cells: [ThemeGridCell] = Self.gridCells(presets: ThemePresets.all, customs: customThemes)
                     VStack(spacing: 12) {
                         ForEach(Array(cells.chunked(into: 2).enumerated()), id: \.offset) { _, row in
                             HStack(spacing: 12) {
