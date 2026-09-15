@@ -202,6 +202,13 @@ struct JwWebViewLoginScreen: View {
             coordinator.evaluate(BoyaPpFetchJs.js)
             return
         }
+        // 强智移动教务 SPA: 课表只在移动 JSON API 里 (token header 鉴权), 页面 HTML
+        // 无课程数据。先相对路径 serverconfig.json (免鉴权) 发现 ApiUrl, 再带
+        // sessionStorage.Token 逐周抓课表合并成 {weeks:[…]} 组合源。
+        if school.type == JwProtocol.TYPE_QZ_APP {
+            coordinator.evaluate(QzAppFetchJs.js)
+            return
+        }
         // 同步 evaluateJavascript 拿 HTML(iframe/frame 合并)
         let js = """
         (function() {
@@ -705,5 +712,104 @@ enum BoyaPpFetchJs {
         window.webkit.messageHandlers.__sleepyBridge.postMessage({json:JSON.stringify({ok:false, err:String(err)})});
       }
     })();
+    """
+}
+
+
+// MARK: - QZ_APP_FETCH_JS(← JwWebViewLoginScreen.kt QZ_APP_FETCH_JS 原文移植, 桥回调改 WKScriptMessage postMessage)
+//
+// 强智移动教务 SPA (type=qz_app): 课表只在移动 JSON API 里 (token header 鉴权), 页面
+// HTML 无课程数据。相对路径 serverconfig.json 免鉴权发现 ApiUrl (各校部署根可不同,
+// 先试当前目录再试 /dist/serverconfig.json, 禁硬编码) → sessionStorage.Token 作 token
+// 头请求。课表端点一次只回一周 (week= 空 = 当前教学周, data 恒单元素), 只抓当前周会把
+// 仅在后续周出现的课整门丢掉 — 先 POST /teachingWeek 取周数列表, 再并行逐周 POST
+// curriculum?week=w&kbjcmsid=, 合并成 {weeks:[<单次响应>…]} 组合源 (与燕大 boya_pp
+// 逐周方案同构)。401 一律中止 (禁以部分数据伪装完整课表), 单周失败静默跳过。
+// JS 只做 fetch 与传输层状态路由, 协议字段解码全部在 JwQzAppParser (跨语言 invariant)。
+
+enum QzAppFetchJs {
+static let js = """
+    (function(){
+      try {
+        var post = function(obj){
+          window.webkit.messageHandlers.__sleepyBridge.postMessage({json:JSON.stringify(obj)});
+        };
+        var token = '';
+        try { token = sessionStorage.getItem('Token') || ''; } catch(e) {}
+        if (!token) {
+          post({ok:false, err:'未取到登录令牌: 请先登录移动教务后再点导入'});
+          return;
+        }
+        var getCfg = function(url){
+          return fetch(url, {credentials:'include'})
+            .then(function(r){
+              if (!r.ok) { throw new Error('serverconfig.json HTTP ' + r.status); }
+              return r.json();
+            });
+        };
+        getCfg('serverconfig.json')
+          .catch(function(){
+            return getCfg('/dist/serverconfig.json');
+          })
+          .then(function(cfg){
+            var apiUrl = String(cfg.ApiUrl || '').replace(/\\/+$/,'');
+            if (!apiUrl) { throw new Error('serverconfig.json 缺 ApiUrl'); }
+            return apiUrl;
+          })
+          .then(function(apiUrl){
+            var call = function(path){
+              return fetch(apiUrl + path, {
+                method:'POST',
+                credentials:'include',
+                headers: { 'token': token }
+              }).then(function(r){ return r.text(); });
+            };
+            // 课表端点一次只回一周 (week= 空 = 当前教学周, data 单元素);
+            // 只抓当前周会丢掉仅在后续周出现的课 — 先取 teachingWeek 周数列表,
+            // 再并行逐周拉取合并 (与燕大 boya_pp 逐周方案同构)
+            return call('/teachingWeek').then(function(twText){
+              var weekNums = [];
+              try {
+                var tw = JSON.parse(twText);
+                if (tw && tw.code != '401' && tw.data && tw.data.length) {
+                  for (var i = 0; i < tw.data.length; i++) {
+                    var n = parseInt(tw.data[i].week, 10);
+                    if (n >= 1 && n <= 30) weekNums.push(n);
+                  }
+                }
+              } catch(e) {}
+              if (!weekNums.length) weekNums = [1];
+              var expired = false;
+              var reqs = weekNums.map(function(w){
+                return call('/student/curriculum?week=' + w + '&kbjcmsid=')
+                  .then(function(text){
+                    try { if (JSON.parse(text).code == '401') expired = true; } catch(e) {}
+                    return text;
+                  })
+                  .catch(function(){ return null; });
+              });
+              return Promise.all(reqs).then(function(texts){
+                if (expired) {
+                  post({ok:false, err:'登录已过期: 请重新登录后再点导入'});
+                  return;
+                }
+                var ok = texts.filter(function(t){ return t !== null; });
+                if (!ok.length) {
+                  post({ok:false, err:'课表接口无响应: 请确认已登录并进入课表页'});
+                  return;
+                }
+                post({ok:true, data: JSON.stringify({weeks: ok.map(function(t){
+                  try { return JSON.parse(t); } catch(e) { return null; }
+                }).filter(function(j){ return j !== null; })})});
+              });
+            });
+          })
+          .catch(function(e){
+            post({ok:false, err:String(e && e.message || e)});
+          });
+      } catch(err) {
+        window.webkit.messageHandlers.__sleepyBridge.postMessage({json:JSON.stringify({ok:false, err:String(err)})});
+      }
+    })()
     """
 }

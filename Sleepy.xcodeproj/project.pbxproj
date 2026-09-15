@@ -33,6 +33,7 @@
 		15CB796FBC691AE7B1505870 /* JwChengFangParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79F4DCCC2A6CD5809C73B1A1 /* JwChengFangParser.swift */; };
 		160CF854AADABDFB324E4D22 /* ScheduleRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F93B2813DC503FB445168386 /* ScheduleRepository.swift */; };
 		18ECA3085EC4D063C5DBCA50 /* JwEams5Parser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51A86F82646BCD36EE693111 /* JwEams5Parser.swift */; };
+		1C8E683FDAFAE99A1ED64D2F /* JwQzAppParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 991A8A88EDA9AC6FE69501FB /* JwQzAppParserTests.swift */; };
 		1EFE6A5CCA24F35DB5DC5A1C /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = B58142DA4B1A49633BB19A05 /* GRDB */; };
 		204AE00E39C760909B0B00CA /* SleepyUITestSeeder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CA7389DF46C926458122F39 /* SleepyUITestSeeder.swift */; };
 		207583D1714E56206332B0E0 /* Eams5PathPrefix.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2521BF901963D8A628CE921 /* Eams5PathPrefix.swift */; };
@@ -420,6 +421,7 @@
 		9103FA65945B83156A93E926 /* NativeColorPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeColorPicker.swift; sourceTree = "<group>"; };
 		9275738703FAD36D408DAA49 /* ExportScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportScreen.swift; sourceTree = "<group>"; };
 		990A9D3555C706514CFAA8B3 /* JwImportFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwImportFlow.swift; sourceTree = "<group>"; };
+		991A8A88EDA9AC6FE69501FB /* JwQzAppParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwQzAppParserTests.swift; sourceTree = "<group>"; };
 		9C11210F0D929BD75517DDD5 /* JwCquParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwCquParser.swift; sourceTree = "<group>"; };
 		9D3AA9F8B115E2B804EBDA31 /* CourseDao.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseDao.swift; sourceTree = "<group>"; };
 		9D8DFDCCD1C8491943A7FD52 /* ReminderPermissionUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderPermissionUITests.swift; sourceTree = "<group>"; };
@@ -777,6 +779,7 @@
 				E7717787BC54237EC484E5E5 /* JwBoyaPpParserTests.swift */,
 				EDC6BEB3E8D377C5952F4450 /* JwJsonParserTests.swift */,
 				4B8F322DCB1C5CF622C99C11 /* JwParserTests.swift */,
+				991A8A88EDA9AC6FE69501FB /* JwQzAppParserTests.swift */,
 				3367512117ED9A28C3912E12 /* JwUcasParserTests.swift */,
 				23473ACBFDC5C56F0CC30A1D /* LocaleAndL10nTests.swift */,
 				1BCB8B72B49233D52340AB7A /* ParserAuditTests.swift */,
@@ -1335,6 +1338,7 @@
 				902DD269F77279DB2BAC9BEB /* JwBoyaPpParserTests.swift in Sources */,
 				7D937FA178D2B32F57D5AEBA /* JwJsonParserTests.swift in Sources */,
 				25083A3FF7EDB6386F4AD3DC /* JwParserTests.swift in Sources */,
+				1C8E683FDAFAE99A1ED64D2F /* JwQzAppParserTests.swift in Sources */,
 				00842708C4DC4477910C5DA3 /* JwUcasParserTests.swift in Sources */,
 				74C36660E2DFE6D371F31A2B /* LocaleAndL10nTests.swift in Sources */,
 				F65B4753901D75DE1D367046 /* ParserAuditTests.swift in Sources */,
