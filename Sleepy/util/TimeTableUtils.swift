@@ -298,6 +298,14 @@ enum TimeTableUtils {
         return (first.start, last.end)
     }
 
+    /// "HH:mm" → 当日分钟数 (widget 窗口/冲突聚簇共用的时间域刻度); 非法 → nil
+    static func hmMinutes(_ v: String) -> Int? {
+        let parts = v.trimmingCharacters(in: .whitespaces).split(separator: ":")
+        guard parts.count == 2, let h = Int(parts[0]), let m = Int(parts[1]),
+              (0...23).contains(h), (0...59).contains(m) else { return nil }
+        return h * 60 + m
+    }
+
     /// "H:mm"/"HH:mm" 规范为 "HH:mm"(LocalTime.toString 语义); 非法 → nil
     private static func normalizedHm(_ v: String) -> String? {
         let t = v.trimmingCharacters(in: .whitespaces)

@@ -1,7 +1,14 @@
 // TodayWidgetView.swift — ← TodayWidget.kt (Receiver) + WidgetBitmapRenderers.renderToday
 // 桌面 Today 小组件 — 今日课程列表。
-// 布局: bg 圆角 20 / pad 14 / 标题行(今天·周X + 日期) / 课程胶囊 38dp 高 + 10dp 间距。
-// Canvas 手绘坐标 → SwiftUI 等价布局(间距/字号/取色逐项对齐)。
+//
+// 对齐 Android 定稿语义 (ede839af / ab19fd26 / 8c0fcbea / ab27230c / 2dbad515 / 895fe72f):
+//  1. 固定窗口: 正文只放得下 availH 的行, 溢出折成底部「+N」胶囊 (无滚动);
+//  2. 行几何: 行高 30 / 行距 4 / 冲突行同栏堆叠距 3, 冲突课并排分栏;
+//  3. 底部条: 只剩「+N」胶囊 (Android 的 ◀▶↻ 翻天按钮依赖 PendingIntent + per-widgetId
+//     状态,iOS 15.6 部署目标下 WidgetKit 无等价物 → 不实现,详见对齐报告);
+//  4. 「+N」恒画且不可点: 有溢出 +N,无溢出/全部上完「+0」;
+//  5. ALL_DONE: 不写「今日课程已结束」长状态行,空正文 + 「+0」胶囊即结束标记;
+//  6. 分簇用 timeJson: 非标准时间课不再被占位节点误判成冲突行。
 
 import SwiftUI
 import WidgetKit
@@ -11,6 +18,8 @@ import WidgetKit
 struct TodayWidgetEntry: TimelineEntry {
     let date: Date
     let data: WidgetData
+    /// 该 entry 生效时刻的当日分钟 ← 课程边界锚点 (WidgetBoundaryScheduler 等价)
+    var nowMin: Int? = nil
 }
 
 struct TodayWidgetProvider: TimelineProvider {
@@ -25,181 +34,138 @@ struct TodayWidgetProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<TodayWidgetEntry>) -> Void) {
-        // 次日 00:05 刷新(日期变化 + 课表数据变化都覆盖 — 后者由 App 端 WidgetCenter.reloadAllTimelines 触发)
         let data = TodayWidgetLoader.loadDataSync(kind: "TodayWidgetRV")
-        let entry = TodayWidgetEntry(date: Date(), data: data)
+        let now = Date()
+        var entries = [TodayWidgetEntry(date: now, data: data, nowMin: WidgetWindows.nowMinutes(now))]
+        // ← WidgetBoundaryScheduler: 每节课下课的下一分钟 (end+1) 一颗边界,窗口跟着前移。
+        // Android 用 AlarmManager 重推,iOS 等价 = 把边界做成 timeline entry,到点自动换页。
+        if data.hasTable && data.semesterStatus == .inRange {
+            for at in WidgetWindows.boundaryDates(courses: data.courses, timeJson: data.timeJson, from: now) {
+                entries.append(TodayWidgetEntry(date: at, data: data, nowMin: WidgetWindows.nowMinutes(at)))
+            }
+        }
+        // 次日 00:05 换日 (数据变化仍由 App 端 WidgetCenter.reloadAllTimelines 触发)
         var cal = DateUtils.isoCalendar
         cal.timeZone = .current
-        let tomorrow = cal.date(byAdding: .day, value: 1, to: Date()) ?? Date().addingTimeInterval(3600)
+        let tomorrow = cal.date(byAdding: .day, value: 1, to: now) ?? now.addingTimeInterval(3600)
         let refresh = cal.date(bySettingHour: 0, minute: 5, second: 0, of: tomorrow) ?? tomorrow
         WidgetArchiveLog.append(kind: "TodayWidgetRV", family: context.family.description, result: "success")
-        completion(Timeline(entries: [entry], policy: .after(refresh)))
+        completion(Timeline(entries: entries, policy: .after(refresh)))
     }
 }
 
-// MARK: - View ← renderToday
+// MARK: - View ← renderTodayRegular (Android 已删小档纯文本脸,三档同一渲染器)
 
 struct TodayWidgetEntryView: View {
     @Environment(\.widgetFamily) var widgetFamily
     let entry: TodayWidgetEntry
 
     var body: some View {
-        // SMALL 紧凑档 ← renderTodayCompact: 日期小字(顶) + 状态/首课程名(居中), 纯文本无胶囊
-        if widgetFamily == .systemSmall {
-            let s = resolveWidgetScheme(themeKey: entry.data.themeKey, isDark: entry.data.isDark)
-            WidgetCompactFace(scheme: s, dateLabel: entry.data.dateLabel,
-                              lines: Self.todayCompactTexts(data: entry.data,
-                                                            useAlias: AppPrefs.shared.isWidgetUseAlias()))
-                .widgetURL(URL(string: "sleepy://open"))
-        } else {
-            regularBody
-        }
-    }
-
-    // ← renderTodayRegular: 常规/中大档全量排版
-    @ViewBuilder
-    private var regularBody: some View {
         let data = entry.data
         let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: data.isDark)
         let prefs = AppPrefs.shared
         let colorless = prefs.isWidgetColorless()
-        // ★ 用户显示设置 (决策 D5-12)
-        let displayMode = prefs.getDisplayMode()
+        let displayMode = prefs.getDisplayMode()   // ★ 用户显示设置 (决策 D5-12)
         let showDate = prefs.isShowDate()
-        // issue#26: widget 全局一档别名开关
-        let useAlias = prefs.isWidgetUseAlias()
+        let useAlias = prefs.isWidgetUseAlias()    // issue#26: widget 全局一档别名开关
+        let tier = WidgetLayoutTier(family: widgetFamily)
+        // 时间窗只在「今天」生效 (Android data.isToday);非今天走 HEAD 从头截断
+        let nowMin = Calendar.current.isDate(entry.date, inSameDayAs: data.date) ? entry.nowMin : nil
 
-        VStack(alignment: .leading, spacing: 0) {
-            // 标题行: 今天 · 周X  +  日期 (★ showDate=false 时隐藏右侧日期)
-            HStack(alignment: .firstTextBaseline) {
-                Text("\(L10n.format("today_today")) · \(data.dayName)")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(s.primary)
-                    .lineLimit(1) // 安卓 ellipsize 单行 (min 预算 40dp)
-                Spacer()
-                if showDate {
-                    Text(data.dateLabel)
-                        .font(.system(size: 12))
-                        .foregroundColor(s.onSurfaceVariant)
-                }
-            }
-            .padding(.bottom, 8.5) // 安卓头部前进 24dp: pad14+行高≈15.5+8.5≈38
-
-            if !data.hasTable {
-                Text(L10n.format("widget_create_schedule"))
-                    .font(.system(size: 15))
-                    .foregroundColor(s.onSurface)
-                Spacer()
-            } else if data.semesterStatus != .inRange {
-                // ★ 学期外: 状态标题 + 提示行, 不画课程 (loadDataSync 侧课程已按周过滤, 此处为标题语义)
-                Text(data.semesterStatus == .beforeStart
-                     ? L10n.format("semester_not_started")
-                     : L10n.format("semester_ended"))
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(s.onSurface)
-                    .padding(.bottom, 6)
-                Text(L10n.format("today_semester_out_hint"))
-                    .font(.system(size: 11))
-                    .foregroundColor(s.onSurfaceVariant)
-                Spacer()
-            } else if data.courses.isEmpty {
-                // 今日无课 → 大字提示 + 副文案
-                Text(L10n.format("today_no_course"))
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(s.onSurface)
-                    .padding(.bottom, 6)
-                Text(L10n.format("today_rest"))
-                    .font(.system(size: 12))
-                    .foregroundColor(s.onSurfaceVariant)
-                Spacer()
-            } else {
-                // ★ 课程列表 — WidgetKit 不支持 ScrollView 归档;按 family 取前 N 门,
-                // 溢出由 widget 容器自然裁切,与 Android bitmap 行为一致
-                let maxCount = courseLimitForFamily()
-                let visible = Array(data.courses.prefix(maxCount))
-                VStack(spacing: 10) {
-                    ForEach(visible) { course in
-                        WidgetCourseCard(course: course, timeJson: data.timeJson, scheme: s,
-                                         colorless: colorless, fontSizeSp: 12,
-                                         displayMode: displayMode,
-                                         groupRows: data.courses.filter { $0.groupId == course.groupId },
-                                         useAlias: useAlias)
-                            .frame(height: 38)
+        return GeometryReader { proxy in
+            let win = TodayWidgetEntryView.window(data: data, heightDp: proxy.size.height,
+                                                  tier: tier, nowMin: nowMin)
+            VStack(alignment: .leading, spacing: 0) {
+                // 标题行: 今天 · 周X  +  日期 (★ showDate=false 时隐藏右侧日期)
+                HStack(alignment: .firstTextBaseline) {
+                    Text("\(L10n.format("today_today")) · \(data.dayName)")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(s.primary)
+                        .lineLimit(1) // 安卓 ellipsize 单行 (min 预算 40dp)
+                    Spacer(minLength: 4)
+                    if showDate {
+                        Text(data.dateLabel)
+                            .font(.system(size: 12))
+                            .foregroundColor(s.onSurfaceVariant)
+                            .lineLimit(1)
                     }
                 }
+                .padding(.bottom, 7) // 表头前进 20dp: pad10 + 行高≈13 + 7
+
+                statusOrCourses(data: data, win: win, scheme: s, colorless: colorless,
+                                displayMode: displayMode, useAlias: useAlias)
+
+                Spacer(minLength: 0)
+
+                // 底部条 (← configureTodayBar): 「+N」胶囊恒画、不可点,左对齐
+                HStack(spacing: 4) {
+                    WidgetMoreCapsule(hidden: win?.hiddenAheadCourses ?? 0, scheme: s)
+                    Spacer(minLength: 0)
+                }
             }
+            .padding(.horizontal, 10)
+            .padding(.top, 10)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(s.bg)
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(s.bg)
         .widgetURL(URL(string: "sleepy://open"))
     }
 
-    /// 不同 widget family 显示的最大课程数。WidgetKit 不支持 ScrollView 归档,
-    /// 所以按容器尺寸裁剪,与 Android bitmap 渲染时由容器 clip 行为一致。
-    private func courseLimitForFamily() -> Int {
-        switch widgetFamily {
-        case .systemSmall: return 2
-        case .systemMedium: return 3
-        case .systemLarge: return 6
-        default: return 3
-        }
+    /// 固定窗口: 只有「有课表 + 学期内 + 有课」才有行轴,其余状态无窗口语义
+    static func window(data: WidgetData, heightDp: CGFloat, tier: WidgetLayoutTier,
+                       nowMin: Int?) -> WidgetWindowCore.WindowResult? {
+        guard data.hasTable, data.semesterStatus == .inRange, !data.courses.isEmpty else { return nil }
+        return WidgetWindows.today(courses: data.courses, timeJson: data.timeJson,
+                                   heightDp: heightDp, tier: tier, nowMin: nowMin)
     }
 
-    // ← todayCompactTexts(resolve, useAlias, data): 紧凑档纯文本行(渲染与单测单一事实来源)。
-    // 空课表/学期外/无课也各有对应一行; useAlias: true 时显示别名(空回退原名)。
-    static func todayCompactTexts(data: WidgetData, useAlias: Bool) -> [String] {
-        if !data.hasTable { return [L10n.format("widget_create_schedule")] }
-        if data.semesterStatus != .inRange {
-            return [data.semesterStatus == .beforeStart
-                    ? L10n.format("semester_not_started")
-                    : L10n.format("semester_ended")]
-        }
-        if data.courses.isEmpty { return [L10n.format("today_no_course")] }
-        return data.courses.map { CourseDisplayUtil.displayName($0, useAlias) }
-    }
-}
-
-// MARK: - SMALL 紧凑面 ← renderTodayCompact 布局(Today/TwoDay/WeekList/WeekGrid 共用)
-
-/// 紧凑档渲染面 — 布局常量逐值对照 Android renderTodayCompact:
-/// 背景圆角 20 / pad 10 / 日期行 11sp 顶部左侧 / 正文 15sp bold 居中,
-/// 首行基线 ≈ h/2, 行距 pitch 20, 最多 2 行, 超宽省略号截断(w - pad*2)。
-struct WidgetCompactFace: View {
-    let scheme: WidgetScheme
-    let dateLabel: String?
-    let lines: [String]
-
-    var body: some View {
-        ZStack {
-            Rectangle()
-                .fill(scheme.bg)
-                .cornerRadius(20)
-            VStack(spacing: 0) {
-                if let dateLabel = dateLabel {
-                    Text(dateLabel)
-                        .font(.system(size: 11))
-                        .foregroundColor(scheme.onSurfaceVariant)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 10)
+    @ViewBuilder
+    private func statusOrCourses(data: WidgetData, win: WidgetWindowCore.WindowResult?,
+                                 scheme s: WidgetScheme, colorless: Bool,
+                                 displayMode: String, useAlias: Bool) -> some View {
+        if !data.hasTable {
+            Text(L10n.format("widget_create_schedule"))
+                .font(.system(size: 15))
+                .foregroundColor(s.onSurface)
+        } else if data.semesterStatus != .inRange {
+            // ★ 学期外: 状态标题 + 提示行,不画课程
+            Text(data.semesterStatus == .beforeStart
+                 ? L10n.format("semester_not_started")
+                 : L10n.format("semester_ended"))
+                .font(.system(size: 15, weight: .bold))
+                .foregroundColor(s.onSurface)
+                .padding(.bottom, 6)
+            Text(L10n.format("today_semester_out_hint"))
+                .font(.system(size: 11))
+                .foregroundColor(s.onSurfaceVariant)
+        } else if data.courses.isEmpty {
+            // 今日无课 → 大字提示 + 副文案
+            Text(L10n.format("today_no_course"))
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(s.onSurface)
+                .padding(.bottom, 6)
+            Text(L10n.format("today_rest"))
+                .font(.system(size: 12))
+                .foregroundColor(s.onSurfaceVariant)
+        } else if win?.status == .allDone {
+            // ALL_DONE (ab27230c): 空正文,唯一结束标记 = 底部「+0」胶囊
+            EmptyView()
+        } else if let rows = win?.visible.map({ $0.row }), !rows.isEmpty {
+            // 固定窗口内的行 (行序即窗口序),溢出部分折进「+N」
+            VStack(alignment: .leading, spacing: WidgetRowGeometry.rowGap) {
+                ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                    WidgetCourseRowView(row: row, allCourses: data.courses, timeJson: data.timeJson,
+                                        scheme: s, colorless: colorless, displayMode: displayMode,
+                                        useAlias: useAlias)
                 }
-                Spacer(minLength: 0)
-                VStack(spacing: 2) {
-                    ForEach(Array(lines.prefix(2).enumerated()), id: \.offset) { _, line in
-                        Text(line)
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundColor(scheme.onSurface)
-                            .lineLimit(1)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.horizontal, 10)
-                    }
-                }
-                // 首行基线 ≈ h/2: 两行块高≈38, 居中后基线偏上 ~5, 下移补偿 (← Android y=h/2)
-                .offset(y: 4)
-                Spacer(minLength: 0)
             }
+        } else {
+            // 时间窗锚点之后暂无可显示行 (例如下课后、下一节前的空档)
+            EmptyView()
         }
     }
+
 }
 
 struct TodayWidget: Widget {

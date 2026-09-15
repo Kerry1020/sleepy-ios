@@ -403,6 +403,105 @@ enum ConflictLayoutEngine {
         return rows.sorted { $0.courses.first!.startNode < $1.courses.first!.startNode }
     }
 
+    /**
+     * 时间域行分组 (← Android 25c943f0 / issue #37) — timeJson 非空时: ownTime 课先按
+     * 真实时间归一化节点, 区域划分改走分钟域 (mergeOverlappingByTime, 混合域不成簇)。
+     * 时间零交集的 ownTime 课对不再因落库占位节点相同被并成冲突行 (非标准时间被误判冲突)。
+     */
+    static func weekLaneRows(_ courses: [CourseEntity], timeJson: String?) -> [WeekLaneRow] {
+        guard let timeJson = timeJson else { return weekLaneRows(courses) }
+        if courses.isEmpty { return [] }
+        let prepared = courses.map { $0.normalizeNode(timeJson: timeJson) }
+        var rows: [WeekLaneRow] = []
+        // 分组保序 (Kotlin groupBy = LinkedHashMap 语义), 避免跨天同节点行的顺序抖动
+        var dayOrder: [Int] = []
+        var byDay: [Int: [CourseEntity]] = [:]
+        for c in prepared {
+            if byDay[c.day] == nil { dayOrder.append(c.day) }
+            byDay[c.day, default: []].append(c)
+        }
+        for day in dayOrder {
+            let dayCourses = byDay[day] ?? []
+            let sorted = dayCourses.sorted {
+                if $0.startNode != $1.startNode { return $0.startNode < $1.startNode }
+                if $0.step != $1.step { return $0.step < $1.step }
+                return $0.id < $1.id
+            }
+            for region in mergeOverlappingByTime(sorted, timeJson) {
+                if region.count < 2 {
+                    for c in region { rows.append(WeekLaneRow(courses: [c], laneOf: [:], laneCount: 1)) }
+                    continue
+                }
+                let lanes = chainGroups(region)
+                var laneOf: [Int64: Int] = [:]
+                for (laneIdx, lane) in lanes.enumerated() {
+                    for c in lane { laneOf[c.id] = laneIdx }
+                }
+                rows.append(WeekLaneRow(courses: region.sorted { $0.startNode < $1.startNode },
+                                        laneOf: laneOf, laneCount: lanes.count))
+            }
+        }
+        return rows.sorted { $0.courses.first!.startNode < $1.courses.first!.startNode }
+    }
+
+    /// 真实时间区间(分钟级)聚簇 ← mergeOverlappingByTime: 相邻课真实时间区间相交才并簇。
+    /// 混合域(一方时间不可解析)判不相交 — 节点数(1..12)永远小于分钟数, 直接比会把脏
+    /// ownTime 课粘进时间簇; 宁可漏报不可误报。
+    static func mergeOverlappingByTime(_ sorted: [CourseEntity], _ timeJson: String) -> [[CourseEntity]] {
+        if sorted.isEmpty { return [] }
+        let intervals = sorted.map { realIntervalOf($0, timeJson) }
+        var clusters: [[CourseEntity]] = [[sorted[0]]]
+        var currentEnd = intervals[0]?.1 ?? (sorted[0].startNode + sorted[0].step - 1)
+        var currentEndIsTime = intervals[0] != nil
+        for i in 1..<sorted.count {
+            let c = sorted[i]
+            let iv = intervals[i]
+            let start: Int
+            let end: Int
+            let isTime: Bool
+            if let iv = iv {
+                start = iv.0; end = iv.1; isTime = true
+            } else {
+                start = c.startNode; end = c.startNode + c.step - 1; isTime = false
+            }
+            let overlaps: Bool
+            if currentEndIsTime, iv != nil {
+                overlaps = start < currentEnd
+            } else if !currentEndIsTime, iv == nil {
+                overlaps = start <= currentEnd
+            } else {
+                overlaps = false
+            }
+            if overlaps {
+                clusters[clusters.count - 1].append(c)
+                if end > currentEnd {
+                    currentEnd = end
+                    currentEndIsTime = isTime
+                }
+            } else {
+                clusters.append([c])
+                currentEnd = end
+                currentEndIsTime = isTime
+            }
+        }
+        return clusters
+    }
+
+    /// 课程真实时间区间(当日分钟) — 解析不出或 end<=start → nil (回落节点域)
+    static func realIntervalOf(_ c: CourseEntity, _ timeJson: String) -> (Int, Int)? {
+        guard let eff = TimeTableUtils.effectiveCourseTime(
+            isIrregularTime: c.isIrregularTime || c.ownTime,
+            startTime: c.startTime,
+            endTime: c.endTime,
+            startNode: c.startNode,
+            step: c.step,
+            timeJson: timeJson
+        ) else { return nil }
+        guard let s = TimeTableUtils.hmMinutes(eff.0),
+              let e = TimeTableUtils.hmMinutes(eff.1), e > s else { return nil }
+        return (s, e)
+    }
+
     // =====================================================================================
     // v7.10.8 WeekGrid 网格小组件冲突分栏 — 与 App 周视图同一引擎,一份真相源
     // =====================================================================================
