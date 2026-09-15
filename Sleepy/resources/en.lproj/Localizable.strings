@@ -33,6 +33,8 @@
 "manage_new_table_sub" = "Create a blank schedule, add courses manually";
 "manage_edit_current" = "Edit Current";
 "manage_edit_current_sub" = "Edit name, dates, and time slots";
+"manage_export" = "Export Current";
+"manage_export_sub" = "Share the current timetable as file";
 "manage_manual_add" = "Add Course";
 "manage_manual_add_sub" = "Add a course directly to current schedule";
 "table_info" = "Start: %1$@  |  Week %2$d  |  %3$d courses";

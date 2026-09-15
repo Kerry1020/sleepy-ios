@@ -379,6 +379,7 @@ struct AppRoot: View {
                     root.pendingNewTableId = nil
                     root.overlayScreen = .editTable
                 },
+                onExportRequested: { root.overlayScreen = .export },
                 // ★ 导入完成链(← Android onImported: 关导入框+切课表 Tab;
                 //   onOpenEditTable: 新导入表 → 打开表编辑页)
                 onImported: {
