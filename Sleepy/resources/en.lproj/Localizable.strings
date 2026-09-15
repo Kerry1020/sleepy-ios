@@ -707,3 +707,10 @@
 "theme_role_tertiary" = "Tertiary";
 "theme_role_tertiary_desc" = "Accent chips such as period tags";
 "theme_new" = "New theme";
+
+/* Custom theme editor — iOS-only controls (surface sliders + discard guard) */
+"theme_editor_surface_hue" = "Surface hue";
+"theme_editor_surface_chroma" = "Surface saturation";
+"theme_editor_discard_confirm" = "Discard unsaved changes?";
+"theme_editor_discard" = "Discard";
+"theme_editor_discard_confirm_body" = "This theme has unsaved changes. They will be lost if you leave now.";

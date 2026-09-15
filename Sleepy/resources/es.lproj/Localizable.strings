@@ -707,3 +707,10 @@
 "theme_role_tertiary" = "Énfasis terciario";
 "theme_role_tertiary_desc" = "Chips decorativos como etiquetas de período";
 "theme_new" = "Nuevo tema";
+
+/* Custom theme editor — iOS-only controls (surface sliders + discard guard) */
+"theme_editor_surface_hue" = "Tono de la superficie";
+"theme_editor_surface_chroma" = "Saturación de la superficie";
+"theme_editor_discard_confirm" = "¿Descartar los cambios sin guardar?";
+"theme_editor_discard" = "Descartar";
+"theme_editor_discard_confirm_body" = "Este tema tiene cambios sin guardar. Se perderán si sales ahora.";

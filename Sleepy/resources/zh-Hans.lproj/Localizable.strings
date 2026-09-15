@@ -707,3 +707,10 @@
 "theme_role_tertiary" = "第三强调";
 "theme_role_tertiary_desc" = "节次 chip 等点缀色";
 "theme_new" = "新建主题";
+
+/* Custom theme editor — iOS-only controls (surface sliders + discard guard) */
+"theme_editor_surface_hue" = "表面色相";
+"theme_editor_surface_chroma" = "表面饱和度";
+"theme_editor_discard_confirm" = "放弃未保存的修改?";
+"theme_editor_discard" = "放弃修改";
+"theme_editor_discard_confirm_body" = "这个主题有未保存的修改，现在离开将会丢失。";

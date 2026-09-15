@@ -47,6 +47,22 @@ struct CustomTheme: Codable, Equatable {
         self.surfaceChroma = surfaceChroma
         self.createdAt = createdAt
     }
+
+    /// ← Kotlin data class 自动生成的 copy():编辑器草稿只替换需要的字段,其余原样带走。
+    func copy(id: String? = nil, name: String? = nil, primary: String? = nil, secondary: String? = nil,
+              tertiary: String? = nil, surfaceHue: Double? = nil, surfaceChroma: Double? = nil,
+              createdAt: Int64? = nil) -> CustomTheme {
+        CustomTheme(
+            id: id ?? self.id,
+            name: name ?? self.name,
+            primary: primary ?? self.primary,
+            secondary: secondary ?? self.secondary,
+            tertiary: tertiary ?? self.tertiary,
+            surfaceHue: surfaceHue ?? self.surfaceHue,
+            surfaceChroma: surfaceChroma ?? self.surfaceChroma,
+            createdAt: createdAt ?? self.createdAt
+        )
+    }
 }
 
 // MARK: - ← CustomThemeCore(纯逻辑核心,所有语义集中在此以便单测)

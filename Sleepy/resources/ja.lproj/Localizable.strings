@@ -707,3 +707,10 @@
 "theme_role_tertiary" = "ターシャリ";
 "theme_role_tertiary_desc" = "時限チップなどの差し色";
 "theme_new" = "新しいテーマ";
+
+/* Custom theme editor — iOS-only controls (surface sliders + discard guard) */
+"theme_editor_surface_hue" = "表面の色相";
+"theme_editor_surface_chroma" = "表面の彩度";
+"theme_editor_discard_confirm" = "未保存の変更を破棄しますか?";
+"theme_editor_discard" = "破棄";
+"theme_editor_discard_confirm_body" = "未保存の変更があります。今離れると失われます。";

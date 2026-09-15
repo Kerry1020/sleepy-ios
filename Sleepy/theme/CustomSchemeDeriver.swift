@@ -215,10 +215,36 @@ enum CustomSchemeDeriver {
 
     // MARK: - Color ↔ 分量桥接(iOS 适配层)
 
-    /// 模板/种子 Color → r/g/b(0-1)。UIColor(color).getRed 与 CourseColorUtil.luminance 同手法。
+    /// 模板/种子 Color → r/g/b(0-1)。
+    /// ★ 必须落到 sRGB 再读分量:UIColor(Color) 在高色域设备上可能落在设备 RGB(=Display P3),
+    ///   直接 getRed 会读到 P3 分量(sRGB #FF0000 → 0.92/0.20/0),派生与 hex 展示都会跑色。
+    ///   本 SDK 没有 CGColor.converting / UIColor.usingColorSpace,故:已是 sRGB 直接读分量,
+    ///   否则用 1×1 sRGB 位图上下文绘制一次让 CoreGraphics 做色域转换。
     static func rgb(of color: Color) -> (r: Float, g: Float, b: Float) {
+        let ui = UIColor(color)
+        let cg = ui.cgColor
+        let spaceName = (cg.colorSpace?.name as String?) ?? ""
+        if spaceName == (CGColorSpace.sRGB as String) || spaceName == (CGColorSpace.extendedSRGB as String),
+           let comps = cg.components, comps.count >= 3 {
+            return (Float(comps[0]), Float(comps[1]), Float(comps[2]))
+        }
+        if let converted = rgbViaSRGBBitmap(cg) { return converted }
+        return components(of: ui)
+    }
+
+    private static func rgbViaSRGBBitmap(_ cg: CGColor) -> (r: Float, g: Float, b: Float)? {
+        guard let srgb = CGColorSpace(name: CGColorSpace.sRGB) else { return nil }
+        var pixel = [UInt8](repeating: 0, count: 4)
+        guard let ctx = CGContext(data: &pixel, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
+                                  space: srgb, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        ctx.setFillColor(cg)
+        ctx.fill(CGRect(x: 0, y: 0, width: 1, height: 1))
+        return (Float(pixel[0]) / 255.0, Float(pixel[1]) / 255.0, Float(pixel[2]) / 255.0)
+    }
+
+    private static func components(of ui: UIColor) -> (r: Float, g: Float, b: Float) {
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        UIColor(color).getRed(&r, green: &g, blue: &b, alpha: &a)
+        ui.getRed(&r, green: &g, blue: &b, alpha: &a)
         return (Float(r), Float(g), Float(b))
     }
 

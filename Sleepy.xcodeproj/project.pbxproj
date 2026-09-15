@@ -29,6 +29,7 @@
 		1359BA5B59555988AB6494CF /* DateUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D79D23433FE386230D5AB1 /* DateUtils.swift */; };
 		1368361D972F1DC550EFBAD3 /* JwFetchError.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6385BFCE2C0419152DFEAB9 /* JwFetchError.swift */; };
 		139EA65151F6340EAC31F7AC /* LicenseScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF4AC1BC137184D4FED2FCF3 /* LicenseScreen.swift */; };
+		142F0F71A6D0A380C5DB0A39 /* CustomThemeEditorScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 931C7675820A5CFD1E1D2D75 /* CustomThemeEditorScreen.swift */; };
 		14E0C6206AB3224219245BAE /* JwBjtuParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 715802C2A36A63F13CDA2C0C /* JwBjtuParser.swift */; };
 		15CB796FBC691AE7B1505870 /* JwChengFangParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79F4DCCC2A6CD5809C73B1A1 /* JwChengFangParser.swift */; };
 		160CF854AADABDFB324E4D22 /* ScheduleRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F93B2813DC503FB445168386 /* ScheduleRepository.swift */; };
@@ -416,6 +417,7 @@
 		90B4ADA3F4D0F22AB81E78C4 /* SchoolSelectScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchoolSelectScreen.swift; sourceTree = "<group>"; };
 		9103FA65945B83156A93E926 /* NativeColorPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeColorPicker.swift; sourceTree = "<group>"; };
 		9275738703FAD36D408DAA49 /* ExportScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportScreen.swift; sourceTree = "<group>"; };
+		931C7675820A5CFD1E1D2D75 /* CustomThemeEditorScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomThemeEditorScreen.swift; sourceTree = "<group>"; };
 		990A9D3555C706514CFAA8B3 /* JwImportFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwImportFlow.swift; sourceTree = "<group>"; };
 		9C11210F0D929BD75517DDD5 /* JwCquParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwCquParser.swift; sourceTree = "<group>"; };
 		9D3AA9F8B115E2B804EBDA31 /* CourseDao.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseDao.swift; sourceTree = "<group>"; };
@@ -837,6 +839,7 @@
 				1DBE6E120D6B08E49C30A4C3 /* AboutScreen.swift */,
 				EB16BBC06209972B0E6B63A1 /* AllTablesScreen.swift */,
 				779E427676157A13B322A5B5 /* AppearanceScreen.swift */,
+				931C7675820A5CFD1E1D2D75 /* CustomThemeEditorScreen.swift */,
 				370A630F8E293663E9B52AE2 /* EditTableScreen.swift */,
 				9275738703FAD36D408DAA49 /* ExportScreen.swift */,
 				DA6CEF27A9C39504E09D3487 /* GeneralSettingsScreen.swift */,
@@ -1096,6 +1099,7 @@
 				75BDBE0C304130911EB16781 /* CourseEntity.swift in Sources */,
 				ED1304B67D86E2778FC7A12F /* CourseTableView.swift in Sources */,
 				124C150E7516307A12A3F02F /* CustomSchemeDeriver.swift in Sources */,
+				142F0F71A6D0A380C5DB0A39 /* CustomThemeEditorScreen.swift in Sources */,
 				F51E496AB4A251ABA1206AF7 /* CustomThemeStore.swift in Sources */,
 				F5B6512BFE9EB65E52C1FAD5 /* DateTimePickers.swift in Sources */,
 				EFBA358CFB2F74092DBDB6CB /* DateUtils.swift in Sources */,

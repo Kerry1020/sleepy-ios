@@ -707,3 +707,10 @@
 "theme_role_tertiary" = "第三強調";
 "theme_role_tertiary_desc" = "節次晶片等點綴色";
 "theme_new" = "新增主題";
+
+/* Custom theme editor — iOS-only controls (surface sliders + discard guard) */
+"theme_editor_surface_hue" = "表面色相";
+"theme_editor_surface_chroma" = "表面飽和度";
+"theme_editor_discard_confirm" = "放棄未儲存的修改?";
+"theme_editor_discard" = "放棄修改";
+"theme_editor_discard_confirm_body" = "這個主題有未儲存的修改，現在離開將會遺失。";
