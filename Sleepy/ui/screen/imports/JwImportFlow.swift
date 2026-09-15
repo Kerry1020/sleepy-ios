@@ -166,7 +166,8 @@ struct JwImportFlow: View {
 
     // ← onHtmlCaptured: 解析 → 配置确认页
     private func onHtmlCaptured(_ html: String, _ sch: JwSchoolInfo,
-                                _ periods: [(Int, String, String)]) {
+                                _ periods: [(Int, String, String)],
+                                _ termStartDate: String) {
         statusMsg = L10n.format("import_parsing")
         let courses = (try? JwImportViewModel.parseHtml(html, protocolType: sch.type ?? "")) ?? []
         if courses.isEmpty {
@@ -186,7 +187,9 @@ struct JwImportFlow: View {
                                               start: filled?.0 ?? "",
                                               end: filled?.1 ?? "")
         }
-        configStartDate = ""
+        // 学期起始日预填: JSON 直连协议 (boya_pp/cqu/chaoxing) 能从接口拿到第一周周一
+        // (如燕大 2026-2027-1 实为 2026-08-31, 本地 9 月首一推断会差一周), 用户仍可改
+        configStartDate = termStartDate
         configTimeJson = ""
         configTableName = L10n.format("jw_import_title", sch.name)
         stage = .configureConfirm
