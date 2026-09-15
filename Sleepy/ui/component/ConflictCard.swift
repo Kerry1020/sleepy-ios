@@ -124,6 +124,8 @@ struct ConflictClusterCard: View {
     /// 能用真实 slotIndex 替代过时的 startNode ∈ [1, maxNode] 判定。
     /// 不传 = 旧行为(startNode ∈ [1, maxNode] 才绘)。
     var timeSlots: [TimeSlot] = []
+    /// issue#23 §5: 行跨度(分数行) → 像素高(占位节次行按分钟加权); nil = 等高回落
+    var spanDpOf: ((Double, Double) -> Double)? = nil
     let isGrey: Bool
     /// v7.10.16r 轮换(issue#10): 会话内轮换步数(nil=默认序),不落盘
     var rotationStep: Int? = nil
@@ -188,9 +190,9 @@ struct ConflictClusterCard: View {
             firstHiddenVariant: hiddenItems.first?.variant,
             foldEligible: foldEligible)
         let courseById = Dictionary(uniqueKeysWithValues: drawList.map { ($0.course.id, $0.course) })
-        // 簇几何: 整簇基点 = 主课判定序首位课(override 不改变该锚点)
-        let baseNode = cluster.courses.first!.startNode
-        let minStart = drawList.map { $0.course.startNode }.min()!
+        // 簇几何(分数行域, issue#23 §5): ownTime 课按真实分钟比例, 常规课整格吸附。
+        // 整簇基点 = 主课判定序首位课(override 不改变该锚点)。
+        let baseCourse = cluster.courses.first!
         let clampedSteps: [Int64: Int] = Dictionary(uniqueKeysWithValues: drawList.map { laidItem in
             let sIdx = slotIndexOf(laidItem.course.startNode)
             // issue#23: 步长上限按 timeSlots 剩余行数算,边缘节点也走同一公式
@@ -198,9 +200,29 @@ struct ConflictClusterCard: View {
             let maxStep = sIdx < 0 ? max(laidItem.course.step, 1) : max(timeSlots.count - sIdx, 1)
             return (laidItem.course.id, min(max(laidItem.course.step, 1), maxStep))
         })
-        let maxEnd = drawList.map { $0.course.startNode + (clampedSteps[$0.course.id] ?? 1) }.max()! - 1
-        let clusterH = rowH * CGFloat(maxEnd - minStart + 1) - gapH
-        let clusterYOffset = rowH * CGFloat(minStart - baseNode)
+        // 每课行几何 (startRowFrac, ownRowsFrac): ownTime 且时间可解析 → 分钟比例;
+        // 否则整格吸附(起点=槽位行号, 行数=clamp 后步长)
+        let rowGeomOf: [Int64: (start: Double, rows: Double)] =
+            Dictionary(uniqueKeysWithValues: drawList.map { laidItem in
+                let c = laidItem.course
+                if c.ownTime && !c.startTime.isEmpty && !c.endTime.isEmpty,
+                   let f = TimeTableUtils.timeToFractionalRows(c.startTime, c.endTime, slots: timeSlots) {
+                    return (c.id, (f.0, f.1 - f.0))
+                }
+                let sIdx = Double(max(slotIndexOf(c.startNode), 0))
+                return (c.id, (sIdx, Double(clampedSteps[c.id] ?? 1)))
+            })
+        let baseRowFrac = rowGeomOf[baseCourse.id]?.start
+            ?? Double(max(slotIndexOf(baseCourse.startNode), 0))
+        let minStartRow = rowGeomOf.values.map(\.start).min() ?? baseRowFrac
+        let maxEndRow = rowGeomOf.values.map { $0.start + $0.rows }.max() ?? baseRowFrac + 1
+        let clusterH = CGFloat(spanDpOf?(minStartRow, maxEndRow)
+                               ?? Double(rowH) * (maxEndRow - minStartRow)) - gapH
+        // 簇内容相对锚点(cardY=yOfRows(base))的上移量: yOfRows(minStart)−yOfRows(base) ≤ 0。
+        // 注: Android 81a42eef 此处 spanDpOf(minStart,base) 符号写反(与 fallback 相反),
+        // iOS 按 fallback/历史语义的正确符号实现(base→minStart 的跨度)。
+        let clusterYOffset = CGFloat(spanDpOf?(baseRowFrac, minStartRow)
+                                     ?? Double(rowH) * (minStartRow - baseRowFrac))
         // v6: 顶卡收窄量 = 用户设置(用户 2026-09-04 拆分: STACK/RAIL 独立配置不共享),滑杆 4..20dp
         let topInset = form == .rail
             ? AppPrefs.shared.getConflictRailInset()
@@ -228,17 +250,25 @@ struct ConflictClusterCard: View {
             if isGrey { bg = bg.opacity(SleepyTheme.Alpha.inactive) }
             return bg
         }
-        func cardYOf(_ startNode: Int) -> CGFloat { rowH * CGFloat(startNode - minStart) }
-        func cardHOf(_ courseId: Int64) -> CGFloat { rowH * CGFloat(clampedSteps[courseId] ?? 1) - gapH }
+        func cardYOf(_ courseId: Int64) -> CGFloat {
+            let g = rowGeomOf[courseId]?.start ?? 0
+            return CGFloat(spanDpOf?(minStartRow, g) ?? Double(rowH) * (g - minStartRow))
+        }
+        func cardHOf(_ courseId: Int64) -> CGFloat {
+            let g = rowGeomOf[courseId] ?? (0, 1)
+            let span = spanDpOf?(g.start, g.start + g.rows) ?? Double(rowH) * g.rows
+            return CGFloat(max(span, Double(rowH) * 0.3)) - gapH
+        }
         func layerRepOf(_ courseId: Int64) -> Int64? { layerOfId[courseId].flatMap { layerRepId[$0] } }
         func rectOf(_ course: CourseEntity, isFront: Bool) -> ConflictLayoutEngine.ConflictRect {
-            ConflictLayoutEngine.conflictCardRect(
-                startNode: course.startNode,
-                ownRows: clampedSteps[course.id] ?? 1,
+            let g = rowGeomOf[course.id] ?? (Double(max(slotIndexOf(course.startNode), 0)), 1)
+            return ConflictLayoutEngine.conflictCardRectFrac(
+                startRowFrac: g.start,
+                ownRowsFrac: g.rows,
                 isTop: isFront,
                 form: form,
                 colW: Double(colW), rowH: Double(rowH), gapH: Double(gapH),
-                minStart: minStart, topInset: topInset)
+                minStartRow: minStartRow, topInset: topInset, spanDpOf: spanDpOf)
         }
         func switchTap(_ n: Int, _ fallbackRepId: Int64) {
             if n >= 3 { onRotate() } else { onPickTop(fallbackRepId) }
@@ -294,12 +324,13 @@ struct ConflictClusterCard: View {
         func markHit(_ hiddenCourse: CourseEntity, variant: ConflictVariant) -> AnyView {
             switch variant {
             case .stack, .rail:
-                let hit = ConflictLayoutEngine.conflictMarkRect(
-                    startNode: hiddenCourse.startNode,
-                    ownRows: clampedSteps[hiddenCourse.id] ?? 1,
+                let g = rowGeomOf[hiddenCourse.id] ?? (Double(max(slotIndexOf(hiddenCourse.startNode), 0)), 1)
+                let hit = ConflictLayoutEngine.conflictMarkRectFrac(
+                    startRowFrac: g.start,
+                    ownRowsFrac: g.rows,
                     form: .stack,
                     colW: Double(colW), rowH: Double(rowH), gapH: Double(gapH),
-                    minStart: minStart, clusterH: Double(clusterH), topInset: topInset)
+                    minStartRow: minStartRow, spanDpOf: spanDpOf)
                 return AnyView(Button {
                     switchTap(layerCount, layerRepOf(hiddenCourse.id) ?? hiddenCourse.id)
                 } label: {
@@ -321,7 +352,7 @@ struct ConflictClusterCard: View {
                 }
                 .buttonStyle(SleepyButtonStyle())
                 .frame(width: hitW, height: hitH)
-                .offset(x: colW - hitW, y: cardYOf(topCourse.startNode)))
+                .offset(x: colW - hitW, y: cardYOf(topCourse.id)))
             case .noMark:
                 return AnyView(EmptyView())
             }
@@ -351,7 +382,7 @@ struct ConflictClusterCard: View {
                         FoldFlap(fold: foldSize, corner: foldFlapCorner,
                                  color: foldFlapColor(courseColorOf(host)))
                             .frame(width: foldSize, height: foldSize)
-                            .offset(x: colW - foldSize - 2, y: cardYOf(host.startNode) + 2)
+                            .offset(x: colW - foldSize - 2, y: cardYOf(host.id) + 2)
                         // v7.10.16m 双向挂载: 切走后折角区域仍可点切回;经典双课态 Mark 在场不重复叠
                         if !markPresent, let target = switchTarget {
                             let (w, h) = ConflictLayoutEngine.foldSwitchHitArea(
@@ -365,7 +396,7 @@ struct ConflictClusterCard: View {
                             }
                             .buttonStyle(SleepyButtonStyle())
                             .frame(width: hitW, height: hitH)
-                            .offset(x: colW - hitW, y: cardYOf(host.startNode))
+                            .offset(x: colW - hitW, y: cardYOf(host.id))
                         }
                     }
                 }
@@ -378,7 +409,7 @@ struct ConflictClusterCard: View {
                                          border: cardBorder,
                                          dashLen: dashLen, dashGap: dashGap)
                             .frame(width: colW - 4, height: hidH - 4)
-                            .offset(x: 2, y: cardYOf(hid.course.startNode) + 2)
+                            .offset(x: 2, y: cardYOf(hid.course.id) + 2)
                     }
                 }
                 // ---- N 徽标(图层 N≥3 且存在被盖层): overlay 右上,+层数-2(评审#3 按层计)
