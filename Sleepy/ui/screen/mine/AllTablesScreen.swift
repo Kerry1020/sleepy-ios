@@ -24,8 +24,8 @@ struct AllTablesScreen: View {
                         HStack(spacing: 0) {
                             Button {
                                 if !isCurrent {
+                                    // ← Android ce7f7924: 选表后留在本页(选中态就地高亮), 不再强制弹出
                                     viewModel.selectTable(table.id)
-                                    onDismiss()
                                 }
                             } label: {
                                 HStack(spacing: 12) {

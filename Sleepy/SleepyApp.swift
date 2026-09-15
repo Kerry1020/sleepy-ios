@@ -387,8 +387,8 @@ struct AppRoot: View {
                 // ★ 导入完成链(← Android onImported: 关导入框+切课表 Tab;
                 //   onOpenEditTable: 新导入表 → 打开表编辑页)
                 onImported: {
+                    // ← Android ce7f7924: 导入完成留在管理页(摘要卡就地刷新), 不再硬跳课表 Tab
                     PendingImportText.value = nil
-                    root.currentTab = .schedule
                 },
                 onOpenEditTable: { tableId in
                     PendingImportText.value = nil
