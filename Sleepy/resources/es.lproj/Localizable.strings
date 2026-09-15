@@ -682,3 +682,28 @@
 "schedule_empty_create_table" = "Crear primer horario";
 "irregular_options_section" = "Opciones avanzadas";
 "irregular_options_section_sub" = "Huecos de borde / horarios personalizados para casos especiales; no hace falta expandirlos en cursos normales";
+
+/* Custom theme editor (migrated from sleepy Android strings.xml) */
+"theme_custom_edit" = "Editar tema";
+"theme_custom_name_label" = "Nombre del tema";
+"theme_custom_default_name" = "Tema %1$d";
+"theme_editor_delete_confirm" = "¿Eliminar este tema personalizado?";
+"theme_editor_delete_confirm_body" = "Las páginas y widgets que lo usen volverán al tema predeterminado «Lila».";
+"theme_editor_from_seed" = "Crear desde un color principal";
+"theme_editor_from_seed_desc" = "Elige un color principal y obtén un set completo coordinado";
+"theme_editor_manual" = "Elegir roles manualmente";
+"theme_editor_manual_desc" = "Define principal, secundario, terciario y neutro de superficie uno a uno";
+"theme_editor_preview" = "Vista previa";
+"theme_editor_preview_card_room" = "Edif. 1 · 302";
+"theme_editor_preview_card_title" = "Matemáticas";
+"theme_editor_random" = "Aleatorio";
+"theme_editor_random_desc" = "Genera una paleta al azar; toca de nuevo si no encaja";
+"theme_role_primary" = "Color principal";
+"theme_role_primary_desc" = "Botones, selección, píldora de semana actual, enlaces";
+"theme_role_secondary" = "Énfasis secundario";
+"theme_role_secondary_desc" = "Chips y contenedores secundarios";
+"theme_role_surface" = "Neutro de superficie";
+"theme_role_surface_desc" = "Tendencia del fondo y las tarjetas";
+"theme_role_tertiary" = "Énfasis terciario";
+"theme_role_tertiary_desc" = "Chips decorativos como etiquetas de período";
+"theme_new" = "Nuevo tema";

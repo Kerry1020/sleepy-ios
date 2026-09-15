@@ -682,3 +682,28 @@
 "schedule_empty_create_table" = "手動建立第一張課表";
 "irregular_options_section" = "非常規選項";
 "irregular_options_section_sub" = "邊緣槽位 / 自訂時間等特殊排課，普通課程無需展開";
+
+/* Custom theme editor (migrated from sleepy Android strings.xml) */
+"theme_custom_edit" = "編輯主題";
+"theme_custom_name_label" = "主題名稱";
+"theme_custom_default_name" = "主題 %1$d";
+"theme_editor_delete_confirm" = "刪除這個自訂主題?";
+"theme_editor_delete_confirm_body" = "刪除後使用該主題的頁面與小工具將回落到預設主題「淡紫」。";
+"theme_editor_from_seed" = "選主色產生整套";
+"theme_editor_from_seed_desc" = "選一個主色,自動配出全套協調配色";
+"theme_editor_manual" = "逐角色手選";
+"theme_editor_manual_desc" = "分別指定主互動色、次級強調、第三強調與表面中性色";
+"theme_editor_preview" = "預覽";
+"theme_editor_preview_card_room" = "教一 302";
+"theme_editor_preview_card_title" = "高等數學";
+"theme_editor_random" = "隨機產生";
+"theme_editor_random_desc" = "隨機一套配色,不合適再點一次";
+"theme_role_primary" = "主互動色";
+"theme_role_primary_desc" = "按鈕、選中狀態、當前週膠囊、連結色";
+"theme_role_secondary" = "次級強調";
+"theme_role_secondary_desc" = "晶片、次級容器底色";
+"theme_role_surface" = "表面中性色";
+"theme_role_surface_desc" = "背景與卡片的底色傾向";
+"theme_role_tertiary" = "第三強調";
+"theme_role_tertiary_desc" = "節次晶片等點綴色";
+"theme_new" = "新增主題";
