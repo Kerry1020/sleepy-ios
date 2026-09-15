@@ -9,6 +9,12 @@
 //   POST {ApiUrl}/student/curriculum?week=&kbjcmsid=   header: token: <JWT>
 //   → {"code":"1","Msg":"success~","data":[{date:[…7 天],courses:[…]}],needClassName,needClassRoomNub}
 //
+// 端点一次只回一周: week= 空 = 当前教学周, week=N = 指定周; 响应 data 恒单元素,
+// courses 只列该周出现的课 (classWeek 仍是全学期位图)。抓取侧 (QZ_APP_FETCH_JS)
+// 先取 /teachingWeek 周数列表再并行逐周拉取, 合并成 {"weeks":[<单次响应>, …]}
+// 组合源; 本 parser 遍历全部周元素, 完全相同的行只展开一次 — 只取当前周会让
+// 仅在后续周出现的课整门丢失 (2026-09-11 学校学生反馈实锤)。
+//
 // 抓取方式: WebView 登录 SPA 后, JwWebViewLoginScreen 注入 QZ_APP_FETCH_JS 先 GET
 // /dist/serverconfig.json (免鉴权) 发现 ApiUrl, 再带 sessionStorage.Token 请求课表;
 // 结果经 __sleepyBridge.onWiseduResult({ok,data}) 桥回 (与 wisedu/NEU/CQU 同通道)。
@@ -30,6 +36,8 @@
 //
 // 未登录形态 {"code":"401","Msg":"非法访问：/student/curriculum"} → data 非数组 →
 // emptyList (Registry 按 0 课空学期处理, 真实登录态由 WebView 会话保证)。
+// 401 识别在 JS 传输层完成 (禁解码协议字段的跨语言 invariant 不受影响:
+// weeks 信封的组装与逐元素透传都不是字段解码)。
 
 import Foundation
 
@@ -44,38 +52,78 @@ final class JwQzAppParser: JwParser, JwParserConfidenceReporting {
     func generateCourseList() throws -> [JwCourse] {
         guard let data = source.data(using: .utf8),
               let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return [] }
-        guard let arr = root["data"] as? [[String: Any]] else { return [] }
-        guard let grid = arr.first, let rows = grid["courses"] as? [[String: Any]] else { return [] }
-
+        let grids = Self.extractGrids(root)
+        var seen = Set<String>()
         var result: [JwCourse] = []
-        for o in rows {
-            func str(_ k: String) -> String {
-                ((o[k] as? String) ?? (o[k] as? NSNumber)?.stringValue ?? "")
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-            }
+        for grid in grids {
+            guard let rows = grid["courses"] as? [[String: Any]] else { continue }
+            for o in rows {
+                // 逐周抓取后同一行课会在每周响应里重复出现 (classWeek 是全学期位图),
+                // 完全相同的行只展开一次; 字段有任何差异的行都保留, 不猜并集
+                guard seen.insert(Self.canonicalKey(o)).inserted else { continue }
+                func str(_ k: String) -> String {
+                    ((o[k] as? String) ?? (o[k] as? NSNumber)?.stringValue ?? "")
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                }
 
-            let name = str("courseName")
-            if name.isEmpty { continue }
-            let teacher = str("teacherName")
-            let room = [str("classroomNub"), str("classroomName"), str("location")]
-                .first { !$0.isEmpty } ?? ""
-            guard let timeSpec = Self.parseClassTime(str("classTime")) else { continue }
-            let weeks = Self.parseWeekSpec(str("classWeek").isEmpty ? str("classWeekDetails") : str("classWeek"))
+                let name = str("courseName")
+                if name.isEmpty { continue }
+                let teacher = str("teacherName")
+                let room = [str("classroomNub"), str("classroomName"), str("location")]
+                    .first { !$0.isEmpty } ?? ""
+                guard let timeSpec = Self.parseClassTime(str("classTime")) else { continue }
+                let weeks = Self.parseWeekSpec(str("classWeek").isEmpty ? str("classWeekDetails") : str("classWeek"))
 
-            for (sw, ew, type) in Self.weekRuns(weeks) {
-                result.append(JwCourse(
-                    name: name,
-                    room: room,
-                    teacher: teacher,
-                    day: timeSpec.0,
-                    startNode: timeSpec.1,
-                    endNode: timeSpec.2,
-                    startWeek: sw,
-                    endWeek: ew,
-                    type: type))
+                for (sw, ew, type) in Self.weekRuns(weeks) {
+                    result.append(JwCourse(
+                        name: name,
+                        room: room,
+                        teacher: teacher,
+                        day: timeSpec.0,
+                        startNode: timeSpec.1,
+                        endNode: timeSpec.2,
+                        startWeek: sw,
+                        endWeek: ew,
+                        type: type))
+                }
             }
         }
         return result
+    }
+
+    /// 提取课表网格 (含 courses 数组的对象) 列表。
+    /// 旧形态: source 就是单次 POST 响应, data[0] 唯一元素。
+    /// 逐周合并形态 (QZ_APP_FETCH_JS 循环 teachingWeek 周数逐周抓取后合并):
+    /// {"weeks":[<单次响应>, …]} — 每个元素只含该周出现的课, 全部遍历,
+    /// 否则只在后续周出现的课整门丢失。
+    static func extractGrids(_ root: [String: Any]) -> [[String: Any]] {
+        if let weeks = root["weeks"] as? [Any] {
+            var grids: [[String: Any]] = []
+            for element in weeks.compactMap({ $0 as? [String: Any] }) {
+                guard let payloadList = element["data"] as? [Any] else { continue }
+                grids.append(contentsOf: payloadList.compactMap { $0 as? [String: Any] })
+            }
+            return grids
+        }
+        return (root["data"] as? [Any])?.compactMap { $0 as? [String: Any] } ?? []
+    }
+
+    /// ← Kotlin `el.toString()` 整行去重键。JSONSerialization 字典无序, 故按 key 排序
+    /// 递归序列化: 行内容完全相同 → 同串 (只展开一次); 任一字段有差异 → 不同串 (都保留)。
+    static func canonicalKey(_ value: Any) -> String {
+        if let dict = value as? [String: Any] {
+            let parts = dict.keys.sorted().map { "\"\($0)\":\(canonicalKey(dict[$0] as Any))" }
+            return "{" + parts.joined(separator: ",") + "}"
+        }
+        if let arr = value as? [Any] {
+            return "[" + arr.map { canonicalKey($0) }.joined(separator: ",") + "]"
+        }
+        if let num = value as? NSNumber {
+            if CFGetTypeID(num) == CFBooleanGetTypeID() { return num.boolValue ? "true" : "false" }
+            return num.stringValue
+        }
+        if let text = value as? String { return "\"\(text)\"" }
+        return "null"
     }
 
     /// classTime "10304" → (day=1, start=3, end=4)。

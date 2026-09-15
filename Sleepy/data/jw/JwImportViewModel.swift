@@ -86,11 +86,7 @@ final class JwImportViewModel: ObservableObject {
     /// 解析 HTML 源码,返回课程列表(不入库) ← suspend parseHtml
     /// T8 重写: 分发表与候选都走 JwParserRegistry 单一工厂表。
     static func parseHtml(_ html: String, protocolType: String) throws -> [JwCourse] {
-        if protocolType.trimmingCharacters(in: .whitespaces).isEmpty {
-            // 未知协议(URL 直接登录): 跑全部候选按 confidence/课程数裁决
-            return tryAllParsers(html)
-        }
-        return try parseHtmlStatic(html, protocolType).courses
+        try JwParseDispatch.parseOrThrow(html, protocolType)
     }
 
     /// T8: 显式分发的纯函数形式(不依赖 UIKit / GRDB)。 ← parseHtmlStatic
@@ -544,5 +540,40 @@ final class JwImportViewModel: ObservableObject {
         case parsed([JwCourse])
         case imported(Int64)
         case error(String)
+    }
+}
+
+/// 解析分派单点: 空 protocolType → 全候选按 confidence 裁决; 声明 type → 工厂表精确解析。
+/// 永不抛出 —— 失败时把 error 文案与 attempts 一起交回调用方,
+/// 供 JwParseDiagnostics.classify 生成面向用户的诊断文案(导入 0 课/解析失败)。
+enum JwParseDispatch {
+    struct Outcome {
+        let courses: [JwCourse]
+        let attempts: [ParserAttemptSnapshot]
+        let error: String?
+    }
+
+    static func parse(_ html: String, _ protocolType: String) -> Outcome {
+        if protocolType.trimmingCharacters(in: .whitespaces).isEmpty {
+            // 未知协议(URL 直接登录): 跑全部候选按 confidence/课程数裁决
+            let best = JwParserRegistry.selectBest(html, declaredType: nil)
+            return Outcome(courses: best.0, attempts: best.1, error: nil)
+        }
+        do {
+            let r = try JwImportViewModel.parseHtmlStatic(html, protocolType)
+            return Outcome(courses: r.courses, attempts: r.attempts, error: nil)
+        } catch let e as JwParseError {
+            return Outcome(courses: [], attempts: e.attempts, error: e.message)
+        } catch {
+            return Outcome(courses: [], attempts: [],
+                           error: "parser 解析异常: \(Swift.type(of: error))")
+        }
+    }
+
+    /// 兼容旧 throws 语义(JwImportViewModel.parseHtml)
+    static func parseOrThrow(_ html: String, _ protocolType: String) throws -> [JwCourse] {
+        let out = parse(html, protocolType)
+        if let e = out.error { throw JwParseError(message: e, attempts: out.attempts) }
+        return out.courses
     }
 }

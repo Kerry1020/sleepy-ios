@@ -55,6 +55,7 @@ enum JwParserRegistry {
         (JwProtocol.TYPE_WISEDU, 10),
         (JwProtocol.TYPE_CQU, 15),
         (JwProtocol.TYPE_CHAOXING, 16),
+        (JwProtocol.TYPE_BOYA_PP, 17),
         (JwProtocol.TYPE_EAMS5, 18),
         (JwProtocol.TYPE_CLASSIC_EAMS, 19),
         (JwProtocol.TYPE_PKU, 20),
@@ -91,6 +92,7 @@ enum JwParserRegistry {
         case JwProtocol.TYPE_WHUT: return { JwWhutParser($0) }
         case JwProtocol.TYPE_CQU: return { JwCquParser($0) }
         case JwProtocol.TYPE_CHAOXING: return { JwChaoxingParser($0) }
+        case JwProtocol.TYPE_BOYA_PP: return { JwBoyaPpParser($0) }
         case JwProtocol.TYPE_EAMS5: return { JwEams5Parser($0) }
         case JwProtocol.TYPE_CLASSIC_EAMS: return { JwClassicEamsParser($0) }
         case JwProtocol.TYPE_SEU: return { JwSeuParser($0) }

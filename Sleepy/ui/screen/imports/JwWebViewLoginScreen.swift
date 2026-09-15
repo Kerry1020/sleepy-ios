@@ -26,7 +26,9 @@ struct JwWebViewLoginScreen: View {
 
     @Environment(\.localWakeUpColors) private var colors
     let school: JwSchoolInfo
-    let onHtmlCaptured: (String, JwSchoolInfo, [(Int, String, String)]) -> Void
+    // termStartDate ← Android JwWebViewLoginScreen 第 4 回调参数: JSON 直连协议
+    // (boya_pp 等) 从接口拿到的第一周周一, 供确认页开学日期预填; 无则空串
+    let onHtmlCaptured: (String, JwSchoolInfo, [(Int, String, String)], String) -> Void
     let onDismiss: () -> Void
 
     @State private var progress: Double = 0
@@ -96,7 +98,7 @@ struct JwWebViewLoginScreen: View {
                     url: school.url.isEmpty ? "https://www.baidu.com" : school.url,
                     onProgressChange: { p in progress = p },
                     onCoordinatorCreated: { coordinator in webViewCoordinator = coordinator },
-                    onHtmlCaptured: { html in onHtmlCaptured(html, school, []) },
+                    onHtmlCaptured: { html in onHtmlCaptured(html, school, [], "") },
                     onWiseduResult: handleWiseduResult)
 
                 if progress >= 1 && progress < 100 {
@@ -194,6 +196,19 @@ struct JwWebViewLoginScreen: View {
             coordinator.evaluate(CquFetchJs.js)
             return
         }
+        // 博雅研究生平台 (/pp/ 前端, 首校燕山大学研究生): term 列表取学期+开学日 →
+        // setting/current 取节次时间 → 逐周 byStudent 全学期排课行
+        if school.type == JwProtocol.TYPE_BOYA_PP {
+            coordinator.evaluate(BoyaPpFetchJs.js)
+            return
+        }
+        // 强智移动教务 SPA: 课表只在移动 JSON API 里 (token header 鉴权), 页面 HTML
+        // 无课程数据。先相对路径 serverconfig.json (免鉴权) 发现 ApiUrl, 再带
+        // sessionStorage.Token 逐周抓课表合并成 {weeks:[…]} 组合源。
+        if school.type == JwProtocol.TYPE_QZ_APP {
+            coordinator.evaluate(QzAppFetchJs.js)
+            return
+        }
         // 同步 evaluateJavascript 拿 HTML(iframe/frame 合并)
         let js = """
         (function() {
@@ -229,7 +244,7 @@ struct JwWebViewLoginScreen: View {
                                            err.isEmpty ? L10n.format("jw_page_not_loaded") : err)
                 return
             }
-            onHtmlCaptured(html, school, [])
+            onHtmlCaptured(html, school, [], "")
         }
     }
 
@@ -252,7 +267,9 @@ struct JwWebViewLoginScreen: View {
                     periods.append((node, p["start"] as? String ?? "", p["end"] as? String ?? ""))
                 }
             }
-            onHtmlCaptured(content, school, periods)
+            // 学期起始日: boya_pp 等 JSON 直连协议随 payload 回传 termBeginTime 前 10 位
+            let termStartDate = (obj["startDate"] as? String) ?? ""
+            onHtmlCaptured(content, school, periods, termStartDate)
         } else {
             let err = (obj["err"] as? String) ?? ""
             snackMessage = L10n.format("jw_fetch_failed",
@@ -574,5 +591,225 @@ enum CquFetchJs {
         window.webkit.messageHandlers.__sleepyBridge.postMessage({json:JSON.stringify({ok:false, err:String(err)})});
       }
     })();
+    """
+}
+
+
+// MARK: - BOYA_PP_FETCH_JS(← JwWebViewLoginScreen.kt BOYA_PP_FETCH_JS 原文移植, 桥回调改 WKScriptMessage postMessage)
+//
+// 博雅研究生平台 (/pp/ 前端, 首校燕山大学研究生 yjsxt.ysu.edu.cn): currentUser 取当前
+// 学期名 → microForm/term 定学期 (termBeginTime/weekEnd 在此) → setting/current 取
+// lessonConfig 节次时间 → 逐周 byStudent 并发拉全学期排课行合并成 {term, rows}。
+// 实测不带 whichWeek 的 byStudent 只回不完整子集, 必须按 weekEnd 逐周抓; 单周偶发失败
+// 静默跳过, 但 401 登录失效必须中止 (否则以部分数据伪装完整课表)。
+// payload 额外带 startDate (termBeginTime 前 10 位) → 确认页开学日期预填。
+
+enum BoyaPpFetchJs {
+    static let js = """
+    (function(){
+      try {
+        // 入口是燕大 CAS (cer.ysu.edu.cn), 登录后回调落到 yjsxt.ysu.edu.cn —
+        // 只在平台域放行, CAS 页上点导入给出明确提示而非 404 请求
+        if (location.hostname.indexOf('yjsxt.ysu.edu.cn') < 0 && location.pathname.indexOf('/pp/') < 0) {
+          window.webkit.messageHandlers.__sleepyBridge.postMessage({json:JSON.stringify({ok:false, err:'请先完成统一身份认证登录并进入研究生平台后再点导入'})});
+          return;
+        }
+        var hdrs = {'Protocol-Type': location.protocol.replace(/:/g, '')};
+        try {
+          var m = document.cookie.match(/(?:^|;\\s*)token=([^;]+)/);
+          var tk = m ? decodeURIComponent(m[1]) : '';
+          if (!tk) {
+            var raw = sessionStorage.getItem('ROOT:APPSTORE');
+            if (raw) { var j = JSON.parse(raw); if (j && j.token) tk = j.token; }
+          }
+          if (tk) hdrs['token'] = tk;
+        } catch(e) {}
+        var get = function(url){
+          return fetch(url, {credentials:'include', headers:hdrs}).then(function(r){
+            if (r.status === 401) throw new Error('登录态已失效，请重新登录研究生平台后再点导入');
+            if (!r.ok) throw new Error('接口请求失败 HTTP ' + r.status);
+            return r.json();
+          }).then(function(j){
+            if (!j || (j.code !== 200 && j.code !== '200')) {
+              throw new Error((j && j.message) ? j.message : '接口返回异常');
+            }
+            return j.data;
+          });
+        };
+        get('/api/login/currentUser')
+        .then(function(u){ return (u && u.termName) ? String(u.termName) : ''; })
+        .catch(function(){ return ''; })
+        .then(function(termName){
+          return get('/api/microForm/term').then(function(terms){
+            var list = terms || [];
+            var cur = null;
+            for (var i = 0; i < list.length; i++) {
+              if (termName && list[i].termName === termName) { cur = list[i]; break; }
+              if (!termName && String(list[i].currentTerm) === '是') { cur = list[i]; }
+            }
+            if (!cur || !cur.termName) throw new Error('未找到当前学期，请确认已进入本学期课表页');
+            return cur;
+          });
+        })
+        .then(function(term){
+          var T = term.termName;
+          var periodsP = get('/api/schedule/class/setting/current?yearTerm=' + encodeURIComponent(T))
+          .then(function(cfg){
+            var periods = [];
+            try {
+              var lc = (cfg && cfg.lessonConfig) || [];
+              for (var i = 0; i < lc.length; i++) {
+                var t = lc[i].lessonTime || [];
+                periods.push({
+                  node: lc[i].lessonNumber || (i + 1),
+                  start: String(t[0] || '').slice(11, 16),
+                  end: String(t[1] || '').slice(11, 16)
+                });
+              }
+              periods.sort(function(a, b){ return a.node - b.node; });
+            } catch(e) { periods = []; }
+            return periods;
+          }).catch(function(){ return []; });
+          // 总周数: weekEnd 优先 ("19"), 兜底按起止日推算, 再兜底 30
+          var maxWeek = parseInt(term.weekEnd, 10);
+          if (!(maxWeek >= 1 && maxWeek <= 30)) {
+            try {
+              var ms = new Date(term.termEndTime) - new Date(term.termBeginTime);
+              maxWeek = Math.ceil(ms / (7 * 24 * 3600 * 1000));
+            } catch(e) { maxWeek = 0; }
+            if (!(maxWeek >= 1 && maxWeek <= 30)) maxWeek = 30;
+          }
+          var weekReqs = [];
+          for (var w = 1; w <= maxWeek; w++) {
+            weekReqs.push(
+              get('/api/schedule/table/byStudent?page=0&size=500&whichWeek=' + w +
+                  '&yearTerm=' + encodeURIComponent(T))
+              .then(function(rows){ return rows || []; })
+              .catch(function(e){
+                // 单周偶发失败不致命, 静默跳过; 但 401 登录失效必须中止 —
+                // 否则会以部分数据伪装成完整课表
+                if (e && String(e.message || '').indexOf('登录态已失效') >= 0) throw e;
+                return [];
+              })
+            );
+          }
+          return Promise.all([Promise.all(weekReqs), periodsP]).then(function(rs){
+            var rows = [];
+            for (var k = 0; k < rs[0].length; k++) rows = rows.concat(rs[0][k]);
+            if (!rows.length) throw new Error('课表为空：请先在研究生平台"我的课表"页确认本学期已有课程');
+            window.webkit.messageHandlers.__sleepyBridge.postMessage({json:JSON.stringify({
+              ok: true,
+              data: JSON.stringify({term: T, rows: rows}),
+              periods: rs[1],
+              startDate: String(term.termBeginTime || '').slice(0, 10)
+            })});
+          });
+        })
+        .catch(function(e){
+          window.webkit.messageHandlers.__sleepyBridge.postMessage({json:JSON.stringify({ok:false, err:String(e && e.message || e)})});
+        });
+      } catch(err) {
+        window.webkit.messageHandlers.__sleepyBridge.postMessage({json:JSON.stringify({ok:false, err:String(err)})});
+      }
+    })();
+    """
+}
+
+
+// MARK: - QZ_APP_FETCH_JS(← JwWebViewLoginScreen.kt QZ_APP_FETCH_JS 原文移植, 桥回调改 WKScriptMessage postMessage)
+//
+// 强智移动教务 SPA (type=qz_app): 课表只在移动 JSON API 里 (token header 鉴权), 页面
+// HTML 无课程数据。相对路径 serverconfig.json 免鉴权发现 ApiUrl (各校部署根可不同,
+// 先试当前目录再试 /dist/serverconfig.json, 禁硬编码) → sessionStorage.Token 作 token
+// 头请求。课表端点一次只回一周 (week= 空 = 当前教学周, data 恒单元素), 只抓当前周会把
+// 仅在后续周出现的课整门丢掉 — 先 POST /teachingWeek 取周数列表, 再并行逐周 POST
+// curriculum?week=w&kbjcmsid=, 合并成 {weeks:[<单次响应>…]} 组合源 (与燕大 boya_pp
+// 逐周方案同构)。401 一律中止 (禁以部分数据伪装完整课表), 单周失败静默跳过。
+// JS 只做 fetch 与传输层状态路由, 协议字段解码全部在 JwQzAppParser (跨语言 invariant)。
+
+enum QzAppFetchJs {
+static let js = """
+    (function(){
+      try {
+        var post = function(obj){
+          window.webkit.messageHandlers.__sleepyBridge.postMessage({json:JSON.stringify(obj)});
+        };
+        var token = '';
+        try { token = sessionStorage.getItem('Token') || ''; } catch(e) {}
+        if (!token) {
+          post({ok:false, err:'未取到登录令牌: 请先登录移动教务后再点导入'});
+          return;
+        }
+        var getCfg = function(url){
+          return fetch(url, {credentials:'include'})
+            .then(function(r){
+              if (!r.ok) { throw new Error('serverconfig.json HTTP ' + r.status); }
+              return r.json();
+            });
+        };
+        getCfg('serverconfig.json')
+          .catch(function(){
+            return getCfg('/dist/serverconfig.json');
+          })
+          .then(function(cfg){
+            var apiUrl = String(cfg.ApiUrl || '').replace(/\\/+$/,'');
+            if (!apiUrl) { throw new Error('serverconfig.json 缺 ApiUrl'); }
+            return apiUrl;
+          })
+          .then(function(apiUrl){
+            var call = function(path){
+              return fetch(apiUrl + path, {
+                method:'POST',
+                credentials:'include',
+                headers: { 'token': token }
+              }).then(function(r){ return r.text(); });
+            };
+            // 课表端点一次只回一周 (week= 空 = 当前教学周, data 单元素);
+            // 只抓当前周会丢掉仅在后续周出现的课 — 先取 teachingWeek 周数列表,
+            // 再并行逐周拉取合并 (与燕大 boya_pp 逐周方案同构)
+            return call('/teachingWeek').then(function(twText){
+              var weekNums = [];
+              try {
+                var tw = JSON.parse(twText);
+                if (tw && tw.code != '401' && tw.data && tw.data.length) {
+                  for (var i = 0; i < tw.data.length; i++) {
+                    var n = parseInt(tw.data[i].week, 10);
+                    if (n >= 1 && n <= 30) weekNums.push(n);
+                  }
+                }
+              } catch(e) {}
+              if (!weekNums.length) weekNums = [1];
+              var expired = false;
+              var reqs = weekNums.map(function(w){
+                return call('/student/curriculum?week=' + w + '&kbjcmsid=')
+                  .then(function(text){
+                    try { if (JSON.parse(text).code == '401') expired = true; } catch(e) {}
+                    return text;
+                  })
+                  .catch(function(){ return null; });
+              });
+              return Promise.all(reqs).then(function(texts){
+                if (expired) {
+                  post({ok:false, err:'登录已过期: 请重新登录后再点导入'});
+                  return;
+                }
+                var ok = texts.filter(function(t){ return t !== null; });
+                if (!ok.length) {
+                  post({ok:false, err:'课表接口无响应: 请确认已登录并进入课表页'});
+                  return;
+                }
+                post({ok:true, data: JSON.stringify({weeks: ok.map(function(t){
+                  try { return JSON.parse(t); } catch(e) { return null; }
+                }).filter(function(j){ return j !== null; })})});
+              });
+            });
+          })
+          .catch(function(e){
+            post({ok:false, err:String(e && e.message || e)});
+          });
+      } catch(err) {
+        window.webkit.messageHandlers.__sleepyBridge.postMessage({json:JSON.stringify({ok:false, err:String(err)})});
+      }
+    })()
     """
 }
