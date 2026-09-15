@@ -272,13 +272,22 @@ struct SleepyThemeProvider: ViewModifier {
     let themeKey: String
 
     func body(content: Content) -> some View {
-        let preset: ThemePreset? = themeKey == ThemePresets.KEY_SYSTEM
-            ? nil   // 标记走 dynamic 分支
+        // "custom:<id>" 走用户自定义主题:CustomThemeStore 读种子 → CustomSchemeDeriver
+        //   派生整套深浅 scheme(与 widget resolveWidgetScheme 同一派生函数);已删 id
+        //   读不到 → 用默认淡紫种子派生(与 Android Theme.kt 回落语义逐字一致)。
+        let isCustom = themeKey.hasPrefix(ThemePresets.CUSTOM_KEY_PREFIX)
+        // preset==nil 仅在 "system" → dynamic 分支(Android preset==null 同义)
+        let preset: ThemePreset? = (isCustom || themeKey == ThemePresets.KEY_SYSTEM)
+            ? nil
             : ThemePresets.byKey(themeKey)
 
         let wakeColors: WakeUpColorScheme
         let palette: CoursePalette
-        if let preset = preset {
+        if isCustom {
+            let id = String(themeKey.dropFirst(ThemePresets.CUSTOM_KEY_PREFIX.count))
+            let seed = CustomThemeStore.getById(id) ?? Self.defaultSeedTheme
+            wakeColors = CustomSchemeDeriver.derive(theme: seed, isDark: darkTheme)
+        } else if let preset = preset {
             wakeColors = darkTheme ? preset.dark : preset.light
         } else {
             wakeColors = Self.dynamicSystemScheme(dark: darkTheme)
@@ -289,6 +298,19 @@ struct SleepyThemeProvider: ViewModifier {
             .environment(\.localWakeUpColors, wakeColors)
             .environment(\.localCoursePalette, palette)
     }
+
+    /// "custom:<id>" 的 id 读不到(已删/损坏)时的回落种子 = 默认淡紫。
+    /// ← Android Theme.kt 里就地构造的 CustomTheme(#6750A4/#625B71/#7D5260, 265/8)
+    static let defaultSeedTheme = CustomTheme(
+        id: "",
+        name: "",
+        primary: "#6750A4",
+        secondary: "#625B71",
+        tertiary: "#7D5260",
+        surfaceHue: 265.0,
+        surfaceChroma: 8.0,
+        createdAt: 0
+    )
 
     /// Android dynamicColorScheme(context) 的 iOS 等价:系统语义色映射到 M3 槽位
     static func dynamicSystemScheme(dark: Bool) -> WakeUpColorScheme {
