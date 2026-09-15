@@ -161,6 +161,7 @@
 		8AAF5A7A3F027E8E1BE88727 /* TimeTableDao.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E5DE7210118C9EC520F007E /* TimeTableDao.swift */; };
 		8BDE175F3C9FA60A8C6585E5 /* UndoManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D651B0E8CCB723BAB435B4C8 /* UndoManagerTests.swift */; };
 		8F0DCCC39A23A9A6A7093EA5 /* JwCquParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C11210F0D929BD75517DDD5 /* JwCquParser.swift */; };
+		902DD269F77279DB2BAC9BEB /* JwBoyaPpParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7717787BC54237EC484E5E5 /* JwBoyaPpParserTests.swift */; };
 		9235B99583013389D06A2934 /* Eams5PathPrefix.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2521BF901963D8A628CE921 /* Eams5PathPrefix.swift */; };
 		92F5FBC94FF2A739A0980E4E /* AppDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF2B16F1E64028F96C4B5AD5 /* AppDatabase.swift */; };
 		955AA3AAA68DB122F123785B /* CourseColorUtilTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F19B09B9CF4562AD9450D43 /* CourseColorUtilTests.swift */; };
@@ -172,6 +173,7 @@
 		99880A99CECAE11D2D3DDAE2 /* JwQzAppParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6057944C03E91C59FC223358 /* JwQzAppParser.swift */; };
 		9B9D3517FEE37311F47168DD /* SleepyUITestSeeder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CA7389DF46C926458122F39 /* SleepyUITestSeeder.swift */; };
 		9BDBBCA50972C67AC052EA46 /* SleepyNativeFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 831838316873C50C42AC649A /* SleepyNativeFormat.swift */; };
+		9BEEC5940AC82BDA1B6A1107 /* JwBoyaPpParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6267C653C62742958073FDD7 /* JwBoyaPpParser.swift */; };
 		9C3967DF73C2215296271E04 /* CourseDao.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D3AA9F8B115E2B804EBDA31 /* CourseDao.swift */; };
 		9CF496F47DCA8CDC5D6E93D4 /* JwEams5Parser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51A86F82646BCD36EE693111 /* JwEams5Parser.swift */; };
 		9D4CA596D6A10BD76864AB6C /* ScheduleViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B676529801720CE8A47480B3 /* ScheduleViewModel.swift */; };
@@ -187,6 +189,7 @@
 		AD7C70707705DCAC38B45DBF /* JwWhutParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DCE5472D66C30D292A70BCD /* JwWhutParser.swift */; };
 		ADC5B1DC5FC83964820C18EE /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60056452C13B6C1D48E232C7 /* L10n.swift */; };
 		AF780B5353F4A85A3C7A85FC /* JwHnustParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C202EA6E5DE4FC41312B62 /* JwHnustParser.swift */; };
+		B0C3A9CD26C699017100E223 /* JwBoyaPpParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6267C653C62742958073FDD7 /* JwBoyaPpParser.swift */; };
 		B1436FEAB213A86DC79048AA /* UpdateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF4648DE833D3D2C58C52E6C /* UpdateManager.swift */; };
 		B28F1749B30AA833506A16D0 /* SegmentedSwitcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA25C6698B82B80FF02AB1B /* SegmentedSwitcher.swift */; };
 		B5CFFB98AB5D7E7BC9801B84 /* SleepyNativeExporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DDC1DB2898102E2021052B3 /* SleepyNativeExporterTests.swift */; };
@@ -372,6 +375,7 @@
 		60056452C13B6C1D48E232C7 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		6057944C03E91C59FC223358 /* JwQzAppParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwQzAppParser.swift; sourceTree = "<group>"; };
 		6264A390C22B85F9DD9F0CAC /* JwPekingParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwPekingParser.swift; sourceTree = "<group>"; };
+		6267C653C62742958073FDD7 /* JwBoyaPpParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwBoyaPpParser.swift; sourceTree = "<group>"; };
 		64A552952CA5208B8A961BF4 /* JwQzVariants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwQzVariants.swift; sourceTree = "<group>"; };
 		64BF7FAB38EE44A780C793BD /* CourseEditorUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseEditorUITests.swift; sourceTree = "<group>"; };
 		64CFB5B5DD63AC209144EEDD /* SleepyWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = SleepyWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -463,6 +467,7 @@
 		DBC7DB3DE13257F697784257 /* JwJsonParsers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwJsonParsers.swift; sourceTree = "<group>"; };
 		E451AD795407D5BA73BD0A6B /* CourseDisplayUtil.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseDisplayUtil.swift; sourceTree = "<group>"; };
 		E6C202EA6E5DE4FC41312B62 /* JwHnustParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwHnustParser.swift; sourceTree = "<group>"; };
+		E7717787BC54237EC484E5E5 /* JwBoyaPpParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwBoyaPpParserTests.swift; sourceTree = "<group>"; };
 		EAA351FA5E1B5313277092F1 /* WebViewNavigationPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewNavigationPolicyTests.swift; sourceTree = "<group>"; };
 		EB16BBC06209972B0E6B63A1 /* AllTablesScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllTablesScreen.swift; sourceTree = "<group>"; };
 		EDC6BEB3E8D377C5952F4450 /* JwJsonParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwJsonParserTests.swift; sourceTree = "<group>"; };
@@ -674,6 +679,7 @@
 				C2521BF901963D8A628CE921 /* Eams5PathPrefix.swift */,
 				715802C2A36A63F13CDA2C0C /* JwBjtuParser.swift */,
 				32366CDB34A4D30D2E25CFF3 /* JwBnuzParser.swift */,
+				6267C653C62742958073FDD7 /* JwBoyaPpParser.swift */,
 				88A0C2BDE5E35B78392B4C54 /* JwChaoxingParser.swift */,
 				79F4DCCC2A6CD5809C73B1A1 /* JwChengFangParser.swift */,
 				6C3F6B5708FBF3585FFE2EC2 /* JwClassicEamsParser.swift */,
@@ -762,6 +768,7 @@
 				3C66E6D2ABAEEAC25D75D8C3 /* ExportImportRoundTripTests.swift */,
 				7F8FE3D103CAC0B91A9CE015 /* HolidayManagerTests.swift */,
 				1274843FE9312E87CD5807D5 /* Info.plist */,
+				E7717787BC54237EC484E5E5 /* JwBoyaPpParserTests.swift */,
 				EDC6BEB3E8D377C5952F4450 /* JwJsonParserTests.swift */,
 				4B8F322DCB1C5CF622C99C11 /* JwParserTests.swift */,
 				23473ACBFDC5C56F0CC30A1D /* LocaleAndL10nTests.swift */,
@@ -1099,6 +1106,7 @@
 				CD777F7A41318DA863A267CD /* ImportSheet.swift in Sources */,
 				14E0C6206AB3224219245BAE /* JwBjtuParser.swift in Sources */,
 				7F1490E343E8BC376334AC9F /* JwBnuzParser.swift in Sources */,
+				9BEEC5940AC82BDA1B6A1107 /* JwBoyaPpParser.swift in Sources */,
 				97E3455EE96D795BD6B9E811 /* JwChaoxingParser.swift in Sources */,
 				15CB796FBC691AE7B1505870 /* JwChengFangParser.swift in Sources */,
 				28AAD19BBD8398B2351C8434 /* JwClassicEamsParser.swift in Sources */,
@@ -1233,6 +1241,7 @@
 				E29175C1AA20C1E91CED155C /* HolidayManager.swift in Sources */,
 				074693070D57DAB3FFBF5A86 /* JwBjtuParser.swift in Sources */,
 				5BCF822930ED82CBBB59B069 /* JwBnuzParser.swift in Sources */,
+				B0C3A9CD26C699017100E223 /* JwBoyaPpParser.swift in Sources */,
 				2F2DDD9BFBF2170D7B68A4CF /* JwChaoxingParser.swift in Sources */,
 				262690131EB94042FD8CC972 /* JwChengFangParser.swift in Sources */,
 				B65064E11BAFEA92D191DEE4 /* JwClassicEamsParser.swift in Sources */,
@@ -1314,6 +1323,7 @@
 				FB98667FC708E0C9DC47DDFE /* DateUtilsTests.swift in Sources */,
 				017808802F6DC375BEA329F0 /* ExportImportRoundTripTests.swift in Sources */,
 				6A66F8370C8F187915144393 /* HolidayManagerTests.swift in Sources */,
+				902DD269F77279DB2BAC9BEB /* JwBoyaPpParserTests.swift in Sources */,
 				7D937FA178D2B32F57D5AEBA /* JwJsonParserTests.swift in Sources */,
 				25083A3FF7EDB6386F4AD3DC /* JwParserTests.swift in Sources */,
 				74C36660E2DFE6D371F31A2B /* LocaleAndL10nTests.swift in Sources */,
