@@ -39,19 +39,20 @@ final class TableEditUITests: XCTestCase {
         app.terminate()   // 隔离: 每用例杀进程重启, 防跨用例状态串扰
     }
 
-    // MARK: 3 个基础信息字段(field_Schedule Name / field_Semester Start Date / field_Total Weeks)
+    // MARK: 2 个文本字段 + 周数 Stepper(field_Total Weeks 已被 d03c426 原生化
+    //       Stepper 取代 — 数字键盘 TextField 移除, 改断言步进控件)
 
     func testBasicInfoFieldsAcceptInput() {
         let nameField = app.descendants(matching: .any)["field_Schedule Name"]
         XCTAssertTrue(nameField.waitForExistence(timeout: 5), "名称字段锚点未找到")
         XCTAssertTrue(app.descendants(matching: .any)["field_Semester Start Date"].exists)
-        XCTAssertTrue(app.descendants(matching: .any)["field_Total Weeks"].exists)
+        XCTAssertTrue(app.staticTexts["Total Weeks"].exists, "周数行应在")
 
         nameField.tap()
         nameField.typeText("2")
-        let weeks = app.descendants(matching: .any)["field_Total Weeks"]
-        weeks.tap()
-        weeks.typeText("5")
+        let stepper = app.steppers.firstMatch
+        XCTAssertTrue(stepper.waitForExistence(timeout: 3), "周数应为 Stepper 控件")
+        stepper.tap()   // 步进不崩即可(增量由系统控件处理)
     }
 
     // MARK: 日期非法 → 保存报校验错误

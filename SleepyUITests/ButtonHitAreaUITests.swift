@@ -49,7 +49,9 @@ final class ButtonHitAreaUITests: XCTestCase {
         let dialog = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label CONTAINS 'New version' OR label == 'Download' OR label == 'Retry' OR label == 'Cancel'"))
             .firstMatch
-        let triggered = dialog.waitForExistence(timeout: 15)
+        // 25s: fetch 走 UpdateManager 15s 超时(对齐 Android connectTimeout)→
+        // failed sheet 最迟 ~15s+渲染 才出现; 15s 等待与 app 超时同值必竞态
+        let triggered = dialog.waitForExistence(timeout: 25)
         XCTAssertTrue(triggered, "点击按钮色块区(非文字/图标)应触发检查更新动作(结果 sheet 出现)")
     }
 }

@@ -186,18 +186,24 @@ final class ScheduleFlowUITests: XCTestCase {
 
     func testTodayCourseTapOpensDetailSheet() {
         app.descendants(matching: .any)["pill_today"].tap()
-        // 种子: 周一 高数 1-2 节 — 今天是周几不定, 有课才点
+        // 种子: 周一高数/周二英语/周三物理/周五体育 — 今天落哪天不定,
+        // 用 today_course_ 标识符匹配任意课卡(旧版只认"高等数学", 非周一有课时两断言全挂)
         let course = app.descendants(matching: .any).matching(
-            NSPredicate(format: "label CONTAINS '高等数学'")).firstMatch
+            NSPredicate(format: "identifier BEGINSWITH 'today_course_'")).firstMatch
         guard course.waitForExistence(timeout: 4) else {
-            // 今天无课(空态)→ 用例只验证不崩
-            XCTAssertTrue(app.staticTexts["No classes today"].waitForExistence(timeout: 3))
+            // 今天无课(空态; 学期外文案不同, 两种都算通过)
+            let empty = app.staticTexts.matching(NSPredicate(
+                format: "label CONTAINS 'classes' OR label CONTAINS 'semester'")).firstMatch
+            XCTAssertTrue(empty.waitForExistence(timeout: 3), "无课应显示空态")
             return
         }
+        let isMath = course.label.contains("高等数学")
         course.tap()
         XCTAssertTrue(app.staticTexts["Teacher"].waitForExistence(timeout: 5),
                       "今天页课程卡点击应弹详情 Sheet(对齐 Android)")
-        XCTAssertTrue(app.staticTexts["张老师"].exists, "详情应含教师字段")
+        if isMath {
+            XCTAssertTrue(app.staticTexts["张老师"].exists, "高数详情应含张老师")
+        }
         let edit = app.descendants(matching: .any)["detail_edit"]
         XCTAssertTrue(edit.waitForExistence(timeout: 3), "详情应含编辑入口")
         edit.tap()
