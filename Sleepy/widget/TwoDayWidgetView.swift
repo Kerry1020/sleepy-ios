@@ -1,6 +1,13 @@
-// TwoDayWidgetView.swift — ← TwoDayWidget.kt + WidgetBitmapRenderers.renderTwoDay
+// TwoDayWidgetView.swift — ← TwoDayWidget.kt + WidgetBitmapRenderers.renderTwoDayRegular
 // 最近两天 widget — 今天 + 明天 (左右两栏并排, 中间竖直分隔)。
-// 顶部标签 "最近两天" + 每列(今天/明天 + 日期) 课程胶囊(最大高 44dp)。
+//
+// 对齐 Android 定稿语义 (2dbad515 / 8c0fcbea / ab27230c / 895fe72f / f7e80c84):
+//  1. 顶部「最近两天」标题行已删 (2dbad515), 直接以列标题起排;
+//  2. 每列 FIXED 窗口独立 (今天列 TIME_WINDOW / 明天列 HEAD), 行高 36 / 行距 6 / 堆叠 3;
+//  3. 每列「+N」胶囊恒画且各说各的 (合并求和禁回流), 上完/没课列显示「+0」;
+//  4. ALL_DONE 列正文留空 —— 「无课程」文案不残留, 只剩列底「+0」标记 (ab27230c);
+//  5. 三档同一渲染器 (Android renderTwoDay 已无 compact 分支), 2×2 靠窗口数学装 2 节;
+//  6. 课程边界即刷新窗口 (f7e80c84 的 iOS 等价 = timeline entry 落在 end+1)。
 
 import SwiftUI
 import WidgetKit
@@ -8,103 +15,114 @@ import WidgetKit
 struct TwoDayWidgetEntry: TimelineEntry {
     let date: Date
     let data: TwoDayData
+    /// 该 entry 生效时刻的当日分钟 ← 课程边界锚点;nil = 不做时间窗截断
+    var nowMin: Int? = nil
 }
 
 struct TwoDayWidgetProvider: TimelineProvider {
     func placeholder(in context: Context) -> TwoDayWidgetEntry {
         WidgetArchiveLog.append(kind: "TwoDayWidgetRV", family: context.family.description, result: "success")
-        return TwoDayWidgetEntry(date: Date(), data: TwoDayWidgetLoader.loadDataSync(kind: "TwoDayWidgetRV"))
+        return makeEntry(at: Date())
     }
 
     func getSnapshot(in context: Context, completion: @escaping (TwoDayWidgetEntry) -> Void) {
         WidgetArchiveLog.append(kind: "TwoDayWidgetRV", family: context.family.description, result: "success")
-        completion(TwoDayWidgetEntry(date: Date(), data: TwoDayWidgetLoader.loadDataSync(kind: "TwoDayWidgetRV")))
+        completion(makeEntry(at: Date()))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<TwoDayWidgetEntry>) -> Void) {
-        let entry = TwoDayWidgetEntry(date: Date(), data: TwoDayWidgetLoader.loadDataSync(kind: "TwoDayWidgetRV"))
-        // 次日 00:05 刷新(今天/明天窗口滚动)
+        let now = Date()
+        let data = TwoDayWidgetLoader.loadDataSync(kind: "TwoDayWidgetRV")
+        var entries = [TwoDayWidgetEntry(date: now, data: data, nowMin: WidgetWindows.nowMinutes(now))]
+        // ← WidgetBoundaryScheduler: 今天列每节课下课的下一分钟一颗边界,窗口跟着前移
+        if let today = data.days.first(where: { $0.isToday }),
+           data.hasTable, data.semesterStatus == .inRange {
+            for at in WidgetWindows.boundaryDates(courses: today.courses, timeJson: today.timeJson, from: now) {
+                entries.append(TwoDayWidgetEntry(date: at, data: data, nowMin: WidgetWindows.nowMinutes(at)))
+            }
+        }
+        // 次日 00:05 换日 (今天/明天窗口滚动)
         let cal = DateUtils.isoCalendar
-        let tomorrow = cal.date(byAdding: .day, value: 1, to: Date()) ?? Date().addingTimeInterval(3600)
+        let tomorrow = cal.date(byAdding: .day, value: 1, to: now) ?? now.addingTimeInterval(3600)
         let refresh = cal.date(bySettingHour: 0, minute: 5, second: 0, of: tomorrow) ?? tomorrow
         WidgetArchiveLog.append(kind: "TwoDayWidgetRV", family: context.family.description, result: "success")
-        completion(Timeline(entries: [entry], policy: .after(refresh)))
+        completion(Timeline(entries: entries, policy: .after(refresh)))
+    }
+
+    private func makeEntry(at date: Date) -> TwoDayWidgetEntry {
+        TwoDayWidgetEntry(date: date, data: TwoDayWidgetLoader.loadDataSync(kind: "TwoDayWidgetRV"),
+                          nowMin: WidgetWindows.nowMinutes(date))
     }
 }
 
-// MARK: - View ← renderTwoDay
+// MARK: - View ← renderTwoDayRegular
 
 struct TwoDayWidgetEntryView: View {
     @Environment(\.widgetFamily) var widgetFamily
     let entry: TwoDayWidgetEntry
 
     var body: some View {
-        // SMALL 紧凑档 ← renderTwoDayCompact: 日期小字(顶) + 状态/首课程名(居中), 纯文本无两栏胶囊
-        if widgetFamily == .systemSmall {
-            let s = resolveWidgetScheme(themeKey: entry.data.themeKey, isDark: entry.data.isDark)
-            WidgetCompactFace(scheme: s,
-                              dateLabel: entry.data.days.first.map { DateUtils.shortDateSlash($0.date) },
-                              lines: Self.twoDayCompactTexts(data: entry.data,
-                                                             useAlias: AppPrefs.shared.isWidgetUseAlias()))
-                .widgetURL(URL(string: "sleepy://open"))
-        } else {
-            regularBody
-        }
-    }
-
-    // ← renderTwoDay: 常规/中大档左右两栏排版
-    @ViewBuilder
-    private var regularBody: some View {
         let data = entry.data
         let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: data.isDark)
         let prefs = AppPrefs.shared
         let colorless = prefs.isWidgetColorless()
         let displayMode = prefs.getDisplayMode()
         let showDate = prefs.isShowDate()
-        let perColLimit: Int = widgetFamily == .systemLarge ? 3 : 2
         // issue#26: widget 全局一档别名开关
         let useAlias = prefs.isWidgetUseAlias()
+        let tier = WidgetLayoutTier(family: widgetFamily)
+        // 时间窗只作用在「今天」列 (WidgetWindows.twoDay 内按 day.isToday 判定)
+        let nowMin = entry.nowMin
 
-        VStack(alignment: .leading, spacing: 0) {
-            // 顶部标签
-            Text(L10n.format("widget_twoday_label"))
-                .font(.system(size: 13, weight: .bold))
-                .foregroundColor(s.primary)
-                .padding(.bottom, 6.5) // 安卓 y+=22 − 13sp 行高≈15.5
-
-            if !data.hasTable || data.days.isEmpty {
-                Text(L10n.format("widget_create_schedule"))
-                    .font(.system(size: 15))
-                    .foregroundColor(s.onSurface)
-                Spacer()
-            } else if data.semesterStatus != .inRange {
-                // ★ 学期外: 状态标题 + 提示行, 不渲染课程
-                Text(data.semesterStatus == .beforeStart
-                     ? L10n.format("semester_not_started")
-                     : L10n.format("semester_ended"))
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(s.onSurface)
-                    .padding(.bottom, 6)
-                Text(L10n.format("today_semester_out_hint"))
-                    .font(.system(size: 11))
-                    .foregroundColor(s.onSurfaceVariant)
-                Spacer()
-            } else {
-                // ★ 左右两栏: 每天一列, 中间竖直分隔
-                HStack(alignment: .top, spacing: 10) {
-                    ForEach(Array(data.days.enumerated()), id: \.element.dayOfWeek) { colIdx, day in
-                        TwoDayColumn(day: day, scheme: s, colorless: colorless,
-                                     displayMode: displayMode, showDate: showDate,
-                                     isLast: colIdx == data.days.count - 1,
-                                     maxCourses: perColLimit, useAlias: useAlias)
+        return GeometryReader { proxy in
+            let wins = Self.twoDayWindows(data: data, heightDp: proxy.size.height, tier: tier,
+                                          nowMin: nowMin)
+            VStack(alignment: .leading, spacing: 0) {
+                if !data.hasTable || data.days.isEmpty {
+                    Text(L10n.format("widget_create_schedule"))
+                        .font(.system(size: 15))
+                        .foregroundColor(s.onSurface)
+                    Spacer(minLength: 0)
+                } else if data.semesterStatus != .inRange {
+                    // ★ 学期外: 状态标题 + 提示行, 不渲染课程
+                    Text(data.semesterStatus == .beforeStart
+                         ? L10n.format("semester_not_started")
+                         : L10n.format("semester_ended"))
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(s.onSurface)
+                        .padding(.bottom, 6)
+                    Text(L10n.format("today_semester_out_hint"))
+                        .font(.system(size: 11))
+                        .foregroundColor(s.onSurfaceVariant)
+                    Spacer(minLength: 0)
+                } else {
+                    // ★ 左右两栏: 每天一列, 中间竖直分隔
+                    HStack(alignment: .top, spacing: 10) {
+                        ForEach(Array(data.days.enumerated()), id: \.element.dayOfWeek) { colIdx, day in
+                            TwoDayColumn(day: day, scheme: s, colorless: colorless,
+                                         displayMode: displayMode, showDate: showDate,
+                                         isLast: colIdx == data.days.count - 1,
+                                         window: colIdx < (wins?.count ?? 0) ? wins?[colIdx] : nil,
+                                         useAlias: useAlias)
+                        }
                     }
                 }
             }
+            .padding(12)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(s.bg)
         .widgetURL(URL(string: "sleepy://open"))
+    }
+
+    /// ← TwoDayWidget.computeTwoDayWindows: 每列独立窗口; 无课表/学期外/两天全空 → nil
+    static func twoDayWindows(data: TwoDayData, heightDp: CGFloat, tier: WidgetLayoutTier,
+                              nowMin: Int?) -> [WidgetWindowCore.WindowResult]? {
+        guard data.hasTable, !data.days.isEmpty,
+              data.semesterStatus == .inRange,
+              data.days.contains(where: { !$0.courses.isEmpty }) else { return nil }
+        return WidgetWindows.twoDay(days: data.days, heightDp: heightDp, tier: tier, nowMin: nowMin)
     }
 }
 
@@ -115,13 +133,17 @@ private struct TwoDayColumn: View {
     let displayMode: String
     let showDate: Bool
     let isLast: Bool
-    let maxCourses: Int
+    /// 本列 FIXED 窗口;nil = 无窗口 (整列直排, 由容器裁切)
+    let window: WidgetWindowCore.WindowResult?
     /// issue#26: widget 场景别名 — 透传给课程胶囊
     let useAlias: Bool
 
     var body: some View {
         let s = scheme
-        VStack(alignment: .leading, spacing: 0) {
+        let rows = window?.visible.map(\.row)
+            ?? ConflictLayoutEngine.weekLaneRows(day.courses, timeJson: day.timeJson)
+
+        return VStack(alignment: .leading, spacing: 0) {
             // 列标题: 今天/明天/星期 + 日期(★ showDate=false 时隐藏)
             HStack(alignment: .firstTextBaseline, spacing: 6) { // 安卓日期间隔 titleW+6dp
                 Text(title)
@@ -140,24 +162,26 @@ private struct TwoDayColumn: View {
                 Text(L10n.format("no_course"))
                     .font(.system(size: 11))
                     .foregroundColor(s.onSurfaceVariant)
-                Spacer(minLength: 0)
+            } else if window?.status == .allDone {
+                // ← ab27230c: 全上完 → 整列留空, 「无课程」文案不残留, 只剩列底「+0」
+                EmptyView()
             } else {
-                // ★ WidgetKit 不支持 ScrollView 归档;取前 N 门渲染,溢出由容器裁切
-                let visible = Array(day.courses.prefix(maxCourses))
-                VStack(spacing: 8) {
-                    ForEach(visible, id: \.id) { course in
-                        WidgetCourseCard(course: course, timeJson: day.timeJson, scheme: s,
-                                         colorless: colorless, fontSizeSp: 10,
-                                         displayMode: displayMode,
-                                         groupRows: day.courses.filter { $0.groupId == course.groupId },
-                                         useAlias: useAlias)
-                            .frame(height: 44) // 安卓胶囊 maxRowH 44dp
-                    }
-                    if day.courses.count > maxCourses {
-                        Spacer(minLength: 0)
+                // ★ WidgetKit 不支持 ScrollView 归档: 窗口外的课由列底「+N」报告
+                VStack(spacing: WidgetRowGeometry.twoDayRowGap) {
+                    ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                        WidgetCourseRowView(row: row, allCourses: day.courses, timeJson: day.timeJson,
+                                            scheme: s, colorless: colorless,
+                                            displayMode: displayMode, useAlias: useAlias,
+                                            rowHeight: WidgetRowGeometry.twoDayRowH,
+                                            fontSizeSp: 10, laneFontSizeSp: 9)
                     }
                 }
             }
+            Spacer(minLength: 0)
+            // ← 8c0fcbea / ab27230c: 每列「+N」恒画 (含「+0」), 各列独立计数, 不可点
+            WidgetFooterCapsule(
+                text: window.map { WidgetWindowCore.capsuleText(hidden: $0.hiddenAheadCourses) },
+                scheme: s)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         // 列间竖直分隔线
@@ -175,22 +199,6 @@ private struct TwoDayColumn: View {
         if day.isToday { return L10n.format("today_today") }
         if day.isTomorrow { return L10n.format("tomorrow") }
         return day.dayName
-    }
-}
-
-// ← twoDayCompactTexts(resolve, useAlias, data): SMALL 紧凑档纯文本行。
-// 空课表/学期外/今日无课各有对应一行; 有课 → 两天课程名铺开取前 2 行。
-extension TwoDayWidgetEntryView {
-    static func twoDayCompactTexts(data: TwoDayData, useAlias: Bool) -> [String] {
-        if !data.hasTable || data.days.isEmpty { return [L10n.format("widget_create_schedule")] }
-        if data.semesterStatus != .inRange {
-            return [data.semesterStatus == .beforeStart
-                    ? L10n.format("semester_not_started")
-                    : L10n.format("semester_ended")]
-        }
-        let today = data.days.first!
-        if today.courses.isEmpty { return [L10n.format("no_course")] }
-        return data.days.flatMap { $0.courses }.map { CourseDisplayUtil.displayName($0, useAlias) }
     }
 }
 
