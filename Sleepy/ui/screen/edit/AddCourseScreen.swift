@@ -502,9 +502,13 @@ struct AddCourseScreen: View {
         }
         // issue#23: 新建槽位 / 槽位时间编辑先在编辑页暂存, 课程落库成功后再写回课表 timeJson。
         // 顺序串接保证一次添加多个槽位时编号连续且方向元数据不丢失。
+        // v7.10.16v 撤回: 课程行 + timeJson 写回是一个动作 — beginBatch 让快照
+        // 固定在动作前, 撤回一次整步回退(否则第二写覆盖快照, 只回退一半)。
         if !pendingEdgeInserts.isEmpty || !pendingEdgeEdits.isEmpty {
             let repo2 = ScheduleRepository(AppDatabase.getShared())
             let base = ((try? repo2.getTable(tableId))?.timeJson) ?? TimeTableUtils.DEFAULT_TIME_JSON
+            UndoManager.shared.beginBatch()
+            defer { UndoManager.shared.endBatch() }
             var updated = base
             for insert in pendingEdgeInserts {
                 updated = TimeTableUtils.insertEdgeNode(timeJson: updated, edgeClass: insert.edgeClass,
