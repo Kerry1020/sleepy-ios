@@ -65,3 +65,111 @@ struct WidgetCourseCard: View {
     // issue#26: 展示名走 CourseDisplayUtil — useAlias→trim 别名, 空回退原名
     private var displayName: String { CourseDisplayUtil.displayName(course, useAlias) }
 }
+
+// MARK: - 「+N」溢出胶囊 ← WidgetBitmapRenderers.renderNavCapsule
+
+/// 溢出胶囊 (8c0fcbea 恒画 / ab27230c 结束态「+0」): 高 20dp · 最小宽 30dp ·
+/// 11sp bold · surfaceVariant 底 + onSurfaceVariant 字 · 全圆角。
+/// Android 侧它是底部条里的 ImageView 且**不挂 PendingIntent**(不可点);
+/// iOS 侧 widget 整体只有一个 widgetURL,胶囊本身同样不单独响应点击 → 语义一致。
+struct WidgetMoreCapsule: View {
+    let hidden: Int
+    let scheme: WidgetScheme
+
+    var body: some View {
+        Text(WidgetWindowCore.capsuleText(hidden: hidden))
+            .font(.system(size: 11, weight: .bold))
+            .foregroundColor(scheme.onSurfaceVariant)
+            .frame(minWidth: 30)
+            .frame(height: 20)
+            .padding(.horizontal, 8)
+            .background(scheme.surfaceVariant)
+            .cornerRadius(10)
+            .accessibilityLabel(L10n.format("more_sections", hidden))
+    }
+}
+
+/// 列底「+N」胶囊 ← renderTwoDayRegular / renderWeekListRegular 页脚:
+/// 高 18 / 水平内距 8 / 11sp bold / surfaceVariant 底 / onSurfaceVariant 字 / 全圆角,不可点。
+struct WidgetFooterCapsule: View {
+    /// nil = 该列不画页脚 (WeekList 仅在窗口截断时画)
+    let text: String?
+    let scheme: WidgetScheme
+
+    init(text: String?, scheme: WidgetScheme) {
+        self.text = text
+        self.scheme = scheme
+    }
+
+    var body: some View {
+        if let text = text {
+            Text(text)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundColor(scheme.onSurfaceVariant)
+                .padding(.horizontal, 8)
+                .frame(height: 18)
+                .background(scheme.surfaceVariant)
+                .cornerRadius(9)
+        }
+    }
+}
+
+// MARK: - 渲染行 ← renderTodayRegular / renderTwoDayRegular 的行绘制
+
+/// 一个渲染行 = 一个冲突区域: 无冲突课整宽单卡;冲突课并排分栏(栏间浅细竖线),
+/// 同栏多课纵向堆叠(行高由最高栏决定)。与 ConflictLayoutEngine.weekLaneRows 同口径。
+struct WidgetCourseRowView: View {
+    let row: ConflictLayoutEngine.WeekLaneRow
+    /// 全量课程 (AUTO/CUSTOM 取色按同 groupId 行判)
+    let allCourses: [CourseEntity]
+    let timeJson: String
+    let scheme: WidgetScheme
+    let colorless: Bool
+    var displayMode: String = "node"
+    var useAlias: Bool = false
+    var rowHeight: CGFloat = WidgetRowGeometry.rowH
+    var fontSizeSp: CGFloat = 11
+    var laneFontSizeSp: CGFloat = 10
+    var laneGap: CGFloat = 5
+    var stackGap: CGFloat = WidgetRowGeometry.stackGap
+
+    var body: some View {
+        if row.laneCount <= 1 {
+            card(row.courses[0], fontSize: fontSizeSp)
+                .frame(height: rowHeight)
+        } else {
+            HStack(alignment: .top, spacing: 0) {
+                ForEach(0..<row.laneCount, id: \.self) { lane in
+                    if lane > 0 { separator }
+                    laneView(lane)
+                        .frame(maxWidth: .infinity, alignment: .top)
+                }
+            }
+        }
+    }
+
+    private func laneView(_ lane: Int) -> some View {
+        VStack(spacing: stackGap) {
+            ForEach(row.courses.filter { (row.laneOf[$0.id] ?? 0) == lane }) { course in
+                card(course, fontSize: laneFontSizeSp)
+                    .frame(height: rowHeight)
+            }
+        }
+    }
+
+    /// 栏间浅细竖线 ← sepColor = onSurface RGB @ 30% alpha
+    private var separator: some View {
+        Rectangle()
+            .fill(scheme.onSurface.opacity(0.3))
+            .frame(width: 1)
+            .frame(maxHeight: .infinity)
+            .frame(width: laneGap)
+    }
+
+    private func card(_ course: CourseEntity, fontSize: CGFloat) -> some View {
+        WidgetCourseCard(course: course, timeJson: timeJson, scheme: scheme,
+                         colorless: colorless, fontSizeSp: fontSize, displayMode: displayMode,
+                         groupRows: allCourses.filter { $0.groupId == course.groupId },
+                         useAlias: useAlias)
+    }
+}
