@@ -47,7 +47,13 @@ private struct LayerSortKey: Comparable {
 enum ConflictLayoutEngine {
 
     /// 找出全部冲突簇。输出簇间按 day 升序,簇内课程已按主课判定序排好。
-    static func findClusters(_ courses: [CourseEntity]) -> [ConflictCluster] {
+    ///
+    /// timeJson 非空(推荐,渲染主链路): ownTime 课的真实时间区间(分钟级)参与聚簇 —
+    /// 跨节次空隙反算出的节点范围不再制造假冲突(用户 2026-09-09: 12:30 结束跨午间
+    /// 空隙被吸进 14:00 节 = 报障本体)。节点区间只用于排序/簇内几何, 重叠判定一律
+    /// 按分钟区间。真实时间不重叠的课绝不入簇。
+    /// timeJson 为空(旧调用方兼容): 行为与历史版本完全一致 — 节点区间相交即聚簇。
+    static func findClusters(_ courses: [CourseEntity], timeJson: String? = nil) -> [ConflictCluster] {
         // 按 day 分组 → 簇内按 startNode 升序,线性扫相邻区间合并 → 仅保留 size≥2 的簇
         let byDay = Dictionary(grouping: courses, by: { $0.day }).sorted { $0.key < $1.key }
         return byDay.flatMap { (day, dayCourses) in
@@ -56,10 +62,73 @@ enum ConflictLayoutEngine {
                 if $0.step != $1.step { return $0.step < $1.step }
                 return $0.id < $1.id
             }
-            return mergeOverlapping(sorted)
+            let regions = timeJson != nil
+                ? mergeOverlappingByTime(sorted, timeJson!)
+                : mergeOverlapping(sorted)
+            return regions
                 .filter { $0.count >= 2 }
                 .map { ConflictCluster(day: day, courses: $0.sorted(by: primaryComparator)) }
         }
+    }
+
+    /**
+     * 真实时间区间(分钟级)聚簇 — 线性扫按 startNode 排序的课, 相邻课真实时间
+     * 区间相交则合并为一簇(传递闭包)。区间解析: ownTime 课用自身起止, 常规课用
+     * 节次起止; 任一课无法解析出时间 → 回落节点区间判定(数据脏时宁可保守, 不静默丢簇)。
+     */
+    private static func mergeOverlappingByTime(_ sorted: [CourseEntity], _ timeJson: String) -> [[CourseEntity]] {
+        if sorted.isEmpty { return [] }
+        let intervals = sorted.map { realIntervalOf($0, timeJson) }
+        var clusters: [[CourseEntity]] = [[sorted[0]]]
+        var currentEnd = Double(intervals[0]?.1 ?? (sorted[0].startNode + sorted[0].step - 1))
+        var currentEndIsTime = intervals[0] != nil
+        for i in 1..<sorted.count {
+            let c = sorted[i]
+            let iv = intervals[i]
+            let start: Double, end: Double, isTime: Bool
+            if let iv {
+                start = Double(iv.0); end = Double(iv.1); isTime = true
+            } else {
+                start = Double(c.startNode); end = Double(c.startNode + c.step - 1); isTime = false
+            }
+            // 分钟与节点序不可直接比较: 时间基准 vs 节点基准的相邻比较统一换算到
+            // 各自序列 — 两者都能解析成时间 → 分钟域; 否则节点域。
+            // 用户反馈 2026-09-09: 混合域(一方时间不可解析)严禁拿节点数与秒数直接
+            // 比较 — 节点数(1..12)永远 < 秒数(30000+), 时间域簇会把任何脏 ownTime 课
+            // 粘上来。混合域改为**不成簇**(不相交): 没有可靠证据证明重叠,
+            // 宁可漏报不可误报 — 与 coursesOverlap 的"双双可解析才比时间"原则一致。
+            let overlaps: Bool
+            if currentEndIsTime && iv != nil {
+                overlaps = start < currentEnd
+            } else if !currentEndIsTime && iv == nil {
+                overlaps = start <= currentEnd
+            } else {
+                overlaps = false // 混合域无公共可比域 → 不并簇
+            }
+            if overlaps {
+                clusters[clusters.count - 1].append(c)
+                if end > currentEnd { currentEnd = end; currentEndIsTime = isTime }
+            } else {
+                clusters.append([c])
+                currentEnd = end
+                currentEndIsTime = isTime
+            }
+        }
+        return clusters
+    }
+
+    /**
+     * 课的真实时间区间(秒, 自午夜起) — ownTime 课用自身起止, 常规课用节次起止
+     * (effectiveCourseTime 同一契约)。无法解析 → nil, 调用方回落节点区间。
+     */
+    static func realIntervalOf(_ c: CourseEntity, _ timeJson: String) -> (Int, Int)? {
+        guard let eff = TimeTableUtils.effectiveCourseTime(
+            isIrregularTime: c.isIrregularTime || c.ownTime,
+            startTime: c.startTime, endTime: c.endTime,
+            startNode: c.startNode, step: c.step, timeJson: timeJson) else { return nil }
+        guard let s = TimeTableUtils.hmToSeconds(eff.0),
+              let e = TimeTableUtils.hmToSeconds(eff.1), e > s else { return nil }
+        return (s, e)
     }
 
     /// 主课判定序: step 降 > startNode 升 > id 升。
@@ -302,17 +371,22 @@ enum ConflictLayoutEngine {
      * mergeOverlapping 区域是划分(每课恰属一个区域),行成员 = 区域全体,每课恰渲染一次。
      * 行序: 各行按行首课 startNode 升序穿插。
      */
-    static func weekLaneRows(_ courses: [CourseEntity]) -> [WeekLaneRow] {
+    static func weekLaneRows(_ courses: [CourseEntity], timeJson: String? = nil) -> [WeekLaneRow] {
         if courses.isEmpty { return [] }
         var rows: [WeekLaneRow] = []
         let byDay = Dictionary(grouping: courses, by: { $0.day })
         for (_, dayCourses) in byDay {
-            let sorted = dayCourses.sorted {
+            // 时间域聚簇前先把 ownTime 课反算到节次网格(排序/行首定位用), 与渲染层同源
+            let prepared = timeJson == nil ? dayCourses : dayCourses.map { $0.normalizeNode(timeJson: timeJson!) }
+            let sorted = prepared.sorted {
                 if $0.startNode != $1.startNode { return $0.startNode < $1.startNode }
                 if $0.step != $1.step { return $0.step < $1.step }
                 return $0.id < $1.id
             }
-            for region in mergeOverlapping(sorted) {
+            let regions = timeJson == nil
+                ? mergeOverlapping(sorted)
+                : mergeOverlappingByTime(sorted, timeJson!)
+            for region in regions {
                 if region.count < 2 {
                     for c in region { rows.append(WeekLaneRow(courses: [c], laneOf: [:], laneCount: 1)) }
                     continue
@@ -341,15 +415,20 @@ enum ConflictLayoutEngine {
     }
 
     /// 网格小组件单日分栏(纯函数) — WeekGrid 渲染器对每天的课调一次。
-    static func gridDayLanes(_ courses: [CourseEntity]) -> [GridLaneRect] {
+    /// timeJson 非空 → ownTime 课按真实分钟聚簇(与 App 主视图同一时间域契约)。
+    static func gridDayLanes(_ courses: [CourseEntity], timeJson: String? = nil) -> [GridLaneRect] {
         if courses.isEmpty { return [] }
         var out: [GridLaneRect] = []
-        let sorted = courses.sorted {
+        let prepared = timeJson == nil ? courses : courses.map { $0.normalizeNode(timeJson: timeJson!) }
+        let sorted = prepared.sorted {
             if $0.startNode != $1.startNode { return $0.startNode < $1.startNode }
             if $0.step != $1.step { return $0.step < $1.step }
             return $0.id < $1.id
         }
-        for region in mergeOverlapping(sorted) {
+        let regions = timeJson == nil
+            ? mergeOverlapping(sorted)
+            : mergeOverlappingByTime(sorted, timeJson!)
+        for region in regions {
             if region.count < 2 {
                 for c in region { out.append(GridLaneRect(course: c, laneStartFraction: 0, laneWidthFraction: 1)) }
                 continue
@@ -464,12 +543,13 @@ enum ConflictLayoutEngine {
      */
     static func pruneConflictDefaultTop(
         _ stored: [String: Int64],
-        _ currentCourses: [CourseEntity]
+        _ currentCourses: [CourseEntity],
+        timeJson: String? = nil
     ) -> [String: Int64] {
         if stored.isEmpty || currentCourses.isEmpty { return [:] }
         let liveIds = Set(currentCourses.map { $0.id })
         var liveKeys = Set<String>()
-        for c in findClusters(currentCourses) { liveKeys.insert(conflictClusterKey(c)) }
+        for c in findClusters(currentCourses, timeJson: timeJson) { liveKeys.insert(conflictClusterKey(c)) }
         return stored.filter { liveKeys.contains($0.key) && liveIds.contains($0.value) }
     }
 
@@ -649,6 +729,67 @@ enum ConflictLayoutEngine {
     ) -> ConflictRect {
         let ownH = rowH * Double(max(ownRows, 1)) - gapH
         let y = rowH * Double(startNode - minStart)
+        switch form {
+        case .stack, .rail:
+            let side = min(markSquareDp + markHitPadDp, colW, ownH)
+            return ConflictRect(x: colW - side, y: y + ownH - side, width: side, height: side)
+        default:
+            return ConflictRect(x: 0, y: 0, width: 0, height: 0)
+        }
+    }
+
+    // =====================================================================================
+    // issue#23 §5 分数行几何 — ownTime 课按真实分钟比例落位(与整格版同规则,仅坐标换域)
+    // =====================================================================================
+
+    /**
+     * 簇内单卡放置矩形(分数行坐标版,v6)。与 conflictCardRect 同规则, 差异:
+     * - 行坐标是 Double(可含小数, ownTime 课按分钟比例);
+     * - 行高经 spanDpOf 加权(占位节次行按分钟占比), nil = 等高回落 rowH*行数。
+     */
+    static func conflictCardRectFrac(
+        startRowFrac: Double,
+        ownRowsFrac: Double,
+        isTop: Bool,
+        form: ConflictVariant,
+        colW: Double,
+        rowH: Double,
+        gapH: Double,
+        minStartRow: Double,
+        topInset: Double = 7,
+        spanDpOf: ((Double, Double) -> Double)? = nil
+    ) -> ConflictRect {
+        let ownSpanDp = max(spanDpOf?(startRowFrac, startRowFrac + ownRowsFrac)
+                            ?? rowH * ownRowsFrac, rowH * 0.3)
+        let ownH = ownSpanDp - gapH
+        let y = spanDpOf?(minStartRow, startRowFrac) ?? rowH * (startRowFrac - minStartRow)
+        if isTop && form == .stack {
+            return ConflictRect(x: 0, y: y, width: colW - topInset, height: ownH - topInset)
+        }
+        if isTop && form == .rail {
+            return ConflictRect(x: 0, y: y, width: colW - topInset, height: ownH)
+        }
+        if !isTop && form == .stack {
+            let h = ownH - topInset
+            return ConflictRect(x: topInset, y: y + ownH - h, width: colW - topInset, height: h)
+        }
+        return ConflictRect(x: 0, y: y, width: colW, height: ownH)
+    }
+
+    /// hidden 课命中区矩形(分数行坐标版,v6) — 与 conflictMarkRect 同规则, 坐标换域。
+    static func conflictMarkRectFrac(
+        startRowFrac: Double,
+        ownRowsFrac: Double,
+        form: ConflictVariant,
+        colW: Double,
+        rowH: Double,
+        gapH: Double,
+        minStartRow: Double,
+        spanDpOf: ((Double, Double) -> Double)? = nil
+    ) -> ConflictRect {
+        let ownH = max(spanDpOf?(startRowFrac, startRowFrac + ownRowsFrac)
+                       ?? rowH * ownRowsFrac, rowH * 0.3) - gapH
+        let y = spanDpOf?(minStartRow, startRowFrac) ?? rowH * (startRowFrac - minStartRow)
         switch form {
         case .stack, .rail:
             let side = min(markSquareDp + markHitPadDp, colW, ownH)
