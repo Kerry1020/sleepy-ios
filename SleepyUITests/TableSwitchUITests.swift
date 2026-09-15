@@ -82,13 +82,27 @@ final class TableSwitchUITests: XCTestCase {
         XCTAssertTrue(app.buttons["mine_all_tables"].waitForExistence(timeout: 5))
     }
 
-    /// 行点击(切换非当前表 → selectTable + onBack → Mine)。
-    private func tapTableRow(_ name: String) {
+    /// 行点击切表(d3200bb ← Android ce7f7924: 选表后留在本页, 选中态就地高亮)。
+    /// 断言 "Current · Week" 副标题出现在该表名同一行(y 中心差 < 40 = 就地变当前)。
+    private func selectTableRowInPlace(_ name: String) {
         let row = app.staticTexts[name].firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 4), "行 \(name) 不存在")
         row.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["topbar_back"].firstMatch
+                        .waitForExistence(timeout: 5),
+                      "选表后应仍留在 All Schedules 页(不再强制弹出)")
+        let cur = app.staticTexts.matching(
+            NSPredicate(format: "label BEGINSWITH 'Current · Week'"))
+        let y = row.frame.midY
+        XCTAssertTrue(cur.allElementsBoundByIndex.contains { abs($0.frame.midY - y) < 40 },
+                      "\"\(name)\" 行应就地变为当前表")
+    }
+
+    /// All Schedules 顶栏返回 → Mine。
+    private func backToMine() {
+        app.descendants(matching: .any)["topbar_back"].firstMatch.tap()
         XCTAssertTrue(app.buttons["mine_all_tables"].waitForExistence(timeout: 5),
-                      "切表后应回 Mine 页")
+                      "返回后应在 Mine 页")
     }
 
     // MARK: 1. 新建表不保存 = discard(pendingNewTableId 语义, Android 同构)
@@ -119,20 +133,19 @@ final class TableSwitchUITests: XCTestCase {
         // 保存后重进: 两行, 种子表仍当前(commitSelection:false 不切选中)
         assertList(["我的课表", "B表"], current: "我的课表")
 
-        // 切换到 B表: 行点击 → 回 Mine
+        // 切换到 B表: 行点击 → 就地高亮(d3200bb 起不再弹回 Mine), 选中态迁移到 B表
         openAllTables()
-        tapTableRow("B表")
+        selectTableRowInPlace("B表")
 
-        // 选中态迁移: B表成当前(唯一 Current 副标题 + 种子表变 Start:)
-        assertList(["我的课表", "B表"], current: "B表")
-
-        // 数据联动: B表 无课 → Schedule 页不再显示种子课程
+        // 数据联动: B表 无课 → 离开 AllTables 回 Mine → Schedule 页不再显示种子课程
+        backToMine()
         app.descendants(matching: .any)["pill_schedule"].tap()
         XCTAssertFalse(app.staticTexts["高等数学"].firstMatch.waitForExistence(timeout: 3),
                        "切到空表 B表 后 Schedule 不应显示种子课程")
-        // 切回种子表, 课程恢复(切表 onBack → Mine, 再手动回 Schedule)
+        // 切回种子表, 课程恢复(就地选表 → 回 Mine → 手动回 Schedule)
         openAllTables()
-        tapTableRow("我的课表")
+        selectTableRowInPlace("我的课表")
+        backToMine()
         app.descendants(matching: .any)["pill_schedule"].tap()
         XCTAssertTrue(app.staticTexts["高等数学"].firstMatch.waitForExistence(timeout: 4),
                       "切回种子表后课程应恢复")
