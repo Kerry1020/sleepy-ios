@@ -133,6 +133,8 @@ extension CourseEntity {
     /// 渲染前归一化：ownTime=true 的课根据时间表反算等效 startNode/step，
     /// 使其在网格中正确定位。ownTime=false 的课原样返回。
     func normalizeNode(timeJson: String) -> CourseEntity {
+        // issue#23: 边缘槽位卡的网格位置 = 槽位编号本身, 禁止按时间重映射
+        if isIrregularNode { return self }
         if !ownTime || startTime.isEmpty || endTime.isEmpty { return self }
         guard let mapped = TimeTableUtils.timeToNode(startTime, endTime, timeJson) else { return self }
         var copy = self
