@@ -521,6 +521,12 @@ private struct PresentOverlay: ViewModifier {
             }
         }
         .onChange(of: activeScreen) { syncPresentation($0) }
+        .onAppear {
+            // 语言切换 → .id(languageReload) 整树重建 → 本修饰器 @State 复位 nil,
+            // 但 VM.overlayScreen 仍持页 → 不恢复会把用户弹回根页
+            // (Android Activity.recreate 保留当前页, 此处对齐)
+            if shownScreen == nil, let active = activeScreen { shownScreen = active }
+        }
     }
 
     private func syncPresentation(_ active: AppRootViewModel.OverlayScreen?) {
