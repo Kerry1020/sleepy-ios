@@ -334,7 +334,7 @@ struct AppRoot: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(colors.background.ignoresSafeArea())
+        .background(TabsCanvasBackground().ignoresSafeArea())
         .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 
@@ -471,6 +471,18 @@ struct AppRoot: View {
 //   在 mainContent 里链式挂载。每个 modifier 子树类型推导独立预算, 避免
 //   "unable to type-check this expression in reasonable time"。
 //   闭包走构造注入, AppRoot 显式传 root 派生值。
+
+/// tabs 画布底色。★ 必须是独立子 View:AppRoot.colors 读的是
+/// SleepyThemeProvider 之上的环境值(= WakeUpColorsKey.defaultValue = lightScheme),
+/// 直接 `.background(colors.background)` 会让暗黑模式透出 #FEF7FF 白底
+/// (切换控件行留白/卡片缝隙处可见)。子 View 在 provider 子树内解析 env → 主题正确。
+private struct TabsCanvasBackground: View {
+    @Environment(\.localWakeUpColors) private var colors
+
+    var body: some View {
+        colors.background
+    }
+}
 
 private struct PresentOverlay: ViewModifier {
     let isDark: Bool
