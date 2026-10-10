@@ -207,11 +207,55 @@ enum UpdateCheckPrefs {
 // 失败静默(cache 保持 nil, 下次可再查); 关开关清缓存→横幅/高亮立即消失并取消在途请求。
 // Android 在 MainActivity.onCreate 触发, iOS 无法改 App 入口, 由 AboutScreen.task 触发。
 
+/// 纯版本级关闭规则, 各更新提醒界面共用 ← util/UpdateNoticeCore.kt (v1.0.60 对齐)
+enum UpdateNoticeCore {
+    static func isVisible(_ update: UpdateInfo?, _ dismissedVersion: String?) -> Bool {
+        update?.isUpdateAvailable == true &&
+        !(update?.version.isBlank ?? true) &&
+        update?.version != dismissedVersion
+    }
+}
+
 final class UpdateNotifier: ObservableObject {
     static let shared = UpdateNotifier()
 
     @Published private(set) var updateAvailable: UpdateInfo?
+    /// 所有更新提醒 UI 共用的可见状态; dismiss 按版本记忆 ← noticeVisible (v1.0.60 对齐)
+    @Published private(set) var noticeVisible: Bool = false
     private var inFlight: Task<Void, Never>?
+
+    private static let dismissedKey = "update_notice_dismissed_version"
+
+    func loadDismissedVersion() {
+        objectWillChange.send()
+        refreshNoticeVisible()
+    }
+
+    func dismissedVersion() -> String {
+        UserDefaults.standard.string(forKey: Self.dismissedKey) ?? ""
+    }
+
+    /// dismiss 按版本持久化; 新版本自然重新显示 ← dismiss(version)
+    func dismiss(version: String) {
+        if version.isBlank { return }
+        UserDefaults.standard.set(version, forKey: Self.dismissedKey)
+        refreshNoticeVisible()
+    }
+
+    /// Debug-only visual fixture; production callers must use maybeCheckOnStart ← showMockUpdate
+    func showMockUpdate() {
+        self.updateAvailable = UpdateInfo(
+            version: "1.0.58",
+            changelog: "## Mock update\n\n- 新版本提醒预览\n- 课程表显示优化",
+            downloadUrl: "https://example.invalid/mock.apk",
+            isUpdateAvailable: true
+        )
+        refreshNoticeVisible()
+    }
+
+    private func refreshNoticeVisible() {
+        noticeVisible = UpdateNoticeCore.isVisible(updateAvailable, dismissedVersion())
+    }
 
     func maybeCheckOnStart() {
         guard UpdateCheckPrefs.isEnabled else { return }
@@ -222,6 +266,7 @@ final class UpdateNotifier: ObservableObject {
                 await MainActor.run {
                     self.inFlight = nil
                     if info.isUpdateAvailable { self.updateAvailable = info }
+                    self.refreshNoticeVisible()
                 }
             } catch {
                 // 失败静默 ← runCatching { }: 用户没要求弹错
@@ -235,5 +280,6 @@ final class UpdateNotifier: ObservableObject {
         inFlight?.cancel()
         inFlight = nil
         updateAvailable = nil
+        noticeVisible = false
     }
 }
