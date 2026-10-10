@@ -155,8 +155,21 @@ final class CourseDaoChainTests: XCTestCase {
                         "isIrregularNode","isIrregularTime","ownTime",
                         "startTime","endTime","alias","credit","level"], courseCols)
         let tableCols = try Set(db.dbQueue.read { try Row.fetchAll($0, sql: "PRAGMA table_info(time_tables)").map { (r: Row) -> String in r["name"] } })
+        // Android schema v10 全列集: v1 基础 10 列 + periodTableId(v8) + preBindSnapshotJson(v9)
         XCTAssertEqual(["id","name","startDate","maxWeek","nodesPerDay","timeJson","color",
-                        "isDefault","smartConfigJson","createdAt"], tableCols)
+                        "isDefault","smartConfigJson","createdAt",
+                        "periodTableId","preBindSnapshotJson"], tableCols)
+        // v10 新表: period_tables / import_drafts / calendar_import_records 存在且列集对齐 Room
+        let tables = try Set(db.dbQueue.read { try Row.fetchAll($0, sql: "SELECT name FROM sqlite_master WHERE type='table'").map { (r: Row) -> String in r["name"] } })
+        XCTAssertTrue(tables.contains("period_tables"))
+        XCTAssertTrue(tables.contains("import_drafts"))
+        XCTAssertTrue(tables.contains("calendar_import_records"))
+        let periodCols = try Set(db.dbQueue.read { try Row.fetchAll($0, sql: "PRAGMA table_info(period_tables)").map { (r: Row) -> String in r["name"] } })
+        XCTAssertEqual(["id","name","nodesPerDay","timeJson","smartConfigJson","createdAt","updatedAt"], periodCols)
+        let draftCols = try Set(db.dbQueue.read { try Row.fetchAll($0, sql: "PRAGMA table_info(import_drafts)").map { (r: Row) -> String in r["name"] } })
+        XCTAssertEqual(["id","sourceType","sourceUrl","payloadJson","createdAt","updatedAt"], draftCols)
+        let cirCols = try Set(db.dbQueue.read { try Row.fetchAll($0, sql: "PRAGMA table_info(calendar_import_records)").map { (r: Row) -> String in r["name"] } })
+        XCTAssertEqual(["id","tableId","courseId","eventDate","calendarId","eventId","batchId","fingerprint","alarmRequested","createdAt"], cirCols)
         // FK 声明存在且 ON DELETE CASCADE (PRAGMA 行 = Row,列: id/seq/table/from/to/on_update/on_delete)
         let fk = try db.dbQueue.read { try Row.fetchAll($0, sql: "PRAGMA foreign_key_list(courses)") }
         let fkInfo = fk.map { (r: Row) -> (String, String) in (r["table"], r["on_delete"]) }

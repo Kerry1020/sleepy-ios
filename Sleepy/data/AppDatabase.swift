@@ -1,9 +1,11 @@
-// AppDatabase.swift — ← data/AppDatabase.kt (GPL-3.0)
-// Room @Database(version=4) → GRDB。建表 SQL 与 Room schema 逐列对齐
+// AppDatabase.swift — ← data/AppDatabase.kt + Migrations.kt (GPL-3.0)
+// Room @Database(version=10) → GRDB。建表 SQL 与 Room schema 逐列对齐
 // (列名/类型亲和/索引/FK CASCADE — Room 注解生成语义手工落 SQL)。
 // fallbackToDestructiveMigration → migrator 语义等价(降级/未知版本重建);
 // v4 = 1.0.52 issue#22 colorMode; v5 = issue#23 isIrregularNode/isIrregularTime;
-// v6 = issue#26 alias (与 Android Migrations.kt 一一对应)。
+// v6 = issue#26 alias; v7 = issue#39 import_drafts; v8 = issue#40 period_tables
+//      + time_tables.periodTableId; v9 = issue#40 C2 preBindSnapshotJson;
+// v10 = Sleepy 托管系统日历导入记录 (与 Android Migrations.kt 一一对应)。
 
 import Foundation
 import GRDB
@@ -31,6 +33,9 @@ final class AppDatabase {
     let dbQueue: DatabaseQueue
     let courseDao: CourseDao
     let timeTableDao: TimeTableDao
+    let periodTableDao: PeriodTableDao
+    let importDraftDao: ImportDraftDao
+    let calendarImportRecordDao: CalendarImportRecordDao
 
     /// 默认走共享目录(AppGroupResolver: AltStore 侧载共享给 widget;Xcode 直跑回退沙箱)
     convenience init() {
@@ -50,6 +55,9 @@ final class AppDatabase {
         self.dbQueue = queue
         self.courseDao = CourseDao(db: queue)
         self.timeTableDao = TimeTableDao(db: queue)
+        self.periodTableDao = PeriodTableDao(db: queue)
+        self.importDraftDao = ImportDraftDao(db: queue)
+        self.calendarImportRecordDao = CalendarImportRecordDao(db: queue)
         try? migrator.migrate(queue)
     }
 
@@ -119,6 +127,81 @@ final class AppDatabase {
         // ← MIGRATION_5_6 (issue#26 课程别名): alias 列, 旧行全空 → 处处显示原名
         m.registerMigration("v6.addAlias") { db in
             try db.execute(sql: "ALTER TABLE courses ADD COLUMN alias TEXT NOT NULL DEFAULT ''")
+        }
+
+        // ← MIGRATION_6_7 (issue#39): import_drafts 导入草稿快照表。
+        //   草稿由显式 id 标识, payloadJson 保持导入预览数据的演进空间。
+        m.registerMigration("v7.createImportDrafts") { db in
+            try db.create(table: "import_drafts") { t in
+                t.column("id", .text).notNull().primaryKey()
+                t.column("sourceType", .text).notNull().defaults(to: "")
+                t.column("sourceUrl", .text).notNull().defaults(to: "")
+                t.column("payloadJson", .text).notNull()
+                t.column("createdAt", .integer).notNull()
+                t.column("updatedAt", .integer).notNull()
+            }
+        }
+
+        // ← MIGRATION_7_8 (issue#40): 独立时间节次表 + time_tables.periodTableId。
+        //   迁移: 每张旧课表生成一张独立时间节次表(继承 timeJson/smartConfigJson/nodesPerDay),
+        //   periodTableId 指过去 — 旧用户课表不意外共享同一份作息;
+        //   旧 timeJson/smartConfigJson/nodesPerDay 保留为兼容列(异常回退)。
+        m.registerMigration("v8.createPeriodTables") { db in
+            try db.create(table: "period_tables") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("name", .text).notNull()
+                t.column("nodesPerDay", .integer).notNull()
+                t.column("timeJson", .text).notNull()
+                t.column("smartConfigJson", .text).notNull()
+                t.column("createdAt", .integer).notNull()
+                t.column("updatedAt", .integer).notNull()
+            }
+            try db.create(indexOn: "period_tables", columns: ["createdAt"])
+            try db.execute(sql: "ALTER TABLE time_tables ADD COLUMN periodTableId INTEGER")
+
+            // 保留旧课表 id → 回填确定, UPDATE 可逐行核对
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT id, name, nodesPerDay, timeJson, smartConfigJson, createdAt FROM time_tables ORDER BY id
+                """)
+            for row in rows {
+                let id: Int64 = row["id"]
+                let name: String = row["name"]
+                let nodesPerDay: Int = row["nodesPerDay"]
+                let timeJson: String = row["timeJson"]
+                let smartConfigJson: String = row["smartConfigJson"]
+                let createdAt: Int64 = row["createdAt"]
+                try db.execute(sql: """
+                    INSERT INTO period_tables (id, name, nodesPerDay, timeJson, smartConfigJson, createdAt, updatedAt)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, arguments: [id, name, nodesPerDay, timeJson, smartConfigJson, createdAt, createdAt])
+                try db.execute(sql: "UPDATE time_tables SET periodTableId = ? WHERE id = ?", arguments: [id, id])
+            }
+        }
+
+        // ← MIGRATION_8_9 (issue#40 C2 换绑前快照, 2026-09-20):
+        //   加 time_tables.preBindSnapshotJson; 纯加列, 旧行默认空串 = 无快照(行为不变)
+        m.registerMigration("v9.addPreBindSnapshot") { db in
+            try db.execute(sql: "ALTER TABLE time_tables ADD COLUMN preBindSnapshotJson TEXT NOT NULL DEFAULT ''")
+        }
+
+        // ← MIGRATION_9_10: Sleepy 托管的系统日历事件登记表(同步去重/清理)
+        m.registerMigration("v10.createCalendarImportRecords") { db in
+            try db.create(table: "calendar_import_records") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("tableId", .integer).notNull()
+                t.column("courseId", .integer).notNull()
+                t.column("eventDate", .text).notNull()
+                t.column("calendarId", .text).notNull()
+                t.column("eventId", .text).notNull()
+                t.column("batchId", .text).notNull()
+                t.column("fingerprint", .text).notNull()
+                t.column("alarmRequested", .boolean).notNull()
+                t.column("createdAt", .integer).notNull()
+            }
+            try db.create(indexOn: "calendar_import_records",
+                          columns: ["tableId", "courseId", "eventDate", "calendarId"], options: [.unique])
+            try db.create(indexOn: "calendar_import_records", columns: ["tableId"])
+            try db.create(indexOn: "calendar_import_records", columns: ["batchId"])
         }
 
         return m
