@@ -22,6 +22,14 @@ enum L10n {
                locale: LocaleHelper.locale(for: AppPrefs.shared.getLanguage()), arguments: args)
     }
 
+    /// 复数格式(Android plurals 等价) — .stringsdict 走 localizedStringWithFormat 展开;
+    /// 只有普通 .strings 键时退化为 format(城市在前, 数量在后)。
+    static func plural(_ key: String, _ count: Int, _ args: CVarArg...) -> String {
+        String.localizedStringWithFormat(
+            NSLocalizedString(key, bundle: LocaleHelper.currentBundle(), comment: ""),
+            args[0], count)
+    }
+
     /// day_names 数组键(移植自 <string-array name="day_names">)
     static func dayName(_ index: Int) -> String {
         t("array_day_names_\(index)")
