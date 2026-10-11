@@ -21,9 +21,36 @@ final class JwImportViewModel: ObservableObject {
 
     @Published private(set) var schools: [JwSchoolInfo] = []
     @Published private(set) var importState: ImportState = .idle
+    // ← v1.0.60 _schoolLocation StateFlow: 推荐卡定位状态机(8 态)
+    @Published private(set) var schoolLocation: SchoolLocationState = .idle
+
+    // internal: SchoolSelectScreen 的 launcher 等价接线需调 requestPermission(completion:)
+    lazy var locator = SchoolCityLocator()
+    private var locationJob: Task<Void, Never>? = nil
 
     init() {
         loadSchools()
+    }
+
+    /// ← locateSchoolCity(): 取消旧任务 → Locating → 启动定位
+    func locateSchoolCity() {
+        locationJob?.cancel()
+        schoolLocation = .locating
+        locationJob = Task { [weak self] in
+            guard let self else { return }
+            let result = await self.locator.locate()
+            if Task.isCancelled { return }
+            self.schoolLocation = result
+        }
+    }
+
+    /// ← cancelSchoolLocation(): 取消任务; 仍在定位则回 Idle
+    func cancelSchoolLocation() {
+        locationJob?.cancel()
+        locationJob = nil
+        if case .locating = schoolLocation {
+            schoolLocation = .idle
+        }
     }
 
     private func loadSchools() {
@@ -34,7 +61,17 @@ final class JwImportViewModel: ObservableObject {
                                   userInfo: [NSLocalizedDescriptionKey: "schools.json missing"])
                 }
                 let text = try String(contentsOf: url, encoding: .utf8)
-                let list = Self.parseSchoolsJson(text)
+                // v1.0.60: 城市元数据与导入目录分离 — 解析失败绝不能阻止加载学校列表。
+                var cityIndex: [String: [String]] = [:]
+                if let cityUrl = Bundle.main.url(forResource: "school_cities", withExtension: "json"),
+                   let cityText = try? String(contentsOf: cityUrl, encoding: .utf8) {
+                    cityIndex = SchoolCityIndex.parse(cityText)
+                }
+                let list = Self.parseSchoolsJson(text).map { info -> JwSchoolInfo in
+                    var v = info
+                    v.cities = cityIndex[info.name] ?? []
+                    return v
+                }
                 DispatchQueue.main.async {
                     self?.schools = list
                 }
