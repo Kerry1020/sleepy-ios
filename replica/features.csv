@@ -1,0 +1,14 @@
+feature,area,priority,original,clone,notes
+按城市推荐入口定位按钮,ui,must,v1.0.60 选校工具条定位图标,yes,SchoolSelectScreen.swift; 点击即 locateSchoolCity 与 Android 一致
+运行时权限请求,platform,must,launcher launch ACCESS_FINE_LOCATION,yes,requestPermission(completion:) + 授权变更一次性上报 onDisappear 清滞留回调
+权限拒绝分支,platform,must,openPermissionSettings,yes,iOS 开 app 设置页(平台偏差1) 不碰 resumeLocationAfterSettings
+定位服务关闭分支,platform,must,retryLocation 开系统定位页,yes,平台偏差1: iOS 无公开API → app设置页 + resumeLocationAfterSettings=true 回来自动续定位
+单次前台定位,data/jw,must,SchoolCityLocator.kt 12s超时,yes,SchoolCityLocator.swift TimeoutGate 三方竞争单resume
+fix质量策略,data/jw,must,SchoolLocationPolicy.kt,yes,usable/forCityLookup/8向采样逐行对齐
+离线城市边界查找,data/jw,must,OfflineSchoolCityIndex.kt SCB1,yes,SCB1解析+ray-casting+洞环; iOS自行gunzip(AAPT不解); 修2类编译bug(harness抓出)
+城市元数据归一,data/jw,must,SchoolCityIndex.kt,yes,parse过滤空白 normalizeCity去市尾 与生产查询路径一致
+同城学校推荐卡,ui,must,选校页卡片 去重+不支持靠后+sortKeyFull排序,yes,复用共享SchoolRow 与Android卡内行一致
+VM定位状态机,data,must,JwImportViewModel schoolLocation 8态,yes,@Published + locateSchoolCity/cancelSchoolCity Task包装
+scenePhase续定位,ui,must,ON_RESUME/onLocationSettingsResult,yes,inactive→cancel active&&flag→clear+locate 语义对齐
+城市资产,resources,must,school_city_boundaries.bin.gz + school_cities.json,yes,Sleepy/resources/SchoolCity/ 与无subdirectory查找兼容(project.yml已核)
+定位文案本地化,resources,should,定位相关strings 5语言,yes,5×Localizable.strings + stringsdict复数
