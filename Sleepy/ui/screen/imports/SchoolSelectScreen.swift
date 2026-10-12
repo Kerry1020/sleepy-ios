@@ -4,6 +4,8 @@
 // + 首字母分组(sortKeyFull 拼音排序) + 右侧字母索引栏(点击/滑动跳转)。
 
 import SwiftUI
+import CoreLocation
+import UIKit
 
 // ← looksLikeUrl
 func looksLikeUrl(_ s: String) -> Bool {
@@ -56,12 +58,16 @@ func groupByLetter(_ schools: [JwSchoolInfo]) -> [SchoolSection] {
 
 struct SchoolSelectScreen: View {
     @Environment(\.localWakeUpColors) private var colors
+    @Environment(\.scenePhase) private var scenePhase
     let onSchoolSelected: (JwSchoolInfo) -> Void
     let onDismiss: () -> Void
 
     @StateObject private var viewModel = JwImportViewModel()
     @State private var query = ""
     @State private var selectedLetter: String? = nil
+    // ← resumeLocationAfterSettings: 仅当「设置」按钮打开过系统设置, 返回时才续定位
+    @State private var resumeLocationAfterSettings = false
+    @State private var expandedCity = ""   // ← rememberSaveable(city) expanded 键控
 
     private var filtered: [JwSchoolInfo] {
         let schools = viewModel.schools
@@ -82,6 +88,46 @@ struct SchoolSelectScreen: View {
 
     private var sections: [SchoolSection] { groupByLetter(filtered) }
     private var showIndexBar: Bool { query.trimmingCharacters(in: .whitespaces).isEmpty && sections.count > 1 }
+    private var showRecommendations: Bool { query.trimmingCharacters(in: .whitespaces).isEmpty }
+    private var recommendedSchools: [JwSchoolInfo] {
+        guard case .ready(let city) = viewModel.schoolLocation else { return [] }
+        return SchoolCityIndex.schoolsInCity(viewModel.schools, city: city)
+    }
+    private var hasLocationPermission: Bool {
+        CLLocationManager.authorizationStatus() == .authorizedWhenInUse
+            || CLLocationManager.authorizationStatus() == .authorizedAlways
+    }
+    private var openPermissionSettings: () -> Void {
+        {
+            // ← Android openPermissionSettings 不碰 resume 标志(仅 locationDisabled 分支设)
+            if let url = URL(string: UIApplication.openSettingsURLString) {
+                UIApplication.shared.open(url)
+            }
+        }
+    }
+    private var retryLocation: () -> Void {
+        {
+            // ← Android retryLocation: LocationDisabled → 开系统设置 + resume 标志;
+            //   其余 → requestLocation(): 有权限直接定位, 无权限走授权结果回调定位。
+            if CLLocationManager.locationServicesEnabled() {
+                if hasLocationPermission {
+                    viewModel.locateSchoolCity()
+                } else {
+                    // ← launcher.launch 等价: 授权回调(granted)里直接 locateSchoolCity,
+                    //   不设 resume 标志 — 授权框不离开本 app, 无需「返回续定位」
+                    viewModel.locator.requestPermission { granted in
+                        if granted { viewModel.locateSchoolCity() }
+                    }
+                }
+            } else {
+                resumeLocationAfterSettings = true
+                // iOS 无公开 API 打开「定位服务」总开关页; app 设置页是最近可达点
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -145,6 +191,18 @@ struct SchoolSelectScreen: View {
                     ScrollViewReader { proxy in
                         ScrollView {
                             LazyVStack(alignment: .leading, spacing: 2) {
+                                if showRecommendations {
+                                    PossibleSchoolsCard(
+                                        state: viewModel.schoolLocation,
+                                        schools: recommendedSchools,
+                                        isLoadingSchools: viewModel.schools.isEmpty,
+                                        onLocate: retryLocation,
+                                        onPermissionSettings: openPermissionSettings,
+                                        onSchoolSelected: onSchoolSelected,
+                                        expanded: $expandedCity
+                                    )
+                                    .padding(.vertical, 8)
+                                }
                                 ForEach(sections, id: \.letter) { section in
                                     SchoolSectionHeader(letter: section.letter)
                                         .id("header_\(section.letter)")
@@ -179,6 +237,143 @@ struct SchoolSelectScreen: View {
             }
         }
         .background(colors.background)
+        // ← Android DisposableEffect: ON_STOP 取消; ON_RESUME 且来自设置页 → 续定位
+        .onChange(of: scenePhase) { phase in
+            if phase != .active {
+                viewModel.cancelSchoolLocation()
+            } else if resumeLocationAfterSettings {
+                resumeLocationAfterSettings = false
+                viewModel.locateSchoolCity()
+            }
+        }
+        .onDisappear {
+            viewModel.cancelSchoolLocation()
+            // 清掉未完成的授权回调(引用 viewModel, 滞留会挡 VM 释放)
+            viewModel.locator.requestPermission(completion: nil)
+        }
+    }
+}
+
+// ← PossibleSchoolsCard(Android 434-530): 同城推荐单卡 — 标题/8 态副标题/定位按钮/
+// Ready 空表→loading|no_matches/有表→city_hint+行(expanded?全部:take 5)+分隔线/
+// 底部 FlowRow: Ready&&>5 展开/收起 + 恒显权限设置。行走 SchoolRow 原点击路径。
+private struct PossibleSchoolsCard: View {
+    @Environment(\.localWakeUpColors) private var colors
+    let state: SchoolLocationState
+    let schools: [JwSchoolInfo]
+    let isLoadingSchools: Bool
+    let onLocate: () -> Void
+    let onPermissionSettings: () -> Void
+    let onSchoolSelected: (JwSchoolInfo) -> Void
+    @Binding var expanded: String
+
+    // expanded 键控城市(rememberSaveable(city) 语义): 城市变了就回到收起态
+    private var isExpanded: Bool { expanded == cityKey }
+    private var cityKey: String {
+        if case .ready(let city) = state { return city }
+        return ""
+    }
+
+    private var subtitle: String {
+        switch state {
+        case .ready(let city):
+            let count = schools.count
+            return L10n.plural("school_location_city", count, city, count)
+        case .locating: return L10n.t("school_location_loading")
+        case .permissionDenied: return L10n.t("school_location_denied")
+        case .accuracyInsufficient: return L10n.t("school_location_accuracy_insufficient")
+        case .locationDisabled: return L10n.t("school_location_disabled")
+        case .positionUnavailable: return L10n.t("school_location_no_fix")
+        case .unavailable: return L10n.t("school_location_unavailable")
+        case .idle: return L10n.t("school_location_hint")
+        }
+    }
+
+    private var actionLabel: String {
+        switch state {
+        case .idle: return L10n.t("school_location_locate")
+        case .permissionDenied: return L10n.t("school_location_enable")
+        case .locationDisabled: return L10n.t("school_location_settings")
+        default: return L10n.t("school_location_retry")
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L10n.t("possible_schools"))
+                        .font(.system(size: 16, weight: .medium))   // ← titleMedium 16sp
+                        .foregroundColor(colors.primary)
+                    Text(subtitle)
+                        .font(.system(size: 12))                    // ← bodySmall 12sp
+                        .foregroundColor(colors.onSurfaceVariant)
+                }
+                Spacer()
+                if state == .locating {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .scaleEffect(0.7)                           // ← 20dp 圈
+                        .padding(8)
+                } else {
+                    Button(action: onLocate) {
+                        Text(actionLabel)
+                    }
+                    .buttonStyle(SleepyButtonStyle())
+                }
+            }
+
+            if case .ready = state {
+                if schools.isEmpty {
+                    Text(isLoadingSchools ? L10n.t("loading") : L10n.t("school_location_no_matches"))
+                        .font(.system(size: 12))
+                        .padding(.top, 8)
+                } else {
+                    Text(L10n.t("school_location_city_hint"))
+                        .font(.system(size: 12))
+                        .foregroundColor(colors.onSurfaceVariant)
+                        .padding(.top, 8)
+                    let visible = isExpanded ? schools : Array(schools.prefix(5))
+                    ForEach(visible, id: \.name) { school in
+                        // ← Android 卡内行走共享 SchoolRow(含 badge/URL 行), 非独立 inline
+                        SchoolRow(school: school) {
+                            onSchoolSelected(school)
+                        }
+                        DividerRow()
+                    }
+                }
+            }
+
+            let showFlowRow: Bool = {
+                switch state {
+                case .permissionDenied, .accuracyInsufficient: return true
+                case .ready: return true
+                default: return false
+                }
+            }()
+            if showFlowRow {
+                HStack(spacing: 8) {
+                    if case .ready = state, schools.count > 5 {
+                        Button(action: { expanded = isExpanded ? "" : cityKey }) {
+                            Text(isExpanded ? L10n.t("school_location_collapse")
+                                            : L10n.t("school_location_show_all"))
+                        }
+                        .buttonStyle(SleepyButtonStyle())
+                    }
+                    Button(action: onPermissionSettings) {
+                        Text(L10n.t("school_location_permission_settings"))
+                    }
+                    .buttonStyle(SleepyButtonStyle())
+                }
+            }
+        }
+        .padding(12)
+        .background(colors.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: SleepyShapes.medium)
+                .stroke(colors.outline.opacity(SleepyTheme.Alpha.hairline), lineWidth: 1)
+        )
+        .cornerRadius(SleepyShapes.medium)   // ← OutlinedCard
     }
 }
 
