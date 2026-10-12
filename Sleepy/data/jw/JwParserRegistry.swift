@@ -52,23 +52,35 @@ enum JwParserRegistry {
     /// 协议族优先级表。数字越小优先级越高（用于并列裁决）。
     /// 优先级反映"误抢风险"：协议族特征越窄、越独特，越优先。
     static let TYPE_PRIORITY: [(String, Int)] = [
-        (JwProtocol.TYPE_WISEDU, 10),
-        (JwProtocol.TYPE_CQU, 15),
-        (JwProtocol.TYPE_CHAOXING, 16),
-        (JwProtocol.TYPE_BOYA_PP, 17),
-        (JwProtocol.TYPE_EAMS5, 18),
-        (JwProtocol.TYPE_CLASSIC_EAMS, 19),
-        (JwProtocol.TYPE_PKU, 20),
-        (JwProtocol.TYPE_SEU, 22),
-        (JwProtocol.TYPE_ZJU, 23),
-        (JwProtocol.TYPE_USTC, 24),
-        (JwProtocol.TYPE_SCU, 25),
-        (JwProtocol.TYPE_NEU, 26),
-        (JwProtocol.TYPE_BJTU, 27),
-        (JwProtocol.TYPE_BNUZ, 30),
-        (JwProtocol.TYPE_CF, 40),
-        (JwProtocol.TYPE_HNUST, 50),
-        (JwProtocol.TYPE_HNIU, 60),
+        (JwProtocol.TYPE_KINGO_NEW, 8),
+        (JwProtocol.TYPE_JZ, 9),
+        (JwProtocol.TYPE_SOUTH_SOFT, 10),
+        (JwProtocol.TYPE_CHAOXING_LEGACY, 11),
+        (JwProtocol.TYPE_SHUWEI, 12),
+        (JwProtocol.TYPE_SUDA_POST, 13),
+        (JwProtocol.TYPE_CUMTB, 14),
+        (JwProtocol.TYPE_XJU_POST, 15),
+        (JwProtocol.TYPE_WISEDU, 20),
+        (JwProtocol.TYPE_CQU, 25),
+        (JwProtocol.TYPE_CHAOXING, 26),
+        (JwProtocol.TYPE_BOYA_PP, 27),
+        (JwProtocol.TYPE_EAMS5, 28),
+        (JwProtocol.TYPE_CLASSIC_EAMS, 29),
+        (JwProtocol.TYPE_NUIT, 30),
+        (JwProtocol.TYPE_KUST, 31),
+        (JwProtocol.TYPE_PKU, 32),
+        (JwProtocol.TYPE_SEU, 33),
+        (JwProtocol.TYPE_ZJU, 34),
+        (JwProtocol.TYPE_USTC, 35),
+        (JwProtocol.TYPE_SCU, 36),
+        (JwProtocol.TYPE_NEU, 37),
+        (JwProtocol.TYPE_BJTU, 38),
+        (JwProtocol.TYPE_YETHAN, 39),
+        (JwProtocol.TYPE_BNUZ, 40),
+        (JwProtocol.TYPE_CF_NEW, 45),
+        (JwProtocol.TYPE_CF, 50),
+        (JwProtocol.TYPE_HNUST, 60),
+        (JwProtocol.TYPE_HNIU, 65),
         (JwProtocol.TYPE_ZF, 70),
         (JwProtocol.TYPE_ZF_1, 75),
         (JwProtocol.TYPE_URP, 80),
@@ -119,6 +131,18 @@ enum JwParserRegistry {
         case JwProtocol.TYPE_BNUZ: return { JwBnuzParser($0) }
         case JwProtocol.TYPE_HNUST: return { JwHnustParser($0) }
         case JwProtocol.TYPE_HNIU: return { JwHniuParser($0) }
+        case JwProtocol.TYPE_KINGO_NEW: return { JwKingoParser($0) }
+        case JwProtocol.TYPE_JZ: return { JwJzParser($0) }
+        case JwProtocol.TYPE_SOUTH_SOFT: return { JwSouthSoftParser($0) }
+        case JwProtocol.TYPE_CHAOXING_LEGACY: return { JwChaoxingLegacyParser($0) }
+        case JwProtocol.TYPE_SHUWEI: return { JwShuweiParser($0) }
+        case JwProtocol.TYPE_SUDA_POST: return { JwSudaParser($0) }
+        case JwProtocol.TYPE_CUMTB: return { JwCumtbParser($0) }
+        case JwProtocol.TYPE_XJU_POST: return { JwXjuParser($0) }
+        case JwProtocol.TYPE_KUST: return { JwKustParser($0) }
+        case JwProtocol.TYPE_NUIT: return { JwNuitParser($0) }
+        case JwProtocol.TYPE_YETHAN: return { JwYethanParser($0) }
+        case JwProtocol.TYPE_CF_NEW: return { JwCfNewParser($0) }
         default: return nil
         }
     }

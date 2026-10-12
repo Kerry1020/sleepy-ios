@@ -1,5 +1,5 @@
 // JwProtocol.swift — ← JwProtocol.kt
-// 教务系统协议类型常量表(34 个, 与 Android 1:1)。
+// 教务系统协议类型常量表(42 个, 与 Android 1:1)。
 //
 // 基于 dIT8Zv/WakeupSchedule_BUPT (Apache-2.0) 的 Common.kt 协议类型常量
 // 简化而来,保留 sleepy v1.0.8 实际用到的子集:
@@ -25,6 +25,14 @@ enum JwProtocol {
     static let TYPE_QZ_BR = "qz_br"
     static let TYPE_QZ_WITH_NODE = "qz_with_node"
     static let TYPE_CF = "cf"
+
+    /// 新青果 NTSS (青果/乘方新版, FullCalendar 形态, /new/student/xsgrkb/week.page)。
+    /// 页面 DOM 无课表数据, 课程行由 POST /new/student/xsgrkb/getCalendarWeekDatas
+    /// 按周返回; 节次时间在页面 businessHours JSON; 开学日 /new/xlxx/getDatesOfWeek。
+    /// WebView 内逐周并行抓取 (CF_NEW_FETCH_JS) 合并, JwCfNewParser 解析。
+    /// 首校: 江西中医药大学 (jiaowu.jxutcm.edu.cn, 2026-09 采集包实锤)。
+    static let TYPE_CF_NEW = "cf_new"
+
     static let TYPE_PKU = "pku"
     static let TYPE_BNUZ = "bnuz"
     static let TYPE_LOGIN = "login"
@@ -32,6 +40,30 @@ enum JwProtocol {
 
     /// 金智 Wisedu jwapp 微应用平台(JSON API 直连,非 HTML 解析)。如:哈尔滨工程大学 jwgl.hrbeu.edu.cn
     static let TYPE_WISEDU = "wisedu"
+
+    /// WakeUp Kingosoft 新协议,覆盖新青果/金智门户系列。
+    static let TYPE_KINGO_NEW = "kingo_new"
+
+    /// WakeUp 金智课程表回退族。
+    static let TYPE_JZ = "jz"
+
+    /// WakeUp 南软/研究生课表 HTML 变体。
+    static let TYPE_SOUTH_SOFT = "south_soft"
+
+    /// WakeUp 超星旧 JSON/分享变体。
+    static let TYPE_CHAOXING_LEGACY = "login_chaoxing"
+
+    /// WakeUp 数维共享课表变体。
+    static let TYPE_SHUWEI = "shuwei_json"
+
+    /// WakeUp 苏大 POST/HTML 变体。
+    static let TYPE_SUDA_POST = "suda_post"
+
+    /// WakeUp EAMS5 中国矿业大学北京变体。
+    static let TYPE_CUMTB = "cumtb"
+
+    /// WakeUp 西交/新疆大学 POST 课表变体。
+    static let TYPE_XJU_POST = "xju_post"
 
     /// 重庆大学自建统一门户 my.cqu.edu.cn(REST API + Bearer token,非 HTML 解析)。
     /// WebView 登录统一身份认证后从 localStorage 取 cqu_edu_ACCESS_TOKEN,fetch 四个接口。
@@ -75,6 +107,20 @@ enum JwProtocol {
     /// 协议证据: docs/bjtu-cross-verify-2026-09-09/ (24 仓 POSITIVE 12, issue #19)。
     /// 上游协议形态: HFDLYS/BJTUselfService (MIT) + wan300/bjtu_mis_Android (MIT) — 算法自写。
     static let TYPE_BJTU = "bjtu"
+
+    /// 西南交通大学本部 yhxt.swjtu.edu.cn(YETHAN/以专 逐专平台,自建 JSON API,非 HTML 解析)。
+    /// WebView 登录 CAS 后从 localStorage 取 `ytoken`(JWT,同时落 .swjtu.edu.cn cookie),
+    /// 请求头 `ytoken: <JWT>`,fetch 接口:
+    ///   GET /yethan/common/course-schedule/student-course-schedule(零参数,纯 JSON 无 SM2)
+    ///   GET /yethan/public/sys/config/web(TermStart + TermLessonStr 节次时间)
+    /// 包络 {"code":"00000","data":[…]};失效码 401/A0230/A0422(Arex 跨仓验证)。
+    /// classTime{N} "7、10-12、14-15周 星期三 5节"(顿号枚举只作用于周次列表,共享一个
+    /// 「星期X 节」后缀);classTime{N}/classPlace{N} 成对槽位 1..40。
+    /// SM2 `_j` 加密只在 /register/…、/sport/…(选课),课表接口无 SM2,Sleepy 不需要。
+    /// 协议证据:docs/swjtu-cross-verify-2026-09-15/(11 仓,2026-09-15 采集包实锤)。
+    /// 外部佐证:AmaneSuzuha000/SWJTU_Login、1-nuo/swjtu-course-grabber、
+    /// Arex-lbb/auto-course-grabber(失效码)。
+    static let TYPE_YETHAN = "yethan"
 
     /// 合肥工业大学教务(金智 EAMS5, eams5-student 系列, jxglstu.hfut.edu.cn)。
     /// 上游协议形态: Chiu-xaH/HFUT-Schedule (MIT) 全链路参考。
@@ -140,6 +186,8 @@ enum JwProtocol {
     /// 上游协议形态: shiguang_warehouse (MIT) hunnu/uestc/hpu.js + WakeupSchedule_Kotlin
     /// (Apache-2.0); 代码自写。
     static let TYPE_CLASSIC_EAMS = "classic_eams"
+    static let TYPE_KUST = "kust"
+    static let TYPE_NUIT = "nuit"
 
     /// T8 新增：所有协议族常量的有序列表（用于 Registry 兜底遍历顺序）。
     /// 顺序按 TYPE_PRIORITY 优先级：wisedu > cqu > chaoxing > boya_pp > eams5 > classic_eams >
@@ -148,12 +196,18 @@ enum JwProtocol {
     ///                            zf > zf_1 > urp > urp_new > zf_new >
     ///                            qz > qz_crazy > qz_br > qz_with_node > qz_ieas > qz_app > ucas > qz_old
     static let ALL_TYPES: [String] = [
-        TYPE_WISEDU, TYPE_CQU, TYPE_CHAOXING, TYPE_BOYA_PP, TYPE_EAMS5, TYPE_CLASSIC_EAMS, TYPE_PKU, TYPE_BNUZ,
-        TYPE_CF, TYPE_HNUST, TYPE_HNIU,
+        TYPE_WISEDU, TYPE_CQU, TYPE_CHAOXING, TYPE_BOYA_PP, TYPE_EAMS5, TYPE_CLASSIC_EAMS, TYPE_KUST, TYPE_NUIT, TYPE_PKU, TYPE_BNUZ,
+        TYPE_CF, TYPE_CF_NEW, TYPE_HNUST, TYPE_HNIU,
         TYPE_SEU, TYPE_ZJU, TYPE_USTC, TYPE_SCU, TYPE_NEU, TYPE_WHUT,
-        TYPE_BJTU,
+        TYPE_BJTU, TYPE_YETHAN,
         TYPE_ZF, TYPE_ZF_1, TYPE_URP, TYPE_URP_NEW, TYPE_ZF_NEW,
         TYPE_QZ, TYPE_QZ_CRAZY, TYPE_QZ_BR, TYPE_QZ_WITH_NODE, TYPE_QZ_IEAS, TYPE_QZ_APP, TYPE_UCAS, TYPE_QZ_OLD,
+    ]
+
+    /// WakeUp 兼容层路由的协议族;与旧 UI 排序分开保存 ← WAKEUP_COMPAT_TYPES
+    static let WAKEUP_COMPAT_TYPES: [String] = [
+        TYPE_KINGO_NEW, TYPE_JZ, TYPE_SOUTH_SOFT, TYPE_CHAOXING_LEGACY,
+        TYPE_SHUWEI, TYPE_SUDA_POST, TYPE_CUMTB, TYPE_XJU_POST,
     ]
 
     /// 协议显示名(用于 UI 提示) ← displayName
@@ -169,12 +223,32 @@ enum JwProtocol {
             return "国科大选课系统"
         case TYPE_BJTU:
             return "北京交通大学"
+        case TYPE_YETHAN:
+            return "西南交通大学 (逐专平台)"
         case TYPE_ZF, TYPE_ZF_1, TYPE_ZF_NEW:
             return "正方教务"
         case TYPE_URP, TYPE_URP_NEW:
             return "URP 教务"
         case TYPE_CF:
             return "青果教务"
+        case TYPE_CF_NEW:
+            return "青果教务(新版)"
+        case TYPE_KINGO_NEW:
+            return "新青果/金智教务"
+        case TYPE_JZ:
+            return "金智教务(WakeUp 兼容)"
+        case TYPE_SOUTH_SOFT:
+            return "南软研究生教务"
+        case TYPE_CHAOXING_LEGACY:
+            return "超星教务(旧版)"
+        case TYPE_SHUWEI:
+            return "数维教务"
+        case TYPE_SUDA_POST:
+            return "苏大教务"
+        case TYPE_CUMTB:
+            return "矿大 EAMS5"
+        case TYPE_XJU_POST:
+            return "西交/新疆大学教务"
         case TYPE_PKU:
             return "北京大学"
         case TYPE_BNUZ:
@@ -195,6 +269,10 @@ enum JwProtocol {
             return "合工大教务 (EAMS5)"
         case TYPE_CLASSIC_EAMS:
             return "金智教务(经典 EAMS)"
+        case TYPE_KUST:
+            return "昆明理工大学门户"
+        case TYPE_NUIT:
+            return "广东东软学院教务"
         case TYPE_SEU:
             return "东南大学"
         case TYPE_ZJU:
@@ -231,6 +309,9 @@ enum JwProtocol {
             return "zf"
         case TYPE_URP, TYPE_URP_NEW:
             return "urp"
+        case TYPE_KINGO_NEW, TYPE_JZ, TYPE_SOUTH_SOFT, TYPE_CHAOXING_LEGACY,
+             TYPE_SHUWEI, TYPE_SUDA_POST, TYPE_CUMTB, TYPE_XJU_POST:
+            return "other"
         case TYPE_WISEDU:
             return "wisedu"
         case TYPE_CQU:
@@ -241,15 +322,17 @@ enum JwProtocol {
             return "other"
         case TYPE_EAMS5:
             return "eams5"
-        case TYPE_CLASSIC_EAMS:
+        case TYPE_CLASSIC_EAMS, TYPE_KUST, TYPE_NUIT:
             return "other"
         case TYPE_SEU, TYPE_ZJU, TYPE_USTC, TYPE_SCU, TYPE_NEU, TYPE_WHUT:
             return "other"
         case TYPE_BJTU:
             return "other"
+        case TYPE_YETHAN:
+            return "other"
         case TYPE_HNUST, TYPE_HNIU:
             return "hnust"
-        case TYPE_CF:
+        case TYPE_CF, TYPE_CF_NEW:
             return "cf"
         case TYPE_PKU, TYPE_BNUZ:
             return "other"
