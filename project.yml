@@ -66,6 +66,8 @@ targets:
         CFBundleShortVersionString: "1.0.43"
         CFBundleVersion: "36"
         UILaunchStoryboardName: LaunchScreen
+        # ★ 城市定位推荐同城学校入口 — 缺此键 → CLLocationManager 授权弹窗直接崩溃
+        NSLocationWhenInUseUsageDescription: 用于根据当前位置推荐同城学校入口
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         UISupportedInterfaceOrientations:
