@@ -87,7 +87,7 @@ final class ScheduleRepository {
         let orphanCourseIds = try courseDao.getByTable(id).map { $0.id }
         try tableDao.deleteById(id)
         if !orphanCourseIds.isEmpty {
-            NotificationScheduler.shared.cancelCourseNotifications(orphanCourseIds)
+            NotificationScheduler.shared.cancelCourseAlarms(courseIds: orphanCourseIds)
         }
         onDataChanged()
     }

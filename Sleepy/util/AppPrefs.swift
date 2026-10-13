@@ -20,6 +20,12 @@ final class AppPrefs {
     static let KEY_BEFORE_CLASS_BANNER = "before_class_banner"         // bool default true
     static let KEY_BEFORE_CLASS_FLUID = "before_class_fluid"            // bool default false
     static let KEY_BEFORE_CLASS_FLUID_FIELDS = "before_class_fluid_fields" // legacy multi-select
+    // ← v1.0.60 新增: 次日预告 + 上课自动勿扰
+    static let KEY_TOMORROW_REMINDER_ENABLED = "tomorrow_reminder"             // bool default false
+    static let KEY_TOMORROW_REMINDER_TIME = "tomorrow_reminder_time"           // "HH:mm" default "22:00"
+    static let DEFAULT_TOMORROW_REMINDER_ENABLED = false
+    static let DEFAULT_TOMORROW_REMINDER_TIME = "22:00"
+    static let KEY_CLASS_DND_ENABLED = "class_dnd_enabled"                     // bool default false — 上课自动勿扰
     static let KEY_BEFORE_CLASS_FLUID_PRIMARY = "before_class_fluid_primary" // name/time/room
     static let KEY_THEME = "theme_key"
     static let KEY_LANG = "language"
@@ -158,6 +164,25 @@ final class AppPrefs {
         sp().object(forKey: Self.KEY_BEFORE_CLASS_MINUTES) as? Int ?? 10
     }
     func setBeforeClassMinutes(_ minutes: Int) { sp().set(minutes, forKey: Self.KEY_BEFORE_CLASS_MINUTES) }
+
+    // MARK: - v1.0.60 次日预告提醒
+
+    func isTomorrowReminderEnabled() -> Bool {
+        sp().object(forKey: Self.KEY_TOMORROW_REMINDER_ENABLED) as? Bool ?? Self.DEFAULT_TOMORROW_REMINDER_ENABLED
+    }
+    func setTomorrowReminderEnabled(_ v: Bool) { sp().set(v, forKey: Self.KEY_TOMORROW_REMINDER_ENABLED) }
+
+    func getTomorrowReminderTime() -> String {
+        sp().string(forKey: Self.KEY_TOMORROW_REMINDER_TIME) ?? Self.DEFAULT_TOMORROW_REMINDER_TIME
+    }
+    func setTomorrowReminderTime(_ s: String) { sp().set(s, forKey: Self.KEY_TOMORROW_REMINDER_TIME) }
+
+    // MARK: - v1.0.60 上课自动勿扰
+
+    func isClassDndEnabled() -> Bool {
+        sp().bool(forKey: Self.KEY_CLASS_DND_ENABLED)
+    }
+    func setClassDndEnabled(_ v: Bool) { sp().set(v, forKey: Self.KEY_CLASS_DND_ENABLED) }
 
     func isBeforeClassBannerEnabled() -> Bool {
         sp().object(forKey: Self.KEY_BEFORE_CLASS_BANNER) as? Bool ?? true
