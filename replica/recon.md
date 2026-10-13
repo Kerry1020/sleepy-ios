@@ -4,7 +4,7 @@
 
 ### Branch: `rebuild/align-sleepy-1.0.60` in `~/Desktop/sleepy-ios-wt/align-1.0.60`
 
-### Commits delivered (9 since baseline 63ed008 / v1.0.55)
+### Commits delivered (12 since baseline 63ed008 / v1.0.55)
 
 | hash | summary |
 |------|---------|
@@ -16,11 +16,14 @@
 | 95d328a | feat(jw): 移植 v1.0.60 9 个 fetch JS (NEU/NUIT/KUST/YETHAN/CHAOXING/WHUT/EAMS5/EAMS5_AHU/BJTU) + CfNew 协议 |
 | 02c9b21 | feat(diag): 移植 v1.0.60 排查诊断层 — frame capture + JS 诊断集 + 会话记录 |
 | 4c8bdb0 | feat(diag): 移植 v1.0.60 排查全量包 — JwCaptureDump zip dump + ZIPFoundation |
+| a995a31 | chore(replica): 写 v1.0.60 复刻进度卡 — features.csv + recon.md |
+| 4006916 | feat(data): 全量迁移包 WIP — Migration* 五件套 + DAO 保留原 ID 直插 |
+| ff5d516 | feat(migration): 移植 v1.0.60 .sleepybackup 全量迁移层(构建修复: init 标签/协议提级/CourseDao.insertInDb) |
 
 ### Test gate
 
 - xcodebuild build: **SUCCEEDED** (sleepy 1.0.60 baseline)
-- SleepyTests: **532/0 (12.452s)** on iPhone 14 Pro simulator (iOS 16.4)
+- SleepyTests: **532/0 (9.201s)** on iPhone 14 Pro simulator (iOS 16.4)
 
 ## File-level gap (Android v1.0.60 main sources → iOS current)
 
