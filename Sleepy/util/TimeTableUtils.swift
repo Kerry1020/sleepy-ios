@@ -415,3 +415,65 @@ enum TimeTableUtils {
         }
     }
 }
+
+// MARK: - 全局唯一名 (← isTableNameTaken / suggestUniqueName, v1.0.60)
+
+extension TimeTableUtils {
+
+    /**
+     * 全局唯一名判定: 课表名 ∪ 作息表名。
+     * excludeId 场景(重命名自己)传名单+byId 映射剔除"自己那一份"后判撞;
+     * 其余场景(新建/复制/导入确认)传名单即可。
+     * 纯函数 — DAO 全名列表由调用方查好传入, 本函数零库访问。
+     */
+    static func isTableNameTaken(
+        _ name: String,
+        courseTableNames: [String],
+        periodTableNames: [String],
+        excludeCourseTableId: Int64? = nil,
+        courseTableNamesById: [Int64: String] = [:],
+        excludePeriodTableId: Int64? = nil,
+        periodTableNamesById: [Int64: String] = [:]
+    ) -> Bool {
+        if name.isBlank { return false }
+        let courseHit: Bool
+        if let excludeId = excludeCourseTableId {
+            // 名单本身无 id, 用 byId 映射剔除"自己那一份"后判撞: 总出现次数 > 自己出现次数
+            let selfCount = courseTableNamesById[excludeId] == name ? 1 : 0
+            courseHit = courseTableNames.filter { $0 == name }.count > selfCount
+        } else {
+            courseHit = courseTableNames.contains(name)
+        }
+        let periodHit: Bool
+        if let excludeId = excludePeriodTableId {
+            let selfCount = periodTableNamesById[excludeId] == name ? 1 : 0
+            periodHit = periodTableNames.filter { $0 == name }.count > selfCount
+        } else {
+            periodHit = periodTableNames.contains(name)
+        }
+        return courseHit || periodHit
+    }
+
+    /**
+     * 撞名自动顺延: 原名 → 原名2 → 原名3…(导入自动建表/复制预填用)。
+     * 兼容历史 "名字(2)" 形态, 顺延跳过 plain 与 paren 两种占用。
+     * 空名回退 defaultName 参与顺延。
+     */
+    static func suggestUniqueName(
+        _ base: String,
+        courseTableNames: [String],
+        periodTableNames: [String],
+        defaultName: String = ""
+    ) -> String {
+        let effective = base.isBlank ? defaultName : base
+        if !isTableNameTaken(effective, courseTableNames: courseTableNames, periodTableNames: periodTableNames) {
+            return effective
+        }
+        var index = 2
+        while isTableNameTaken("\(effective)\(index)", courseTableNames: courseTableNames, periodTableNames: periodTableNames)
+            || isTableNameTaken("\(effective)(\(index))", courseTableNames: courseTableNames, periodTableNames: periodTableNames) {
+            index += 1
+        }
+        return "\(effective)\(index)"
+    }
+}
