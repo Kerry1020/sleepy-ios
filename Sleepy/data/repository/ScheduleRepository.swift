@@ -212,6 +212,9 @@ final class ScheduleRepository {
 
     func getCourses(_ tableId: Int64) throws -> [CourseEntity] { try courseDao.getByTable(tableId) }
 
+    /// issue#40: 全库课程 — 时间节次表保存预览须统计所有绑定表的课。
+    func getAllCourses() throws -> [CourseEntity] { try courseDao.getAllCourses() }
+
     func getCoursesByDay(_ tableId: Int64, day: Int) throws -> [CourseEntity] {
         try courseDao.getByTableAndDay(tableId, day: day)
     }
