@@ -39,7 +39,8 @@ struct SegmentedSwitcher<T: Hashable>: View {
                 .fill(colors.secondaryContainer)
                 .frame(width: segW, height: 34)
                 .offset(x: 4 + CGFloat(selectedIndex) * segW, y: 4)
-                .animation(.spring(response: 0.18, dampingFraction: 1.0), value: selectedIndex)
+                // 同款 — Android SleepyThumbSpring (高硬度+无回弹实测定参), 见 SleepyMotion.swift
+                .animation(sleepyThumbSpring, value: selectedIndex)
 
             // 层1: 点击段 + 整词单色标签
             HStack(spacing: 0) {
