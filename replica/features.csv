@@ -84,7 +84,7 @@ ported,UpdateManager,app/src/main/java/com/lingion/sleepy/util/UpdateManager.kt,
 ported,WeekDisplayResolver,app/src/main/java/com/lingion/sleepy/util/WeekDisplayResolver.kt,Sleepy/util/WeekDisplayResolver.swift,,
 ported,WidgetContent,app/src/main/java/com/lingion/sleepy/widget/WidgetContent.kt,Sleepy/widget/WidgetContent.swift,,
 ported,WidgetTableResolver,app/src/main/java/com/lingion/sleepy/widget/WidgetTableResolver.kt,Sleepy/widget/WidgetTableResolver.swift,,
-missing,MainActivity,app/src/main/java/com/lingion/sleepy/MainActivity.kt,,,
+ported,MainActivity,app/src/main/java/com/lingion/sleepy/MainActivity.kt,Sleepy/SleepyApp.swift,,app-shell slice
 ported,Migrations,app/src/main/java/com/lingion/sleepy/data/Migrations.kt,Sleepy/data/AppDatabase.swift,,iOS 无独立 Migrations.swift: Room Migrations.kt 逐条内联进 AppDatabase.migrator (v1~v11); data-migrations slice (v11.reminderEnabled)
 missing,SystemCalendarManager,app/src/main/java/com/lingion/sleepy/data/calendar/SystemCalendarManager.kt,,,
 ported,JwImportDraft,app/src/main/java/com/lingion/sleepy/data/jw/JwImportDraft.kt,Sleepy/data/jw/JwImportDraft.swift,,data-migrations slice
@@ -105,13 +105,13 @@ missing,DialogActionButtons,app/src/main/java/com/lingion/sleepy/ui/component/Di
 missing,PeriodHeaderCellContent,app/src/main/java/com/lingion/sleepy/ui/component/PeriodHeaderCellContent.kt,,,
 missing,PeriodHeaderLayoutModel,app/src/main/java/com/lingion/sleepy/ui/component/PeriodHeaderLayoutModel.kt,,,
 missing,PeriodTableShareSheet,app/src/main/java/com/lingion/sleepy/ui/component/PeriodTableShareSheet.kt,,,
-missing,SleepyMotion,app/src/main/java/com/lingion/sleepy/ui/component/SleepyMotion.kt,,,
-missing,SleepyMaterialTransition,app/src/main/java/com/lingion/sleepy/ui/nav/SleepyMaterialTransition.kt,,,
-missing,SleepyNavHost,app/src/main/java/com/lingion/sleepy/ui/nav/SleepyNavHost.kt,,,
-missing,SleepyNavigator,app/src/main/java/com/lingion/sleepy/ui/nav/SleepyNavigator.kt,,,
-missing,SleepyRoutes,app/src/main/java/com/lingion/sleepy/ui/nav/SleepyRoutes.kt,,,
-missing,DiagDumpProgress,app/src/main/java/com/lingion/sleepy/ui/screen/imports/DiagDumpProgress.kt,,,
-missing,ExitDraftState,app/src/main/java/com/lingion/sleepy/ui/screen/imports/ExitDraftState.kt,,,
+ported,SleepyMotion,app/src/main/java/com/lingion/sleepy/ui/component/SleepyMotion.kt,Sleepy/ui/component/SleepyMotion.swift,,app-shell slice
+ported,SleepyMaterialTransition,app/src/main/java/com/lingion/sleepy/ui/nav/SleepyMaterialTransition.kt,Sleepy/ui/nav/SleepyMaterialTransition.swift,,app-shell slice
+ported,SleepyNavHost,app/src/main/java/com/lingion/sleepy/ui/nav/SleepyNavHost.kt,Sleepy/ui/nav/SleepyNavHost.swift,,app-shell slice
+ported,SleepyNavigator,app/src/main/java/com/lingion/sleepy/ui/nav/SleepyNavigator.kt,Sleepy/ui/nav/SleepyNavigator.swift,,app-shell slice
+ported,SleepyRoutes,app/src/main/java/com/lingion/sleepy/ui/nav/SleepyRoutes.kt,Sleepy/ui/nav/SleepyRoutes.swift,,app-shell slice
+ported,DiagDumpProgress,app/src/main/java/com/lingion/sleepy/ui/screen/imports/DiagDumpProgress.kt,Sleepy/ui/screen/imports/DiagDumpProgress.swift,,app-shell slice
+ported,ExitDraftState,app/src/main/java/com/lingion/sleepy/ui/screen/imports/ExitDraftState.kt,Sleepy/ui/screen/imports/ExitDraftState.swift,,app-shell slice
 missing,ImportDraftSheet,app/src/main/java/com/lingion/sleepy/ui/screen/imports/ImportDraftSheet.kt,,,
 missing,JwImportActivity,app/src/main/java/com/lingion/sleepy/ui/screen/imports/JwImportActivity.kt,,,
 missing,JwWebViewClientBuilder,app/src/main/java/com/lingion/sleepy/ui/screen/imports/JwWebViewClientBuilder.kt,,,
@@ -133,7 +133,7 @@ missing,WidgetEditCompactWindowSection,app/src/main/java/com/lingion/sleepy/ui/s
 missing,WidgetEditScheduleSection,app/src/main/java/com/lingion/sleepy/ui/screen/widget/WidgetEditScheduleSection.kt,,,
 missing,WidgetEditScrollSection,app/src/main/java/com/lingion/sleepy/ui/screen/widget/WidgetEditScrollSection.kt,,,
 missing,WidgetEditSection,app/src/main/java/com/lingion/sleepy/ui/screen/widget/WidgetEditSection.kt,,,
-missing,NoRippleClickable,app/src/main/java/com/lingion/sleepy/ui/theme/NoRippleClickable.kt,,,
+ported,NoRippleClickable,app/src/main/java/com/lingion/sleepy/ui/theme/NoRippleClickable.kt,Sleepy/ui/theme/NoRippleClickable.swift,,app-shell slice
 missing,HighRefreshRate,app/src/main/java/com/lingion/sleepy/util/HighRefreshRate.kt,,,
 missing,HolidayRange,app/src/main/java/com/lingion/sleepy/util/HolidayRange.kt,,,
 missing,UpdateNoticeCore,app/src/main/java/com/lingion/sleepy/util/UpdateNoticeCore.kt,,,

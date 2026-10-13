@@ -3,6 +3,7 @@
 // Activity+Stage sealed → NavigationStack-less 状态机 View。
 
 import SwiftUI
+import WebKit
 
 enum JwStage {
     case selectSchool
@@ -31,6 +32,17 @@ struct JwImportFlow: View {
     // 课表名 — 默认 jw_import_title(校名)模板, 用户可编辑; 与 Android 1.0.51 ConfigureConfirm
     // AlertDialog 里 OutlinedTextField 一致。
     @State private var configTableName = ""
+    // v1.0.61 app-shell 对齐 (dump + exit-draft):
+    // ← Android JwImportActivity:
+    //   var lastCaptureResult by remember()        → @State lastCaptureResult
+    //   var dumpProgress by mutableStateOf<...?>   → @State dumpProgress
+    //   val exitDraftState = remember { ExitDraftState() } → @State + manual reducer
+    // lastCaptureResult: 每次抓成留底 — 排查包导出的输入源 ("无抓取记录" guard 用).
+    @State private var lastCaptureResult: FrameCaptureResult? = nil
+    // dumpProgress: 非 null = 全屏进度遮罩 (镜像 Android DiagDumpProgress composable)
+    @State private var dumpProgress: DiagDumpProgress? = nil
+    // exitDraftState: 退出草稿闸 — 镜像 Android 同名 reducer (pure, 可直接构造)
+    @State private var exitDraftState = ExitDraftState()
 
     var body: some View {
         ZStack {
@@ -41,11 +53,27 @@ struct JwImportFlow: View {
                 Button {
                     errorMsg = nil
                 } label: {
-                    Text(msg)
-                        .font(.system(size: 14))
-                        .foregroundColor(colors.onErrorContainer)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(16)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(msg)
+                            .font(.system(size: 14))
+                            .foregroundColor(colors.onErrorContainer)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        // v1.0.61 dump 触发入口 ← Android JwImportActivity 错误横幅旁的
+                        // "导出排查包" 按钮 (jw_diag_export_btn). 仅在有抓取记录时
+                        // 可用 (lastCaptureResult guard, 同 Android "无抓取记录" 分支).
+                        if lastCaptureResult != nil {
+                            Button {
+                                exportDiagnosticDump()
+                            } label: {
+                                Text(L10n.t("jw_diag_export_btn"))
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundColor(colors.primary)
+                            }
+                            .buttonStyle(SleepyButtonStyle())
+                            .accessibilityIdentifier("jw_diag_export_btn")
+                        }
+                    }
+                    .padding(16)
                 }
                 .buttonStyle(SleepyButtonStyle())
                 .background(colors.errorContainer)
@@ -53,6 +81,26 @@ struct JwImportFlow: View {
                 .padding(32)
                 .accessibilityIdentifier("jw_error_banner")
                 .accessibilityLabel(msg)
+            }
+            // v1.0.61 dump 进度遮罩 ← Android DiagDumpProgress 全屏 composable:
+            // dumpProgress != null 时全卡盖住 (进度条 + 分段进度文案 + 状态行).
+            if let dp = dumpProgress {
+                DiagDumpProgressCard(progress: dp)
+                    .transition(.opacity)
+                    .zIndex(2)
+            }
+            // v1.0.61 退出确认闸 ← Android ExitDraftConfirmationDialog:
+            // activeImport 时误触返回 = 静默丢进度 (issue#39 痛点本体), 必须先过确认面.
+            if exitDraftState.confirmationVisible {
+                ExitDraftConfirmationCard(
+                    onContinue: { handleExitChoice(.continueImport) },
+                    onKeepDraft: { handleExitChoice(.keepDraft) },
+                    onDeleteDraft: { handleExitChoice(.deleteDraft) })
+                .padding(20)
+                .background(colors.surface)
+                .cornerRadius(SleepyShapes.medium)
+                .transition(.opacity)
+                .zIndex(3)
             }
             // 状态提示(底部)
             if let msg = statusMsg {
@@ -75,7 +123,20 @@ struct JwImportFlow: View {
         .onChange(of: importFinished) { finished in
             if finished { onFinish() }
         }
+        // ← Android LaunchedEffect(stage): 换阶段清 errorMsg (jw_import_dump_failed
+        // 残留提示不跨阶段 — 同 1:1 对应源 143 行).
+        .onChange(of: stage) { _ in
+            errorMsg = nil
+        }
     }
+
+    // MARK: - WebView 就绪 → dump JS 段持有引
+    //
+    // ← Android JwImportActivity.onWebViewReady: "WebView 就绪即存引 (dump 需要 JS evaluate)"
+    // WKWebView 无 addJavascriptInterface (Android DiagnosticReplayBridge) →
+    // dump 管线 JS 段经此引 evaluate, network replay 段改走 live 日志 (§5 平台差).
+    // 闭包属性 — @State 存闭包不安全; handler 只持引, 无状态回写需求.
+    @State private var dumpWebView: WebViewCoordinator? = nil
 
     @ViewBuilder
     private var content: some View {
@@ -98,13 +159,20 @@ struct JwImportFlow: View {
                     return
                 }
                 selectedSchool = school
+                exitDraftState.activeImport = true   // 进入 import 内段, 退出需过确认闸
                 stage = .webViewLogin
-            }, onDismiss: onFinish)
+            }, onDismiss: { requestExit() })
+            // 学校选择阶段的退出 (Android BackHandler: activeImport && SelectSchool →
+            // requestExit, 否则系统 finish) — iOS 无系统 BackHandler, 顶栏返回走同路.
         } else if stage == .webViewLogin {
             if let school = selectedSchool {
-                JwWebViewLoginScreen(school: school, onHtmlCaptured: onHtmlCaptured) {
-                    stage = .selectSchool
-                }
+                JwWebViewLoginScreen(
+                    school: school,
+                    onHtmlCaptured: onHtmlCaptured,
+                    onDismiss: { stage = .selectSchool },
+                    onWebViewReady: { coordinator in
+                        dumpWebView = coordinator
+                    })
             } else {
                 Color.clear.onAppear { stage = .selectSchool }
             }
@@ -168,6 +236,14 @@ struct JwImportFlow: View {
     private func onHtmlCaptured(_ html: String, _ sch: JwSchoolInfo,
                                 _ periods: [(Int, String, String)],
                                 _ termStartDate: String) {
+        // 抓成留底 — 排查包导出的输入源 (Android lastCaptureResult by remember(),
+        // "无抓取记录" guard 的数据来源). 锚点集用同一棵 traversal tree 扫,
+        // 与导入解析共用判定源, dump 包内容自洽.
+        lastCaptureResult = FrameCaptureResult(
+            selectedFramePath: nil,
+            html: html,
+            matchedAnchors: FrameTraversalTree.findAnchors(html),
+            status: .ok)
         statusMsg = L10n.format("import_parsing")
         // UCAS 详情补全要发原生 HTTP, 必须离开主线程; 回来后仍回主线程改 @State
         Task { @MainActor in
@@ -214,11 +290,154 @@ struct JwImportFlow: View {
         configStartDate = termStartDate
         configTimeJson = ""
         configTableName = L10n.format("jw_import_title", sch.name)
+        exitDraftState.activeImport = true   // 进入确认段, 退出需过确认闸
         stage = .configureConfirm
         statusMsg = nil
     }
 
-    // ← confirmButton 校验链 + 落库
+    // MARK: - dump 管线 (← Android JwImportActivity.exportDiagnosticDump, 235–421)
+//
+// 9 段 宣布-再执行: entering(stage) 先刷卡片再跑段体 (2026-09-22 用户反馈定法),
+// zip 组装离主线程, 成功即拉系统分享面板 (2A 动线)。
+// 平台差 (§5): WKWebView 无 addJavascriptInterface → Android DiagnosticReplayBridge
+// 两段 (网络重放 30s / 资源重取 16s) 走 nil 直通 (管线 stage 仍占位推进);
+// networkLiveJson 由 JwDiagnosticSession 现导 (JS 侧已持续记录 fetch/XHR)。
+// 三个非自调 JS 常量 (DomInventoryJs/StorageJs/LinksJs 原文尾 `})`) evaluate 时补 `()`。
+
+    @MainActor
+    private func exportDiagnosticDump() {
+        guard let capture = lastCaptureResult else {
+            statusMsg = L10n.format("jw_diag_export_failed", "无抓取记录")
+            return
+        }
+        guard let school = parsedSchool ?? selectedSchool else {
+            statusMsg = L10n.format("jw_diag_export_failed", "未选择学校")
+            return
+        }
+        guard dumpProgress == nil else { return }   // 禁止并发导出 (Android 弹窗串行, 天然)
+        var stepsDone = 0
+        let enter = { (stage: DumpStage) in
+            dumpProgress = DiagDumpProgress(stage: stage, stepsDone: stepsDone)
+        }
+        let leave = { stepsDone += 1 }
+        let webView = dumpWebView
+        enter(.domInventory)
+        Task { @MainActor in
+            func evalJs(_ js: String) async -> String? {
+                guard let webView else { return nil }
+                return await withCheckedContinuation { cont in
+                    webView.evaluate(js, completion: { raw in
+                        cont.resume(returning: (raw == nil || raw == "null") ? nil : raw)
+                    })
+                }
+            }
+            // ① DOM 清单 — 原文常量非自调, 补 `()` (Android 端恒为 `})` 原文 1:1 同源)
+            let inventoryJson = await evalJs(DomInventoryJs.js + "()")
+            leave()
+            // ② Storage
+            enter(.storage)
+            let storageJson = await evalJs(StorageJs.js + "()")
+            leave()
+            // ③ Links
+            enter(.links)
+            let linksJson = await evalJs(LinksJs.js + "()")
+            leave()
+            // ④ 运行时 fetch/XHR 快照 (原文即自调 IIFE `})()`)
+            enter(.networkSnapshot)
+            let networkLiveSnapshot = await evalJs(DiagNetworkSnapshotJs.js)
+            leave()
+            // ⑤⑥ 网络重放/资源重取 — WKWebView 无 addJavascriptInterface
+            // (Android DiagnosticReplayBridge 不可对齐) → nil 直通, stage 占位推进.
+            enter(.networkReplay)
+            let networkReplayJson: String? = nil
+            leave()
+            enter(.resourceReplay)
+            let resourceReplayJson: String? = nil
+            leave()
+            // ⑦ Cookies — Android CookieManager.getCookie(url) "k=v; k=v" 全量不脱敏;
+            // WKHTTPCookieStore.getAllCookies 同源等价 (JS 常量 §5 平台差 2).
+            enter(.cookies)
+            let cookiesFull: String?
+            if let store = webView?.webView?.configuration.websiteDataStore {
+                var cookies: [HTTPCookie] = []
+                await store.httpCookieStore.getAllCookies { cookies = $0 }
+                let joined = cookies.map { "\($0.name)=\($0.value)" }
+                    .joined(separator: "; ")
+                cookiesFull = joined.isEmpty ? nil : joined
+            } else {
+                cookiesFull = nil
+            }
+            leave()
+            // ⑧ zip 组装 — Android 落 IO dispatcher; 这里离主线程 detached
+            //    (JwCaptureDump.exportDump 阻塞读 lastCaptureResult.html 现场)
+            enter(.zipAssembly)
+            let live = networkReplayJson ?? networkLiveSnapshot
+            let zipResult = await Task.detached(priority: .userInitiated) {
+                JwCaptureDump.exportDump(
+                    school: school,
+                    result: capture,
+                    domInventoryJson: inventoryJson,
+                    cookiesFull: cookiesFull,
+                    storageJson: storageJson,
+                    linksJson: linksJson,
+                    resourceReplayJson: resourceReplayJson,
+                    networkLiveJson: live)
+            }.value
+            leave()
+            // ⑨ 成功 → save/share 段宣布后清遮罩再拉面板 (同 Android 时序:
+            //    entering(SaveShare) → dumpProgress = null → statusMsg → share)
+            switch zipResult {
+            case .ok(let zipName, let url):
+                enter(.saveShare)
+                dumpProgress = nil
+                statusMsg = L10n.format("jw_diag_export_saved", zipName)
+                JwCaptureDump.share(url: url)
+            case .fail(let reason):
+                dumpProgress = nil
+                statusMsg = L10n.format("jw_diag_export_failed", reason)
+            }
+        }
+    }
+
+// MARK: - exit-draft (← Android JwImportActivity.requestExit / handleExitChoice)
+//
+// Android 侧: requestExit → reduce(.requestExit) → outcome .finishDirectly = finish();
+// handleExitChoice → reduce(.choose(choice)) → KeepDraft/DeleteDraft 持久化钩子由调用方拥有。
+// 平台差 (§5): iOS 无系统 BackHandler, 顶栏返回/手势 onDismiss 走同路 (selectSchool 段 167 行已接)。
+
+    private func requestExit() {
+        let r = reduceExitDraftState(exitDraftState, .requestExit)
+        exitDraftState = r.state
+        switch r.outcome {
+        case .finishDirectly:
+            onFinish()
+        case .none:
+            break   // activeImport = 确认面已可见, 等用户选择
+        case .keepDraft, .deleteDraft:
+            break   // .requestExit 不会产生这两个 outcome
+        }
+    }
+
+    private func handleExitChoice(_ choice: ExitDraftChoice) {
+        let r = reduceExitDraftState(exitDraftState, .choose(choice))
+        exitDraftState = r.state
+        switch r.outcome {
+        case .none:
+            break   // .continueImport — 确认面关闭, 停留 import
+        case .keepDraft:
+            // Android: draftRepository.save/update + finish。iOS 草稿数据切片未落地
+            // (JwImportDraftCodec 无 payloadJson; ImportDraftDao 仅 id 级 upsert/delete)
+            // → 持久化钩子 TODO, 先 finish (issue#39 痛点闸已过, 静默丢进度已防住)。
+            onFinish()
+        case .deleteDraft:
+            // Android: draftRepository.delete(id) + finish。同上: 无 draftId 可删。
+            onFinish()
+        case .finishDirectly:
+            onFinish()
+        }
+    }
+
+// ← confirmButton 校验链 + 落库
     private func confirmAndImport() {
         // 校验(与 ImportConfirmDialog 同链)
         if configStartDate.isEmpty ||
@@ -259,6 +478,7 @@ struct JwImportFlow: View {
             _ = tableId
             statusMsg = L10n.format("jw_import_success", parsedCourses.count)
             importFinished = true
+            exitDraftState.activeImport = false   // ← Android completeImport
         } catch {
             errorMsg = L10n.format("jw_parse_failed", error.localizedDescription)
             statusMsg = nil

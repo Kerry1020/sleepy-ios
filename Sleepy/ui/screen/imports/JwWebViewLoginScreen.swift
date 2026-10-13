@@ -30,6 +30,9 @@ struct JwWebViewLoginScreen: View {
     // (boya_pp 等) 从接口拿到的第一周周一, 供确认页开学日期预填; 无则空串
     let onHtmlCaptured: (String, JwSchoolInfo, [(Int, String, String)], String) -> Void
     let onDismiss: () -> Void
+    // 排查包导出通道 (← Android webViewForDump / onWebViewReady): coordinator 就绪时
+    // 上抛一次, 调用方持有引做 dump JS 段 evaluate. 默认 nil — 不传 = 不启用.
+    var onWebViewReady: ((WebViewCoordinator) -> Void)? = nil
 
     @State private var progress: Double = 0
     @State private var webViewCoordinator: WebViewCoordinator? = nil
@@ -97,7 +100,10 @@ struct JwWebViewLoginScreen: View {
                 JwWebView(
                     url: school.url.isEmpty ? "https://www.baidu.com" : school.url,
                     onProgressChange: { p in progress = p },
-                    onCoordinatorCreated: { coordinator in webViewCoordinator = coordinator },
+                    onCoordinatorCreated: { coordinator in
+                        webViewCoordinator = coordinator
+                        onWebViewReady?(coordinator)   // 排查包导出通道 (dump JS 段引)
+                    },
                     onHtmlCaptured: { html in onHtmlCaptured(html, school, [], "") },
                     onWiseduResult: handleWiseduResult)
 
