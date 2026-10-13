@@ -34,6 +34,8 @@ struct TimeTableEntity: Codable, FetchableRecord, MutablePersistableRecord, Iden
     /// 解绑后"使用本表作息"读到的是镜像副本, 用户手工作息永久丢失。
     /// 快照仅当 periodTableId 由 nil → 非 nil 时写入一次; 绑→绑换目标不刷新快照。
     var preBindSnapshotJson: String = ""
+    /// v11 (2026-10-08 用户诉求): 每表独立提醒开关。旧行默认 1 = 所有表继续参与提醒。
+    var reminderEnabled: Bool = true
     /// 主键 autoGenerate
     var id: Int64 = 0
 
@@ -57,6 +59,7 @@ struct TimeTableEntity: Codable, FetchableRecord, MutablePersistableRecord, Iden
         container["createdAt"] = createdAt
         container["periodTableId"] = periodTableId
         container["preBindSnapshotJson"] = preBindSnapshotJson
+        container["reminderEnabled"] = reminderEnabled
     }
 
     /// issue#40 有效时间表水合(设计 §5.1): 绑定存在 → 节次时间/智慧节次/节次数

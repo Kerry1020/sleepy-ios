@@ -85,21 +85,21 @@ ported,WeekDisplayResolver,app/src/main/java/com/lingion/sleepy/util/WeekDisplay
 ported,WidgetContent,app/src/main/java/com/lingion/sleepy/widget/WidgetContent.kt,Sleepy/widget/WidgetContent.swift,,
 ported,WidgetTableResolver,app/src/main/java/com/lingion/sleepy/widget/WidgetTableResolver.kt,Sleepy/widget/WidgetTableResolver.swift,,
 missing,MainActivity,app/src/main/java/com/lingion/sleepy/MainActivity.kt,,,
-missing,Migrations,app/src/main/java/com/lingion/sleepy/data/Migrations.kt,,,
+ported,Migrations,app/src/main/java/com/lingion/sleepy/data/Migrations.kt,Sleepy/data/AppDatabase.swift,,iOS 无独立 Migrations.swift: Room Migrations.kt 逐条内联进 AppDatabase.migrator (v1~v11); data-migrations slice (v11.reminderEnabled)
 missing,SystemCalendarManager,app/src/main/java/com/lingion/sleepy/data/calendar/SystemCalendarManager.kt,,,
-missing,JwImportDraft,app/src/main/java/com/lingion/sleepy/data/jw/JwImportDraft.kt,,,
+ported,JwImportDraft,app/src/main/java/com/lingion/sleepy/data/jw/JwImportDraft.kt,Sleepy/data/jw/JwImportDraft.swift,,data-migrations slice
 missing,JwNeuParser,app/src/main/java/com/lingion/sleepy/data/jw/JwNeuParser.kt,,,
 ported,OfflineSchoolCityIndex,app/src/main/java/com/lingion/sleepy/data/jw/OfflineSchoolCityIndex.kt,Sleepy/data/jw/OfflineSchoolCityIndex.swift,,auto-sweep
 ported,SchoolCityIndex,app/src/main/java/com/lingion/sleepy/data/jw/SchoolCityIndex.kt,Sleepy/data/jw/SchoolCityIndex.swift,,auto-sweep
 ported,SchoolCityLocator,app/src/main/java/com/lingion/sleepy/data/jw/SchoolCityLocator.kt,Sleepy/data/jw/SchoolCityLocator.swift,,auto-sweep
 missing,SchoolLocationLookup,app/src/main/java/com/lingion/sleepy/data/jw/SchoolLocationLookup.kt,,,
 ported,SchoolLocationPolicy,app/src/main/java/com/lingion/sleepy/data/jw/SchoolLocationPolicy.kt,Sleepy/data/jw/SchoolLocationPolicy.swift,,auto-sweep
-ported,MigrationBackup,app/src/main/java/com/lingion/sleepy/data/migration/MigrationBackup.kt,Sleepy/data/migration/MigrationBackup.swift,,auto-sweep
-ported,MigrationDatabaseCodec,app/src/main/java/com/lingion/sleepy/data/migration/MigrationDatabaseCodec.kt,Sleepy/data/migration/MigrationDatabaseCodec.swift,,auto-sweep
-ported,MigrationExecutor,app/src/main/java/com/lingion/sleepy/data/migration/MigrationExecutor.kt,Sleepy/data/migration/MigrationExecutor.swift,,auto-sweep
-ported,MigrationPackageCodec,app/src/main/java/com/lingion/sleepy/data/migration/MigrationPackageCodec.kt,Sleepy/data/migration/MigrationPackageCodec.swift,,auto-sweep
-ported,MigrationPrefsCodec,app/src/main/java/com/lingion/sleepy/data/migration/MigrationPrefsCodec.kt,Sleepy/data/migration/MigrationPrefsCodec.swift,,auto-sweep
-missing,ImportDraftRepository,app/src/main/java/com/lingion/sleepy/data/repository/ImportDraftRepository.kt,,,
+ported,MigrationBackup,app/src/main/java/com/lingion/sleepy/data/migration/MigrationBackup.kt,Sleepy/data/migration/MigrationBackup.swift,,auto-sweep; data-migrations slice 校对对齐
+ported,MigrationDatabaseCodec,app/src/main/java/com/lingion/sleepy/data/migration/MigrationDatabaseCodec.kt,Sleepy/data/migration/MigrationDatabaseCodec.swift,,auto-sweep; data-migrations slice 校对对齐
+ported,MigrationExecutor,app/src/main/java/com/lingion/sleepy/data/migration/MigrationExecutor.kt,Sleepy/data/migration/MigrationExecutor.swift,,auto-sweep; data-migrations slice 校对对齐
+ported,MigrationPackageCodec,app/src/main/java/com/lingion/sleepy/data/migration/MigrationPackageCodec.kt,Sleepy/data/migration/MigrationPackageCodec.swift,,auto-sweep; data-migrations slice 校对对齐
+ported,MigrationPrefsCodec,app/src/main/java/com/lingion/sleepy/data/migration/MigrationPrefsCodec.kt,Sleepy/data/migration/MigrationPrefsCodec.swift,,auto-sweep; data-migrations slice 校对对齐
+ported,ImportDraftRepository,app/src/main/java/com/lingion/sleepy/data/repository/ImportDraftRepository.kt,Sleepy/data/repository/ImportDraftRepository.swift,,data-migrations slice
 missing,ColorPickerDialog,app/src/main/java/com/lingion/sleepy/ui/component/ColorPickerDialog.kt,,,
 missing,DialogActionButtons,app/src/main/java/com/lingion/sleepy/ui/component/DialogActionButtons.kt,,,
 missing,PeriodHeaderCellContent,app/src/main/java/com/lingion/sleepy/ui/component/PeriodHeaderCellContent.kt,,,
