@@ -6,6 +6,7 @@
 // v6 = issue#26 alias; v7 = issue#39 import_drafts; v8 = issue#40 period_tables
 //      + time_tables.periodTableId; v9 = issue#40 C2 preBindSnapshotJson;
 // v10 = Sleepy 托管系统日历导入记录 (与 Android Migrations.kt 一一对应)。
+// v11 = 每表独立提醒开关 (Android MIGRATION_10_11, 2026-10-08)。
 
 import Foundation
 import GRDB
@@ -202,6 +203,13 @@ final class AppDatabase {
                           columns: ["tableId", "courseId", "eventDate", "calendarId"], options: [.unique])
             try db.create(indexOn: "calendar_import_records", columns: ["tableId"])
             try db.create(indexOn: "calendar_import_records", columns: ["batchId"])
+        }
+
+        // ← MIGRATION_10_11: 每表独立提醒开关 (2026-10-08, Android v1.0.60 引入)
+        // 单条 DDL; Room 把 @ColumnInfo defaultValue 编进 DDL 故老行读时不 NPE。
+        m.registerMigration("v11.addReminderEnabled") { db in
+            try db.execute(
+                sql: "ALTER TABLE time_tables ADD COLUMN reminderEnabled INTEGER NOT NULL DEFAULT 1")
         }
 
         return m
