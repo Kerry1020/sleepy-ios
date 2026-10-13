@@ -1,8 +1,13 @@
-# Sleepy iOS — v1.0.60 Replication Recon
+# Sleepy iOS — v1.0.61 Replication Recon
 
-## Status as of 2026-10-13
+## Status as of 2026-10-13 (master @ 86e0799, align content merged)
 
-### Branch: `rebuild/align-sleepy-1.0.60` in `~/Desktop/sleepy-ios-wt/align-1.0.60`
+### features.csv (172 rows, 同源 basename 全量扫描改判后)
+
+- **94 ported / 77 missing**（同名 Swift 已存在的 9 行: OfflineSchoolCityIndex / SchoolCityIndex / SchoolCityLocator / SchoolLocationPolicy / MigrationBackup / MigrationDatabaseCodec / MigrationExecutor / MigrationPackageCodec / MigrationPrefsCodec 改判 ported，auto-sweep 注）
+- 77 missing = 真实缺口，按层归入 8 切片（plan.md 2-9）
+
+### Branch: `rebuild/align-sleepy-1.0.60` in `~/Desktop/sleepy-ios-wt/align-1.0.60` → 已合入 master
 
 ### Commits delivered (9 since baseline 63ed008 / v1.0.55)
 
@@ -139,3 +144,50 @@ Full breakdown: `replica/features.csv`
 ## Next step
 
 Resume with the highest-value remaining slice. The user's standing goal (`/goal 安装完之后用这个skill 把sleepy 1.0.60 严格复制到sleepy-iOS 已有仓库`) requires 1:1 port of v1.0.60. The pragmatic next slice is **migration/** (5 files, ~640 lines) because it gives users a real upgrade path; the iOS side is currently at v1.0.55 schema.
+
+---
+
+## v1.0.60 → v1.0.61 Delta（对齐目标升级, 2026-10-13）
+
+用户指令：**100% 全部对齐 v1.0.61, 不多不少**。范围锁定 tag v1.0.61（源仓 HEAD 的 #158/#159 不进口）。
+
+### v1.0.60..v1.0.61 全量 diff（47 文件, +3023/-270）
+
+| 类别 | 文件 | 内容 | iOS 归属切片 |
+|---|---|---|---|
+| db | Migrations.kt, AppDatabase.kt, TimeTableEntity.kt, schemas 10/11.json | **DB v10→v11**: `time_tables.reminderEnabled INTEGER NOT NULL DEFAULT 1`（#143 每表独立提醒开关, 前后台课表单独控制） | slice-data-migrations |
+| util | HolidayRange.kt | **`HolidayRangeOps.applyDaySwap`**（#145/#148: sourceDow 课挪到 targetDow + 屏蔽 targetDow 上 day∉sourceDays 的原课; 几何契约: 与 effectiveDayOfWeek 同形但不互相依赖） | slice-util |
+| util | HolidayManager.kt | 自定义补班日（网络 补班日 + 用户 调休 targetDates）也豁免灰显（#139/b92efaf6） | slice-util |
+| util | ConflictLayoutEngine.kt | 簇内原点偏移参数顺序修正（#146/#147: 1-2+2-4 重叠整体下移两节）; #142 非常规时间课并排分道 | slice-util |
+| util | TimeTableUtils.kt | 小修 | slice-util |
+| jw | **JwThuparser.kt (NEW, 351 行)** | 西南交大逐专平台导入修复 + 官方作息兜底（#134）; fixture `thu/zhkbcx-courses.sample.html` | slice-jw |
+| jw | JwYethanParser.kt, JwParserRegistry.kt, JwProtocol.kt | HBSM 湖北商贸登记（#156: schools.json 348→349, #157: sortKeyFull 拼音 shangmau→shangmao + campusOverride） | slice-jw |
+| jw | school_cities.json, schools.json | HBSM 城市映射 | slice-jw |
+| ui | LicenseScreen.kt (+26), AboutLicenseAttributionTest | 致谢页贡献者列表更新（#138） | slice-screens |
+| ui | ReminderScreen.kt (~267 diff) | #143 每表独立开关 UI + 流体云测试投放权限闸门（#151） | slice-reminder-live |
+| ui | TimeSlotEditor.kt (~399), AddCourseScreen, ConflictCard, ExportScreen（无课表有作息表导出页误判空态 #152） | 编辑/导出 UI 修正 | slice-screens |
+| ui | JwWebViewLoginScreen.kt | thu 逐专登录流程 | slice-jw |
+| ui | EditTableScreen.kt | #144 编辑页跳转: header 偏移 + day 进分组 + 空 groupId 匹配; b77fc4d6 改用 CourseEntity.id; 2188a9e4 默认跳到点击时段卡 | slice-screens |
+| notify | CourseNotificationScheduler.kt (~233 diff) | #143 按表 reminderEnabled 门控通知调度 | slice-reminder-live |
+| notify | FluidCloudService.kt, VendorLiveNotificationAdapters.kt | 流体云测试按钮分裂态 + 停止入口（#116）; OPPO 官方设置入口 + 投放状态对账（#151） | slice-reminder-live |
+| strings | 5 语言各 ~+35 键 | 本地化补 | 各切片引用时补 |
+
+### 平台映射表（iOS 无厂商差异 → 统一原生 API）
+
+| Android 机制 | iOS 等价 | 说明 |
+|---|---|---|
+| Widget（TodayWidget/TwoDay/WeekGrid/WeekList/CompactWindow） | WidgetKit extension target | WidgetWeekDataLoader 直读 DB → App Group container 同步; WidgetBitmapRenderers → UIGraphicsImageRenderer |
+| 流体云 / Vendor LiveCard（CourseLiveCardState/FluidCloudService/VendorLiveCardRenderer/Support/VendorLiveNotificationAdapter(s)/Capability） | **ActivityKit Live Activities** 统一一套 | iOS 无厂商分叉; 一套 ActivityKit 覆盖 OPPO/流体云场景; 测试投放权限闸门 → 设置深链 |
+| SystemCalendarManager / CalendarImportDialog | **EventKit** | 课表推入 iOS 日历 |
+| BackgroundReliabilityProbe/Snapshot | BGTaskScheduler 热态探测 | BGAppRefreshTask 采样后台存活 |
+| BatteryOptimizationIntents | 设置深链（ios-settings 无对应 API） | App Intents 暴露入口 |
+| widget 编辑区（WidgetEdit*） | WidgetConfigurationIntent + App Intents | 配置 intent 替代 AppWidget 编辑 Activity |
+| ClassDndScheduler / ReminderRescheduler | UNUserNotificationCenter + UNCalendarTrigger | 每表 reminderEnabled 门控调度 |
+| WeekGridPreviewActivity / WidgetRenderActivity | Widget 生命周期等价（TimelineProvider） | 无 Activity 概念 |
+
+### 工作纪律
+
+- 本地 commit 免批准; **push/tag/gh release = 用户明确批准闸门**（release-sop §6）
+- 每个 commit 作者 `lingion <lingion@hrbeu.edu.cn>`, 零 Co-Authored-By, 禁 `Fixes:/Closes:/Resolves:` 关帖词
+- 构建门: xcodebuild 必须 `env -u GIT_CONFIG_*`（copilot git 2.53.0 的 safe.bareRepository=explicit 污染 SPM bare-repo fetch）
+- xcodegen `/Users/lingion_k/bin/xcodegen generate`; 🚫手编 pbxproj
