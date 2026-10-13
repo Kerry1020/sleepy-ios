@@ -44,6 +44,12 @@ packages:
     exactVersion: 2.7.3
     # ← Jsoup 的 Swift 移植,API 与 org.jsoup 1:1(JwQzParser/JwUrpParser 依赖)。
     # 锁 2.7.3(tools 5.7): 最新 2.13.x 要求 Swift 6 工具链,Xcode 14.3 编不过。
+  ZIPFoundation:
+    url: https://gh.qdp.qzz.io/weichsel/ZIPFoundation.git
+    from: 0.9.20
+    # 纯 Swift zip 实现,JwCaptureDump 用 iOS 标准 .zip 字节流写排查全量包。
+    # Android 端走 java.util.zip,ZIPFoundation 同样输出 DEFLATE 流(标头格式兼容 unzip)。
+    # 镜像源: gh.qdp 是 GitHub 协议的 1:1 镜像,tag/branch 同步无延迟。
 
 targets:
   Sleepy:
@@ -58,6 +64,7 @@ targets:
     dependencies:
       - package: GRDB
       - package: SwiftSoup
+      - package: ZIPFoundation
       - target: SleepyWidget       # 内嵌 widget extension → PlugIns/SleepyWidget.appex
     info:
       path: Sleepy/Info.plist
@@ -117,6 +124,7 @@ targets:
     dependencies:
       - package: GRDB
       - package: SwiftSoup
+      - package: ZIPFoundation
     info:
       path: SleepyWidget/Info.plist
       properties:
