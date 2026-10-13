@@ -32,6 +32,18 @@ struct PeriodTableDao {
         }
     }
 
+    /// 事务内批量直插 — 迁移 applyOverwrite/applyMerge 共用同一 db.write
+    func insertAllInDb(_ dbw: Database, _ tables: [PeriodTableEntity]) throws {
+        for var t in tables {
+            try t.insert(dbw, onConflict: .replace)
+        }
+    }
+
+    /// 事务内直删全表 — 迁移 applyOverwrite 共用同一 db.write
+    func deleteAllInDb(_ dbw: Database) throws {
+        try dbw.execute(sql: "DELETE FROM period_tables")
+    }
+
     // @Update
     func update(_ table: PeriodTableEntity) throws {
         var table = table

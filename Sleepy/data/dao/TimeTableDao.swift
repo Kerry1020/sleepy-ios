@@ -23,6 +23,18 @@ struct TimeTableDao {
         return table.id
     }
 
+    /// 事务内批量直插 — 迁移 applyOverwrite/applyMerge 共用同一 db.write
+    func insertAllInDb(_ dbw: Database, _ tables: [TimeTableEntity]) throws {
+        for var t in tables {
+            try t.insert(dbw, onConflict: .replace)
+        }
+    }
+
+    /// 事务内直删全表 — 迁移 applyOverwrite 共用同一 db.write
+    func deleteAllInDb(_ dbw: Database) throws {
+        try dbw.execute(sql: "DELETE FROM time_tables")
+    }
+
     func setDefaultInDb(_ dbw: Database, _ id: Int64) throws {
         try dbw.execute(sql: "UPDATE time_tables SET isDefault = (id = ?)", arguments: [id])
     }
