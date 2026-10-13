@@ -26,6 +26,14 @@ struct CourseDao {
         return ids
     }
 
+    /// 事务内直插单条 — 迁移 applyMerge 共用同一 db.write, 走自增 ID。
+    @discardableResult
+    func insertInDb(_ dbw: Database, _ course: CourseEntity) throws -> Int64 {
+        var c = course
+        try c.insert(dbw, onConflict: .replace)
+        return c.id
+    }
+
     /// 事务内强制保留原 ID 插入 — 全量迁移包覆盖导入用(Android insertKeepId)。
     /// GRDB 的 MutablePersistableRecord.didInsert 会覆盖 id,所以这里改用底层 SQL
     /// INSERT OR REPLACE,SQLite 按提供的 id 落 rowid;这样 course.id 仍为入参值。

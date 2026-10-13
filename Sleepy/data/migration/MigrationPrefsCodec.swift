@@ -167,8 +167,8 @@ enum MigrationPrefsFileMap {
     ]
     static let PERSISTED_STATE: [String] = []   // iOS 端当前无独立持久态; 预留给未来扩展
 
-    static func files(of module: MigrationModule) -> [String] {
-        switch module {
+    static func files(of: MigrationModule) -> [String] {
+        switch `of` {
         case .PREFERENCES: return PREFERENCES
         case .WIDGETS: return WIDGETS
         case .PERSISTED_STATE: return PERSISTED_STATE
