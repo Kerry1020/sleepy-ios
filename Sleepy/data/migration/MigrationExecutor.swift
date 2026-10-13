@@ -53,7 +53,7 @@ enum MigrationExecutor {
     /// iOS 同步 throws(GRDB DAO throws 而非 suspend)。
     static func export(
         selected: Set<MigrationModule>,
-        prefsStore: MigrationPrefsStore,
+        prefsStore: MigrationPrefsStoreProtocol,
         courseDao: CourseDao,
         timeTableDao: TimeTableDao,
         periodTableDao: PeriodTableDao,
@@ -84,7 +84,7 @@ enum MigrationExecutor {
             createdAt: createdAt,
             modules: payloads.keys.map { $0.entryName }
         )
-        let bytes = try MigrationPackageCodec.write(payloads, createdAt: createdAt)
+        let bytes = try MigrationPackageCodec.write(modules: payloads, createdAt: createdAt)
         return ExportResult(
             bytes: bytes,
             modules: Array(payloads.keys).sorted(),
@@ -98,7 +98,7 @@ enum MigrationExecutor {
         var files: [String: MigrationPrefsCodec.PrefsFileSnapshot] = [:]
         for fileName in MigrationPrefsFileMap.files(of: module) {
             // 空 prefs 文件不进包: 无信息量, 且让接收端保留自有设置 (设备设置优先于默认)
-            let defaults = store.open(fileName)
+            let defaults = store.open(fileName: fileName)
             let snapshot = MigrationPrefsCodec.collect(defaults)
             if !snapshot.entries.isEmpty {
                 files[fileName] = snapshot
@@ -114,7 +114,7 @@ enum MigrationExecutor {
     static func `import`(
         bytes: Data,
         mode: ImportMode,
-        prefsStore: MigrationPrefsStore,
+        prefsStore: MigrationPrefsStoreProtocol,
         courseDao: CourseDao,
         timeTableDao: TimeTableDao,
         periodTableDao: PeriodTableDao,
@@ -160,7 +160,7 @@ enum MigrationExecutor {
                 let snapshot = try MigrationPrefsCodec.decode(payload)
                 // 包内缺失的 prefs 文件不动本机; 包内文件按 mode 决定整文件替换或同名覆盖
                 for (fileName, fileSnapshot) in snapshot.files {
-                    let defaults = prefsStore.open(fileName)
+                    let defaults = prefsStore.open(fileName: fileName)
                     try MigrationPrefsCodec.apply(defaults, fileSnapshot,
                                                   merge: mode == .MERGE)
                 }
