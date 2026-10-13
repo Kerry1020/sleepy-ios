@@ -198,16 +198,19 @@ final class ManageImportUITests: XCTestCase {
         _ = app.descendants(matching: .any).matching(
             NSPredicate(format: "label CONTAINS '编译原理'")).firstMatch.waitForExistence(timeout: 2)
 
-        // 选"追加不冲突"模式(不破坏种子表)
+        // 选 "Import as new schedule" 模式: 只有该模式(及 Append as new table / Overwrite
+        // current)会弹 "Confirm Before Import" 对话框; "Append non-conflicting" 在 Android
+        // 源上本来就不弹 confirm(直接应用) → 旧断言不可能通过。
         let appendBtn = app.descendants(matching: .any).matching(
-            NSPredicate(format: "label CONTAINS 'Append non-conflicting'")).firstMatch
+            NSPredicate(format: "label CONTAINS 'Import as new'")).firstMatch
         if appendBtn.waitForExistence(timeout: 3) {
             appendBtn.tap()
         } else {
-            // 三模式按钮之一必在
+            // 兜底: "⚠ Overwrite current" 也走 confirm 流(替换种子表为导入内容,
+            // 编译原理 周四 7-8 不碰种子课时段, 课表仍可验证)
             let replace = app.descendants(matching: .any).matching(
-                NSPredicate(format: "label CONTAINS 'Replace'")).firstMatch
-            XCTAssertTrue(replace.exists, "3 模式按钮至少一个应在")
+                NSPredicate(format: "label CONTAINS 'Overwrite current'")).firstMatch
+            XCTAssertTrue(replace.waitForExistence(timeout: 2), "confirm 流模式按钮都不在")
             replace.tap()
         }
 
@@ -252,9 +255,11 @@ final class ManageImportUITests: XCTestCase {
                       "导入后应打开新表编辑页(onOpenEditTable 链)")
         // 表名应为导入的表名
         XCTAssertTrue(app.staticTexts["Edit Schedule"].exists)
-        // 返回编辑页 → 课表含新课
+        // 返回编辑页 → 落在 Manage Tab(导入链从 Manage 发起, Android 同行为:
+        // 导入后留在管理页) → 切到课表 Tab 才可见新课
         app.buttons.matching(NSPredicate(format: "label == 'Back'")).firstMatch.tap()
         sleep(1)
+        app.descendants(matching: .any)["pill_schedule"].tap()
         XCTAssertTrue(app.descendants(matching: .any).matching(
             NSPredicate(format: "label CONTAINS '编译原理'")).firstMatch
             .waitForExistence(timeout: 8), "导入后课表应含编译原理")
