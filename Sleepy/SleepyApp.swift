@@ -6,6 +6,15 @@
 //   - MainActivity.setContent + AppRoot → WindowGroup { AppRoot }
 //   - 深链 EXTRA_COURSE_ID → URL scheme sleepy://course/<id>(平台差异表#4)
 //   - pendingImportText(外部 json 打开) → onOpenURL sleepy://import?text=
+//
+// MainActivity 职责 → iOS 承接表 (app-shell slice, 2026-10):
+//   - 深链 EXTRA_COURSE_ID / onNewIntent    → onOpenURL (sleepy://course, sleepy://import)
+//   - autoShowImportOnceState (一键导入引导) → 管理页 sheet 通道 (无跨进程一次性标记缺口)
+//   - pendingImportText → EXTRA_DRAFT_ID 打开 import   → 外部打开走 URL; 草稿恢复待 data-migrations
+//   - uiMode 监听 (dark 实时重算, configChanges 不重建) → iOS 系统 dark 自动驱动颜色资源, 无需信号
+//   - splash 替换 (installSplashScreen)               → iOS 无公开 splash API, 记录 no-analog
+//   - HighRefreshRate 120Hz 请求                        → 无公开 API (ProMotion 系统调度, 2026-09-10 已审计)
+//   - 权限请求序 (runtime permission)                   → 通知权限在 NotificationScheduler 首次调度时按需请求, 无独立序
 
 import SwiftUI
 import UIKit
