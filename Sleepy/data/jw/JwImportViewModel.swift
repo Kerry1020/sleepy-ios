@@ -77,7 +77,8 @@ final class JwImportViewModel: ObservableObject {
                 status: status,
                 aliases: aliases,
                 sortKeyFull: obj["sortKeyFull"] as? String ?? "",
-                enableFetch: (obj["enableFetch"] as? Bool) ?? false
+                enableFetch: (obj["enableFetch"] as? Bool) ?? false,
+                cities: (obj["cities"] as? [String]) ?? []
             ))
         }
         return list

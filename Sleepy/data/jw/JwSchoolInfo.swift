@@ -18,6 +18,9 @@ struct JwSchoolInfo: Equatable {
     var sortKeyFull: String = ""
     /// T11 新增:该校是否启用 WebView 内 fetch 模式。默认 false 避免给未验证学校强行 fetch 出 0 课。
     var enableFetch: Bool = false
+    /// Known home/campus cities, used only for the school picker recommendations.
+    /// ← v1.0.60 同城推荐: 城市元数据与导入目录分离, 不影响 URL/协议。
+    var cities: [String] = []
 
     var isSupported: Bool { status == Self.STATUS_SUPPORTED || status == Self.STATUS_GRAD_SUPPORTED }
     var isGrad: Bool { status == Self.STATUS_GRAD_SUPPORTED || status == Self.STATUS_GRAD_PENDING }
