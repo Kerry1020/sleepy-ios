@@ -24,6 +24,16 @@ struct TimeTableEntity: Codable, FetchableRecord, MutablePersistableRecord, Iden
     /// v1.0.16 自动模式（智慧节次）配置 JSON。空串表示该表走手动模式（timeJson）。
     var smartConfigJson: String = ""
     var createdAt: Int64 = Int64(Date().timeIntervalSince1970 * 1000)
+    /// issue#40 绑定的独立时间节次表 (period_tables.id)。nil = 未绑定(用旧 timeJson 兼容列)。
+    /// 课程表 → 时间节次表的单向引用; 一张时间节次表可被多张课程表引用。
+    /// 修改所绑时间表 = 本表立即按新作息解释节次; 课程行 startNode/step 不重算。
+    var periodTableId: Int64? = nil
+    /// C2(2026-09-20): 换绑前本表自身作息快照 — 绑定时的 timeJson/nodesPerDay/smartConfigJson
+    /// 三元组 JSON 包络({t,n,s}), 解绑时恢复此快照再清空。
+    /// 修复 issue#40 用户数据破坏: 旧实现换绑时把目标表内容镜像覆盖本表兼容列,
+    /// 解绑后"使用本表作息"读到的是镜像副本, 用户手工作息永久丢失。
+    /// 快照仅当 periodTableId 由 nil → 非 nil 时写入一次; 绑→绑换目标不刷新快照。
+    var preBindSnapshotJson: String = ""
     /// 主键 autoGenerate
     var id: Int64 = 0
 
@@ -45,5 +55,36 @@ struct TimeTableEntity: Codable, FetchableRecord, MutablePersistableRecord, Iden
         container["isDefault"] = isDefault
         container["smartConfigJson"] = smartConfigJson
         container["createdAt"] = createdAt
+        container["periodTableId"] = periodTableId
+        container["preBindSnapshotJson"] = preBindSnapshotJson
+    }
+
+    /// issue#40 有效时间表水合(设计 §5.1): 绑定存在 → 节次时间/智慧节次/节次数
+    /// 全部以所绑 periodTable 为准覆盖本表对应字段(兼容列保留不动, 仅作回退);
+    /// 未绑定或传入 nil → 原样返回(读旧兼容列, 行为与升级前一致)。
+    ///
+    /// 渲染/通知/widget 路径统一经此函数取"节次→时间"的真源;
+    /// 课程行按 startNode/step 节次绑定, 不因水合而变。
+    func hydratedWith(_ periodTable: PeriodTableEntity?) -> TimeTableEntity {
+        guard let pt = periodTable else { return self }
+        var t = self
+        t.nodesPerDay = pt.nodesPerDay
+        t.timeJson = pt.timeJson
+        t.smartConfigJson = pt.smartConfigJson
+        return t
+    }
+
+    /// C2: 首次绑定(nil → 非 nil)时产出的新实体 — 兼容列不变,
+    /// 只写 periodTableId 并把绑定前的 {t,n,s} 三元组存进快照列。
+    static func snapshotForBind(table: TimeTableEntity, targetId: Int64) -> TimeTableEntity {
+        var t = table
+        t.periodTableId = targetId
+        t.preBindSnapshotJson = PeriodTableEntity.snapshotJsonForBind(table: table)
+        return t
+    }
+
+    /// C2: 解绑(非 nil → nil)时的新实体 — 见 PeriodTableEntity.restoredForUnbind
+    static func restoredForUnbind(table: TimeTableEntity) -> TimeTableEntity {
+        PeriodTableEntity.restoredForUnbind(table)
     }
 }

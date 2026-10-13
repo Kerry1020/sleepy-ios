@@ -26,6 +26,33 @@ struct CourseDao {
         return ids
     }
 
+    /// 事务内强制保留原 ID 插入 — 全量迁移包覆盖导入用(Android insertKeepId)。
+    /// GRDB 的 MutablePersistableRecord.didInsert 会覆盖 id,所以这里改用底层 SQL
+    /// INSERT OR REPLACE,SQLite 按提供的 id 落 rowid;这样 course.id 仍为入参值。
+    func insertKeepIdInDb(_ dbw: Database, _ course: CourseEntity) throws {
+        let columns = CourseEntity.databaseTableName
+        // 与 GRDB 的 column order 一致(CourseEntity Codable 字段顺序即 columns),
+        // 用 row.toArray() 避免遗漏 future 字段;但 row 是 struct,转 array 需要
+        // 走 GRDB 的 PersistenceContainer;简化:用全列显式绑定
+        try dbw.execute(
+            sql: """
+            INSERT OR REPLACE INTO courses
+            (id, groupId, tableId, courseName, teacher, room, note, alias, day, startNode,
+             step, startWeek, endWeek, type, color, colorMode, ownTime,
+             isIrregularNode, isIrregularTime, startTime, endTime, credit, level)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            arguments: [
+                course.id, course.groupId, course.tableId, course.courseName,
+                course.teacher, course.room, course.note, course.alias, course.day,
+                course.startNode, course.step, course.startWeek, course.endWeek,
+                course.type, course.color, course.colorMode, course.ownTime,
+                course.isIrregularNode, course.isIrregularTime,
+                course.startTime, course.endTime, course.credit, course.level
+            ]
+        )
+    }
+
     func insertAll(_ courses: [CourseEntity]) throws -> [Int64] {
         try db.write { db in
             var ids: [Int64] = []

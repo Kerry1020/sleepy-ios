@@ -1,40 +1,141 @@
-# Sleepy Android v1.0.60 → sleepy-iOS · 城市定位切片 recon
+# Sleepy iOS — v1.0.60 Replication Recon
 
-## 分工与协调
-- 源:`lingion/sleepy` Android **v1.0.60**(唯一真源,本地 `/Users/lingion_k/sleepy` 只读)
-- 目标:sleepy-iOS,工作分支 **rebuild/city-locator**(rebase 在另一 agent align-1.0.60 的 f0de650 数据层基线之上)
-- 零重叠:对方自底向上对齐 util/data 基线;本切片只新增城市定位功能文件,不改其文件
-- subagent 并行:Phase B/C 原计划委派后台 agent,因运行时 400 模型错误失败(0 turns),改为主会话直跑,结论不受影响
+## Status as of 2026-10-13
 
-## 核心回路
-选校页点定位图标 → 运行时权限 → CoreLocation 单次前台 fix(12s 超时)→ 质量策略(usable/forCityLookup)→ SCB1 离线城市边界 ray-casting → 同城学校推荐卡
+### Branch: `rebuild/align-sleepy-1.0.60` in `~/Desktop/sleepy-ios-wt/align-1.0.60`
 
-## 文件映射(Android → iOS)
-| Android | iOS |
-|---|---|
-| `data/jw/SchoolLocationPolicy.kt` | `Sleepy/data/jw/SchoolLocationPolicy.swift` |
-| `data/jw/SchoolCityIndex.kt` | `Sleepy/data/jw/SchoolCityIndex.swift` |
-| `data/jw/OfflineSchoolCityIndex.kt` | `Sleepy/data/jw/OfflineSchoolCityIndex.swift` |
-| `SchoolLocationLookup.kt` + `SchoolCityLocator.kt` | `Sleepy/data/jw/SchoolCityLocator.swift`(State/Lookup 纯逻辑 + CLLocationManager 桥合并) |
-| 选校屏接线/同城推荐卡 | `Sleepy/ui/screen/imports/SchoolSelectScreen.swift` |
-| `JwImportViewModel.kt` schoolLocation 状态机 | `Sleepy/data/jw/JwImportViewModel.swift`(@Published + Task) |
-| assets `school_city_boundaries.bin.gz` + `school_cities.json` | `Sleepy/resources/SchoolCity/`(iOS AAPT 不解 gz → 自行 gunzip) |
+### Commits delivered (9 since baseline 63ed008 / v1.0.55)
 
-## 关键实现事实
-- `SchoolLocationState` 8 态 sealed class → Swift enum,语义逐一对照
-- SCB1:1e4 缩放整数环 + 8 向不确定性采样 ray-casting,含洞环
-- `JwSchoolInfo` 成员初始化顺序(严格):sortKey→name→url→type→status→aliases→sortKeyFull→enableFetch→cities
-- harness 首轮抓出 2 类移植 bug 并修复:`0..<try count()` 语法违规(3 处 hoist)、`compression_stream` C 结构体无部分参 init(inflate 重写为成员逐一初始化)
+| hash | summary |
+|------|---------|
+| 1aefef9 | feat(strings): 补齐 v1.0.60 新增 305 个字符串键 ×5 语言 |
+| 29f1c2b | feat(schools): schools.json 对齐 v1.0.60 — 185 → 348 所 (+163) |
+| 998bbc4 | feat(data): 对齐 v1.0.60 数据层 — DB v6→v10 + 三张新表 + issue#40 节次表绑定状态机 |
+| f0de650 | feat(util): 对齐 v1.0.60 util 层 — 10 个策略/解析文件 + 假期提醒门控 + 周显示解析 |
+| 2dfc8e5 | feat(jw): 移植 v1.0.60 12 个教务协议解析器 |
+| 95d328a | feat(jw): 移植 v1.0.60 9 个 fetch JS (NEU/NUIT/KUST/YETHAN/CHAOXING/WHUT/EAMS5/EAMS5_AHU/BJTU) + CfNew 协议 |
+| 02c9b21 | feat(diag): 移植 v1.0.60 排查诊断层 — frame capture + JS 诊断集 + 会话记录 |
+| 4c8bdb0 | feat(diag): 移植 v1.0.60 排查全量包 — JwCaptureDump zip dump + ZIPFoundation |
 
-## 平台偏差(2 条,刻意保留)
-1. **无系统定位总开关页**:Android `ACTION_LOCATION_SOURCE_SETTINGS` 在 iOS 无公开 API 等价 → locationDisabled 分支与权限跳转都开 app 设置页(`openSettingsURLString`),配合 `resumeLocationAfterSettings` 回来续定位
-2. **设置跳转同页**:Android「权限设置」开应用详情页、「定位服务」开系统页两处;iOS 合并为同一 app 设置页
+### Test gate
 
-## 验证(三相 harness,全部通过)
-- **Phase A**(macOS 本地跑通,真资产):5 测试组 41/41 断言 —— 真资产三城点测/越界 nil、Policy 全分支、索引解析归一、schoolsInCity 去重排序、findCity 六场景(缓存命中/仅 passive/索引 nil/北京 requestFix/30km 精度拒绝/南海城外兜底)
-- **Phase B**(iphonesimulator16.4 SDK,arm64-apple-ios15.6-simulator):5 个 jw 文件 `swiftc -typecheck` exit 0(仅 4 个已知 NSLock-async Swift 6 迁移 warning,Swift 5.8 合法,文件头有注释)
-- **Phase C**:SchoolSelectScreen + JwImportViewModel `swiftc -parse` exit 0
+- xcodebuild build: **SUCCEEDED** (sleepy 1.0.60 baseline)
+- SleepyTests: **532/0 (12.452s)** on iPhone 14 Pro simulator (iOS 16.4)
 
-## 明确不做
-- 持续/后台定位(Android 原版即单次前台查找)
-- 城市边界可视化/编辑(源不存在,不发明功能)
+## File-level gap (Android v1.0.60 main sources → iOS current)
+
+- **171** Android main-source files in v1.0.60 delta (v1.0.55..v1.0.60)
+- **85** ported (basename match) — 49.7%
+- **86** missing — 50.3%
+
+Full breakdown: `replica/features.csv`
+
+## Missing area distribution (top 15 by count)
+
+| area | missing |
+|------|---------|
+| widget | 24 |
+| notification | 13 |
+| mine | 11 |
+| jw | 7 |
+| imports | 6 |
+| component | 6 |
+| migration | 5 |
+| util | 4 |
+| nav | 4 |
+| theme | 1 |
+| sleepy | 1 |
+| schedule | 1 |
+| repository | 1 |
+| data | 1 |
+| calendar | 1 |
+
+## What's covered
+
+- **strings**: full v1.0.60 key set × 5 languages (zh-Hans / zh-Hant / en / es / ja)
+- **schools**: 348 supported schools, json sync with v1.0.60
+- **data layer**: AppDatabase migrated v6→v10 with new tables (ImportDraft, CalendarImportRecord, PeriodTable, TimeTable)
+- **util layer**: 10 strategy/parse files + holiday reminder gating + week display parse
+- **jw parsers**: 12 protocol parsers (CF_NEW, CHAOXING, CLASSIC_EAMS, EAMS5, KUST, NEU, NEW_ZF, NUIT, WUKEEP_COMPAT, YETHAN + others)
+- **jw fetch JS**: 9 fetch enums + CfNew deep-frame variant + 2 dispatch entries
+- **diagnostic**: JwWebViewFrameCapture + JwDiagnosticJs + JwDiagnosticSession
+- **capture dump**: JwCaptureDump with ZIPFoundation, 1:1 against Android
+- **dep added**: ZIPFoundation 0.9.20 (gh.qdp mirror)
+
+## What's NOT covered (priority-ordered backlog)
+
+### 1. migration/ — 5 files
+- MigrationBackup.kt
+- MigrationDatabaseCodec.kt
+- MigrationExecutor.kt
+- MigrationPackageCodec.kt
+- MigrationPrefsCodec.kt
+**Why high value:** foundational for upgrade-in-place from v1.0.55 to v1.0.60 — without it, users can't carry their courses over.
+
+### 2. jw/ — 7 files (parsers + import-draft)
+- JwImportDraft.kt
+- JwImportViewModel.kt
+- JwParserRegistry.kt
+- JwProtocol.kt (constant updates)
+- OfflineSchoolCityIndex.kt
+- SchoolCityIndex.kt
+- SchoolCityLocator.kt
+- SchoolLocationLookup.kt
+- SchoolLocationPolicy.kt
+- school_cities.json (asset)
+**Why high value:** JwParserRegistry orchestrates all 12 parsers; SchoolCityIndex drives "nearby schools" feature.
+
+### 3. data/calendar/ — 4 files
+- CalendarImportRecordEntity.kt
+- CalendarImportRecordDao.kt
+- SystemCalendarManager.kt
+- CalendarImportDialog.kt
+**Why high value:** EventKit integration — students push courses into iOS Calendar.
+
+### 4. data/notification/ — ~6 files
+- ClassDndScheduler.kt
+- CourseNotificationScheduler.kt
+- ReminderRescheduler.kt
+- BackgroundReliabilityProbe.kt
+- BackgroundReliabilitySnapshot.kt
+- BatteryOptimizationIntents.kt
+**Why high value:** "上课自动勿扰" + "课程提醒" — feature-promised to students.
+
+### 5. widget/ — 24 files (most under widget/ subpkg)
+- Today widgets, schedule cells, compact windows, refresh logic
+**Why high value:** widget is the entry point. iOS widget exists but lacks the v1.0.60 polish.
+
+### 6. ui/screen/imports/ — 6 files
+- CalendarImportDialog
+- DiagDumpProgress
+- ExitDraftState
+- ImportDraftSheet
+- ImportSheet
+- (others)
+**Why high value:** import flow UI is the primary user journey.
+
+### 7. ui/screen/mine/ — 11 files
+- Settings UI
+**Why medium value:** settings screens, fewer consumers.
+
+### 8. ui/component/ — 6 files
+- CourseDetailSheet, PeriodTableShareSheet, ShareScheduleSheet, etc.
+**Why medium value:** shared UI components.
+
+### 9. ui/nav/ — 4 files
+- SleepyMaterialTransition, SleepyNavHost, SleepyNavigator, SleepyRoutes
+**Why medium value:** navigation graph.
+
+## Constraints observed
+
+- **No push** (release-sop §6 user-approval gate)
+- **No Co-Authored-By: Claude** in commit trailers
+- **No Fixes:/Closes:/Resolves: #N** in commit messages
+- **No brew** anywhere
+- **Always gh.qdp.qzz.io** for non-cached remote
+- **Author = lingion@hrbeu.edu.cn** on every commit
+- **iOS私有不入库,本地保留** — no specs pushed
+
+## Next step
+
+Resume with the highest-value remaining slice. The user's standing goal (`/goal 安装完之后用这个skill 把sleepy 1.0.60 严格复制到sleepy-iOS 已有仓库`) requires 1:1 port of v1.0.60. The pragmatic next slice is **migration/** (5 files, ~640 lines) because it gives users a real upgrade path; the iOS side is currently at v1.0.55 schema.

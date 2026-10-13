@@ -353,9 +353,9 @@ final class JwImportViewModelLogicTests: XCTestCase {
 
     func testSchoolsJsonLoadsAndParses() throws {
         // 校数闸门随安卓 schools.json 联动
-        // 2026-09-10 安卓收录燕山大学(博雅研究生平台, 首个 grad_supported) → 185
+        // 2026-09-10 安卓 185 → v1.0.60 全量交叉验证收录 348 (15 agent 分桶, 60 修/3 删/3 更名)
         let list = try loadSchools()
-        XCTAssertEqual(185, list.count)
+        XCTAssertEqual(348, list.count)
         let first = list[0]
         XCTAssertFalse(first.name.isEmpty)
     }

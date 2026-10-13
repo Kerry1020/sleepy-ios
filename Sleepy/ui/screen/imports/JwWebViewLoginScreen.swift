@@ -209,6 +209,41 @@ struct JwWebViewLoginScreen: View {
             coordinator.evaluate(QzAppFetchJs.js)
             return
         }
+        // v1.0.60 新增 fetch JS 派发(8 校, ← JwWebViewLoginScreen.kt 派发表逐条移植)
+        if school.type == JwProtocol.TYPE_NEU {
+            coordinator.evaluate(NeuFetchJs.js); return
+        }
+        if school.type == JwProtocol.TYPE_NUIT {
+            coordinator.evaluate(NuitFetchJs.js); return
+        }
+        if school.type == JwProtocol.TYPE_KUST {
+            coordinator.evaluate(KustFetchJs.js); return
+        }
+        if school.type == JwProtocol.TYPE_YETHAN {
+            coordinator.evaluate(YethanFetchJs.js); return
+        }
+        if school.type == JwProtocol.TYPE_CHAOXING {
+            coordinator.evaluate(ChaoxingFetchJs.js); return
+        }
+        if school.type == JwProtocol.TYPE_WHUT {
+            coordinator.evaluate(WhutFetchJs.js); return
+        }
+        if school.type == JwProtocol.TYPE_BJTU {
+            coordinator.evaluate(BjtuFetchJs.js); return
+        }
+        if school.type == JwProtocol.TYPE_EAMS5 {
+            // EAMS5 与 EAMS5_AHU 共用 fetch 模板, __EAMS5_PREFIX__ 运行时
+            // 用 Eams5PathPrefix.fromSchoolUrl 替换(见 Eams5PathPrefix.swift)
+            let prefix = Eams5PathPrefix.fromSchoolUrl(school.url)
+            coordinator.evaluate(Eams5FetchJs.js.replacingOccurrences(of: EAMS5_PREFIX_PLACEHOLDER, with: prefix))
+            return
+        }
+        // 新青果 NTSS (江西中医药大学 jiaowu.jxutcm.edu.cn): 课表页在深嵌同源 iframe,
+        // 走下钻 frame + getCalendarWeekDatas 全学期单请求(行 zc 覆盖多周, 防御性
+        // 回退逐周 1..22),全 JSON envelope sleepyCfNtss 透传给 JwCfNewParser 解码。
+        if school.type == JwProtocol.TYPE_CF_NEW {
+            coordinator.evaluate(CfNewFetchJs.js); return
+        }
         // 同步 evaluateJavascript 拿 HTML(iframe/frame 合并)
         let js = """
         (function() {

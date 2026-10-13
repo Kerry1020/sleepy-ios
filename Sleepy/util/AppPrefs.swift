@@ -461,6 +461,63 @@ final class AppPrefs {
     func setHolidayRanges(_ ranges: [HolidayRange]) {
         sp().set(HolidayRangeOps.encodeOverrides(ranges), forKey: Self.KEY_HOLIDAY_OVERRIDES)
     }
+
+    // ===== 节假日提醒规则开关 (v1.0.60 对齐) =====
+    // 默认全 true ← Android 同名 KEY, sp().getBoolean(KEY, true)
+    static let KEY_HOLIDAY_REMINDER_RULES_ENABLED = "holiday_reminder_rules_enabled"
+    static let KEY_HOLIDAY_REMINDER_PUBLIC_HOLIDAY = "holiday_reminder_public_holiday"
+    static let KEY_HOLIDAY_REMINDER_TRANSFER_HOLIDAY = "holiday_reminder_transfer_holiday"
+    static let KEY_HOLIDAY_REMINDER_MAKEUP_WORKDAY = "holiday_reminder_makeup_workday"
+    static let KEY_HOLIDAY_REMINDER_ORDINARY_WEEKEND = "holiday_reminder_ordinary_weekend"
+
+    private func reminderFlag(_ key: String) -> Bool {
+        sp().object(forKey: key) as? Bool ?? true
+    }
+
+    func isHolidayReminderRulesEnabled() -> Bool { reminderFlag(Self.KEY_HOLIDAY_REMINDER_RULES_ENABLED) }
+    func setHolidayReminderRulesEnabled(_ v: Bool) { sp().set(v, forKey: Self.KEY_HOLIDAY_REMINDER_RULES_ENABLED) }
+    func isHolidayReminderPublicHolidayEnabled() -> Bool { reminderFlag(Self.KEY_HOLIDAY_REMINDER_PUBLIC_HOLIDAY) }
+    func setHolidayReminderPublicHolidayEnabled(_ v: Bool) { sp().set(v, forKey: Self.KEY_HOLIDAY_REMINDER_PUBLIC_HOLIDAY) }
+    func isHolidayReminderTransferHolidayEnabled() -> Bool { reminderFlag(Self.KEY_HOLIDAY_REMINDER_TRANSFER_HOLIDAY) }
+    func setHolidayReminderTransferHolidayEnabled(_ v: Bool) { sp().set(v, forKey: Self.KEY_HOLIDAY_REMINDER_TRANSFER_HOLIDAY) }
+    func isHolidayReminderMakeupWorkdayEnabled() -> Bool { reminderFlag(Self.KEY_HOLIDAY_REMINDER_MAKEUP_WORKDAY) }
+    func setHolidayReminderMakeupWorkdayEnabled(_ v: Bool) { sp().set(v, forKey: Self.KEY_HOLIDAY_REMINDER_MAKEUP_WORKDAY) }
+    func isHolidayReminderOrdinaryWeekendEnabled() -> Bool { reminderFlag(Self.KEY_HOLIDAY_REMINDER_ORDINARY_WEEKEND) }
+    func setHolidayReminderOrdinaryWeekendEnabled(_ v: Bool) { sp().set(v, forKey: Self.KEY_HOLIDAY_REMINDER_ORDINARY_WEEKEND) }
+
+    // ===== issue#44 调休映射(按课表隔离, 放假日→补班日) =====
+
+    /// 调休映射按课表 ID 单独存 key — 各校补法不同(同一天 A 校补周四、B 校补周一),
+    /// 全局一份会跨表套错。删表时可整键删除。
+    private static func transferKey(_ tableId: Int64) -> String { "holiday_transfer_\(tableId)" }
+
+    /// 某课表的调休映射; 无表/未设置 = 空(全部按自然星期取课)
+    func getHolidayTransfers(_ tableId: Int64) -> [HolidayTransferEntry] {
+        HolidayTransferOps.decodeTransfers(sp().string(forKey: Self.transferKey(tableId)) ?? "[]")
+    }
+
+    func setHolidayTransfers(_ tableId: Int64, _ transfers: [HolidayTransferEntry]) {
+        sp().set(HolidayTransferOps.encodeTransfers(transfers), forKey: Self.transferKey(tableId))
+    }
+
+    /// 设/改某放假日的映射; targetDate = nil → 清除该放假日(回到自然星期)。
+    /// 互斥(后选覆盖前选): 写入前移除同 targetDate 的既有条目 — 一天只能上一次课。
+    func updateHolidayTransfer(_ tableId: Int64, sourceDate: Date, targetDate: Date?, segmentId: String) {
+        let existing = getHolidayTransfers(tableId)
+        let next: [HolidayTransferEntry]
+        if let td = targetDate {
+            next = HolidayTransferOps.withTargetExclusivity(
+                existing, HolidayTransferEntry(sourceDate: sourceDate, targetDate: td, segmentId: segmentId))
+        } else {
+            next = existing.filter { $0.sourceDate != sourceDate }
+        }
+        setHolidayTransfers(tableId, next)
+    }
+
+    /// 删表时清掉该表映射
+    func clearHolidayTransfers(_ tableId: Int64) {
+        sp().removeObject(forKey: Self.transferKey(tableId))
+    }
 }
 
 /// 冲突默认置顶内存真相源(← MutableStateFlow) — @Published 供 SwiftUI 同帧刷 UI
