@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct PeriodTablesScreen: View {
+    @Environment(\.localWakeUpColors) private var colors
     let onBack: () -> Void
     let onOpenEdit: (Int64) -> Void
     var onCreateNew: (Int64) -> Void
@@ -24,6 +25,7 @@ struct PeriodTablesScreen: View {
             list
             newButton
         }
+        .accessibilityIdentifier("period_tables_screen")
         .navigationBarHidden(true)
         .onAppear { reload() }
         .sheet(item: $copyTarget) { target in
@@ -69,14 +71,14 @@ struct PeriodTablesScreen: View {
                     .font(.subheadline.weight(.semibold))
                 Text(L10n.format("period_table_bound_count", bound))
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(colors.onSurfaceVariant)
             }
             Spacer()
             Button {
                 onOpenEdit(pt.id)
             } label: {
                 Image(systemName: "square.and.pencil")
-                    .foregroundColor(.secondary)
+                    .foregroundColor(colors.onSurfaceVariant)
             }
             .accessibilityLabel(Text(L10n.t("edit_table_title")))
             Button {
@@ -86,13 +88,13 @@ struct PeriodTablesScreen: View {
                 }
             } label: {
                 Image(systemName: "doc.on.doc")
-                    .foregroundColor(.secondary)
+                    .foregroundColor(colors.onSurfaceVariant)
             }
             .accessibilityLabel(Text(L10n.t("period_table_copy")))
             // v1.0.56 T7: 删除键在编辑页底部, 行内只留 编辑+复制
         }
         .padding(16)
-        .background(Color(.secondarySystemBackground))
+        .background(colors.surfaceContainer)
         .cornerRadius(20)
     }
 
@@ -131,7 +133,7 @@ struct PeriodTablesScreen: View {
             if nameTaken {
                 Text(L10n.t("period_table_name_taken"))
                     .font(.caption)
-                    .foregroundColor(.red)
+                    .foregroundColor(colors.error)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             HStack(spacing: 10) {

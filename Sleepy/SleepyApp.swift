@@ -71,6 +71,11 @@ final class AppRootViewModel: ObservableObject {
     //   其原生 pop 识别器按 UIKit 独占规则优先于容器侧滑。
     enum OverlayScreen: String, Identifiable {
         case addCourse, allTables, editTable, theme, general, export, reminder, about, license
+        // ← v1.0.60 新屏(Android SleepyNavHost push 路由的 overlay 等价物)
+        case courseList              // CourseListScreen(我的页课程数卡入口)
+        case periodTables            // PeriodTablesScreen(作息表管理, issue#40 §4.1)
+        case periodEdit              // PeriodTableEditScreen(pendingNew 丢弃链见 handleBack)
+        case scheduleDisplay         // ScheduleDisplayScreen(课表显示设置)
         // holiday 由 GeneralSettings 内部 sheet 呈现,不再出现在根 enum
         var id: String { rawValue }
     }
@@ -83,6 +88,9 @@ final class AppRootViewModel: ObservableObject {
     @Published var scheduleViewMode: ViewMode = AppPrefs.shared.getStartView() == "cards" ? .cards : .full
     // ← rememberSaveable 导航参数(旋转恢复语义 — iOS 状态默认保留)
     @Published var editTableId: Int64? = nil
+    // ← v1.0.60 作息表编辑路由参数(镜像 EditTable 的 pendingNew 丢弃链)
+    @Published var periodEditId: Int64? = nil
+    @Published var pendingNewPeriodTableId: Int64? = nil
     @Published var pendingNewTableId: Int64? = nil
     @Published var previousDefaultTableId: Int64? = nil
     // 深链课程
@@ -132,10 +140,27 @@ final class AppRootViewModel: ObservableObject {
             scheduleViewModel.discardNewTable(discardId, fallbackId: fallback)
             overlayScreen = nil
             editTableId = nil
+        } else if let discardPeriodId = pendingNewPeriodTableId {
+            // ← v1.0.60: 作息表编辑未保存返回 → 丢弃残留行(Android NavHost BackHandler 同语义)
+            pendingNewPeriodTableId = nil
+            scheduleViewModel.discardNewPeriodTable(id: discardPeriodId)
+            overlayScreen = nil
+            periodEditId = nil
         } else {
             overlayScreen = nil
             editingCourse = nil
             editTableId = nil
+        }
+    }
+
+    // ← v1.0.60: 新建作息表 → 立即进编辑(编辑页按"未保存新表"处理,
+    //   返回时 handleBack 丢弃残留行) ← Android createPeriodTableAndEdit
+    func createPeriodTableThenEdit() {
+        let newId = scheduleViewModel.insertPeriodTable(name: L10n.t("period_table_new"))
+        if newId > 0 {
+            pendingNewPeriodTableId = newId
+            periodEditId = newId
+            overlayScreen = .periodEdit
         }
     }
 
@@ -278,6 +303,13 @@ struct AppRoot: View {
                 editingCourse: root.editingCourse,
                 editTableId: root.editTableId,
                 pendingNewTableId: root.pendingNewTableId,
+                periodEditId: root.periodEditId,
+                pendingNewPeriodTableId: root.pendingNewPeriodTableId,
+                onOpenPeriodEdit: { periodId, isNew in
+                    root.periodEditId = periodId
+                    root.pendingNewPeriodTableId = isNew ? periodId : nil
+                    root.overlayScreen = .periodEdit
+                },
                 scheduleViewModel: root.scheduleViewModel,
                 themeMode: themeMode,
                 onDismiss: { root.overlayScreen = nil; root.editingCourse = nil },
@@ -404,6 +436,8 @@ struct AppRoot: View {
             MineScreen(
                 viewModel: root.scheduleViewModel,
                 onOpenAllTables: { root.overlayScreen = .allTables },
+                onOpenCourseList: { root.overlayScreen = .courseList },
+                onOpenPeriodTables: { root.overlayScreen = .periodTables },
                 onOpenAppearance: { root.overlayScreen = .theme },
                 onOpenGeneral: { root.overlayScreen = .general },
                 onOpenExport: { root.overlayScreen = .export },
@@ -495,6 +529,10 @@ private struct PresentOverlay: ViewModifier {
     let editingCourse: CourseEntity?
     let editTableId: Int64?
     let pendingNewTableId: Int64?
+    // ← v1.0.60 作息表编辑路由参数(镜像 editTable 的 pending 丢弃链)
+    let periodEditId: Int64?
+    let pendingNewPeriodTableId: Int64?
+    let onOpenPeriodEdit: (Int64, _ isNew: Bool) -> Void
     let scheduleViewModel: ScheduleViewModel
     let themeMode: String
     let onDismiss: () -> Void
@@ -589,6 +627,7 @@ private struct PresentOverlay: ViewModifier {
 
 
     @ViewBuilder
+    @MainActor
     private func overlayContent(_ screen: AppRootViewModel.OverlayScreen) -> some View {
         switch screen {
         case .addCourse:
@@ -644,6 +683,36 @@ private struct PresentOverlay: ViewModifier {
                 .edgeBackGesture(dragX: $dragX, onBack: onDismiss, onCommit: commitGestureDismiss)
         case .license:
             LicenseScreen(onDismiss: onDismiss)
+                .themedOverlay(isDark: isDark, themeKey: themeKey, schemeOverride: schemeOverride)
+                .edgeBackGesture(dragX: $dragX, onBack: onDismiss, onCommit: commitGestureDismiss)
+        case .courseList:
+            CourseListScreen(onBack: onDismiss)
+                .environmentObject(scheduleViewModel)
+                .themedOverlay(isDark: isDark, themeKey: themeKey, schemeOverride: schemeOverride)
+                .edgeBackGesture(dragX: $dragX, onBack: onDismiss, onCommit: commitGestureDismiss)
+        case .periodTables:
+            PeriodTablesScreen(
+                onBack: onDismiss,
+                onOpenEdit: { periodId in
+                    onOpenPeriodEdit(periodId, false)
+                },
+                onCreateNew: { newId in
+                    // 新建 → 编辑页按"未保存新表"处理(返回时 handleBack 丢弃残留行)
+                    onOpenPeriodEdit(newId, true)
+                })
+                .environmentObject(scheduleViewModel)
+                .themedOverlay(isDark: isDark, themeKey: themeKey, schemeOverride: schemeOverride)
+                .edgeBackGesture(dragX: $dragX, onBack: onDismiss, onCommit: commitGestureDismiss)
+        case .periodEdit:
+            PeriodTableEditScreen(
+                viewModel: scheduleViewModel,
+                periodTableId: periodEditId ?? SleepyRoute.NO_ID,
+                isNewUnsaved: pendingNewPeriodTableId != nil,
+                onBack: onBack)
+                .themedOverlay(isDark: isDark, themeKey: themeKey, schemeOverride: schemeOverride)
+                .edgeBackGesture(dragX: $dragX, onBack: onBack, onCommit: commitGestureDismiss)
+        case .scheduleDisplay:
+            ScheduleDisplayScreen(onBack: onDismiss)
                 .themedOverlay(isDark: isDark, themeKey: themeKey, schemeOverride: schemeOverride)
                 .edgeBackGesture(dragX: $dragX, onBack: onDismiss, onCommit: commitGestureDismiss)
         }

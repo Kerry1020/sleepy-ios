@@ -18,6 +18,7 @@ private struct CourseLocation {
 }
 
 struct CourseListScreen: View {
+    @Environment(\.localWakeUpColors) private var colors
     let onBack: () -> Void
 
     @EnvironmentObject var viewModel: ScheduleViewModel
@@ -61,14 +62,14 @@ struct CourseListScreen: View {
                 Spacer()
                 Text(L10n.t("course_list_empty"))
                     .font(.body)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(colors.onSurfaceVariant)
                 Spacer()
             } else {
                 ScrollView {
                     LazyVStack(spacing: 12) {
                         Text(L10n.t("course_list_subtitle"))
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(colors.onSurfaceVariant)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         ForEach(grouped, id: \.name) { group in
                             CourseGroupCard(group: group)
@@ -102,6 +103,7 @@ struct CourseListScreen: View {
 }
 
 private struct CourseGroupCard: View {
+    @Environment(\.localWakeUpColors) private var colors
     let group: CourseGroup
 
     var body: some View {
@@ -117,7 +119,7 @@ private struct CourseGroupCard: View {
                 }
                 Text(L10n.format("course_list_arrangements", location.rows.count))
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(colors.onSurfaceVariant)
                 // 每个地点单独列出该地点的全部上课安排。
                 VStack(spacing: 2) {
                     ForEach(location.rows, id: \.id) { row in
@@ -128,12 +130,13 @@ private struct CourseGroupCard: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemBackground))
+        .background(colors.surfaceContainer)
         .cornerRadius(14)
     }
 }
 
 private struct MetaRow: View {
+    @Environment(\.localWakeUpColors) private var colors
     let icon: String
     let text: String
 
@@ -141,7 +144,7 @@ private struct MetaRow: View {
         HStack(spacing: 6) {
             Image(systemName: icon)
                 .font(.system(size: 12))
-                .foregroundColor(.secondary)
+                .foregroundColor(colors.onSurfaceVariant)
             Text(text)
                 .font(.footnote)
         }
@@ -149,6 +152,7 @@ private struct MetaRow: View {
 }
 
 private struct ArrangementRowView: View {
+    @Environment(\.localWakeUpColors) private var colors
     let row: CourseEntity
 
     var body: some View {
@@ -158,10 +162,10 @@ private struct ArrangementRowView: View {
         return HStack(spacing: 4) {
             Image(systemName: "book")
                 .font(.system(size: 10))
-                .foregroundColor(.secondary)
+                .foregroundColor(colors.onSurfaceVariant)
             Text("\(dayLabel) · \(weekRangeLabel)")
                 .font(.footnote)
-                .foregroundColor(.secondary)
+                .foregroundColor(colors.onSurfaceVariant)
         }
     }
 }

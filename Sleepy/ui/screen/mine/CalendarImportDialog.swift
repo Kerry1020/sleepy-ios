@@ -4,6 +4,7 @@
 import SwiftUI
 
 struct CalendarImportDialog: View {
+    @Environment(\.localWakeUpColors) private var colors
     let table: TimeTableEntity
     let courses: [CourseEntity]
     let onDismiss: () -> Void
@@ -35,10 +36,10 @@ struct CalendarImportDialog: View {
                     if calendars.isEmpty {
                         Text(L10n.t("calendar_no_writable_calendar"))
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(colors.onSurfaceVariant)
                             .padding(16)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color(.secondarySystemBackground))
+                            .background(colors.surfaceContainer)
                             .cornerRadius(12)
                     } else {
                         Group {
@@ -109,15 +110,15 @@ struct CalendarImportDialog: View {
                     Spacer()
                     Image(systemName: "chevron.down")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(colors.onSurfaceVariant)
                 }
                 .padding(12)
-                .background(Color(.secondarySystemBackground))
+                .background(colors.surfaceContainer)
                 .cornerRadius(10)
             }
         }
         .padding(12)
-        .background(Color(.secondarySystemBackground))
+        .background(colors.surfaceContainer)
         .cornerRadius(12)
     }
 
@@ -142,7 +143,7 @@ struct CalendarImportDialog: View {
             }
         }
         .padding(12)
-        .background(Color(.secondarySystemBackground))
+        .background(colors.surfaceContainer)
         .cornerRadius(12)
     }
 
@@ -161,7 +162,7 @@ struct CalendarImportDialog: View {
                 preview = nil
             }
             .padding(12)
-            .background(Color(.secondarySystemBackground))
+            .background(colors.surfaceContainer)
             .cornerRadius(12)
     }
 
@@ -172,7 +173,7 @@ struct CalendarImportDialog: View {
                 preview = nil
             }
             .padding(12)
-            .background(Color(.secondarySystemBackground))
+            .background(colors.surfaceContainer)
             .cornerRadius(12)
     }
 
@@ -187,11 +188,11 @@ struct CalendarImportDialog: View {
                     preview = nil
                 }
             Text(L10n.t("reminder_before_minutes_unit"))
-                .foregroundColor(.secondary)
+                .foregroundColor(colors.onSurfaceVariant)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Color(.secondarySystemBackground))
+        .background(colors.surfaceContainer)
         .cornerRadius(10)
     }
 
@@ -202,14 +203,14 @@ struct CalendarImportDialog: View {
                 preview = nil
             }
             .padding(12)
-            .background(Color(.secondarySystemBackground))
+            .background(colors.surfaceContainer)
             .cornerRadius(12)
     }
 
     private var alarmScope: some View {
         Text(L10n.t("calendar_first_period_scope"))
             .font(.caption)
-            .foregroundColor(.secondary)
+            .foregroundColor(colors.onSurfaceVariant)
     }
 
     private var alarmField: some View {
@@ -223,18 +224,18 @@ struct CalendarImportDialog: View {
                     preview = nil
                 }
             Text(L10n.t("reminder_before_minutes_unit"))
-                .foregroundColor(.secondary)
+                .foregroundColor(colors.onSurfaceVariant)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Color(.secondarySystemBackground))
+        .background(colors.surfaceContainer)
         .cornerRadius(10)
     }
 
     private var alarmDisclaimer: some View {
         Text(L10n.t("calendar_alarm_disclaimer"))
             .font(.caption)
-            .foregroundColor(.red)
+            .foregroundColor(colors.error)
     }
 
     private var previewButton: some View {
@@ -271,7 +272,7 @@ struct CalendarImportDialog: View {
                 if p.skippedInvalidTime > 0 {
                     Text(L10n.format("calendar_invalid_skipped", p.skippedInvalidTime))
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(colors.onSurfaceVariant)
                 }
                 ForEach(Array(p.rows.prefix(8))) { row in
                     Text("\(Self.previewDateFormatter.string(from: row.date))  \(row.start)–\(row.end)  \(row.courseName)\(Self.marks(for: row))")
@@ -280,11 +281,11 @@ struct CalendarImportDialog: View {
                 if p.rows.count > 8 {
                     Text(L10n.format("calendar_more_rows", p.rows.count - 8))
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(colors.onSurfaceVariant)
                 }
                 Text(L10n.t("calendar_second_confirm_warning"))
                     .font(.caption)
-                    .foregroundColor(.red)
+                    .foregroundColor(colors.error)
                 Button {
                     showFinalConfirm = true
                 } label: {
@@ -296,7 +297,7 @@ struct CalendarImportDialog: View {
                 .disabled(p.rows.isEmpty || busy)
             }
             .padding(12)
-            .background(Color(.secondarySystemBackground))
+            .background(colors.surfaceContainer)
             .cornerRadius(12)
         }
     }
@@ -309,12 +310,12 @@ struct CalendarImportDialog: View {
                              outcome.skippedEdited, outcome.skippedInvalidTime,
                              outcome.alarmFallback, outcome.errors))
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(colors.onSurfaceVariant)
         }
         if let dr = deleteResultText {
             Text(dr)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(colors.onSurfaceVariant)
         }
     }
 
@@ -325,7 +326,7 @@ struct CalendarImportDialog: View {
                 showDeleteConfirm = true
             } label: {
                 Text(L10n.format("calendar_delete_managed", managedCount))
-                    .foregroundColor(.red)
+                    .foregroundColor(colors.error)
             }
             .disabled(busy)
         }

@@ -6,6 +6,7 @@ import SwiftUI
 
 /// 复用主体 — AppearanceScreen 底部直接嵌入。
 struct ScheduleDisplayContent: View {
+    @Environment(\.localWakeUpColors) private var colors
     @State private var gridScale: Double = AppPrefs.shared.getGridScale()
     @State private var weekScale: Double = AppPrefs.shared.getWeekScale()
     @State private var cornerRatio: Double = AppPrefs.shared.getGridCornerRatio()
@@ -37,7 +38,7 @@ struct ScheduleDisplayContent: View {
             // 冲突课程样式 — 课表显示 Section 的下级分组: 子标题降级区分
             Text(L10n.t("settings_conflict_style"))
                 .font(.footnote)
-                .foregroundColor(.secondary)
+                .foregroundColor(colors.onSurfaceVariant)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, 8)
             conflictStylePicker
@@ -94,6 +95,7 @@ struct ScheduleDisplayContent: View {
 }
 
 struct ScheduleDisplayScreen: View {
+    @Environment(\.localWakeUpColors) private var colors
     let onBack: () -> Void
 
     var body: some View {
