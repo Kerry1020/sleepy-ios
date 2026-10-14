@@ -4,14 +4,15 @@
 // - 内容库 ContentProvider 写系统日历 → EventKit EKEventStore (系统 framework, 无新 SPM 依赖)
 // - WRITE/READ_CALENDAR 权限 → EKEventStore.requestAccess(to: .event);
 //   16.4 SDK 无 .fullAccess/.writeOnly 分支, 授权即 authorizationStatus == .authorized
-// - 可写日历 = isSelectable && source.type != .calDAV (← Android ACCESS_LEVEL >= CONTRIBUTOR && VISIBLE)
+// - 可写日历 = allowsContentModifications && type != .local/.calDAV (← Android ACCESS_LEVEL >= CONTRIBUTOR && VISIBLE, 16.4 无 isSelectable)
 // - 记录 eventId ← 内容库 _ID(Long) → EKCalendarItem.externalIdentifier (String)
 // - 描述行尾 marker "Sleepy import key: tableId:courseId:yyyy-MM-dd" 保留(存 EKCalendarItem.notes),
 //   记录丢失后可按 marker 恢复, 对齐 Android findEventByMarker
-// - Android "ALARM(闹钟)" 提醒 → iOS EKAlarm 无闹钟类型(.display/.audio/.procedure/.email),
-//   ALARM 恒落 .audio(系统铃声), ALERT 落 .display; 对齐 Android insertReminder(ALERT) 兜底路径:
-//   期望闹钟而只能落普通提醒 → 事件仍写入, alarmFallback 计数(← Android imported.alarmFallback)
-// - 事件时区 EKEvent 无公开 API → 指纹恒以 TimeZone.local.identifier 固定(与 Android ZoneId.systemDefault().id 同位)
+// - Android "ALARM(闹钟)" 提醒 → iOS 16.4 EKAlarm 无 type/soundName(.audio/.display 均不可用),
+//   提醒恒以 EKAlarm(relativeOffset:) 写入、系统默认提醒呈现; 期望的 method(ALARM/ALERT) 由我方记录
+//   alarmRequested 字段承载, 读回(readReminder)恒分类为 .alert; 对齐 Android insertReminder(ALERT) 兜底:
+//   期望闹钟而系统未给闹钟 → 事件仍写入, alarmFallback 计数(← Android imported.alarmFallback)
+// - 事件时区 EKEvent 无公开 API → 指纹恒以 TimeZone.current.identifier 固定(与 Android ZoneId.systemDefault().id 同位)
 // - EventKit 无"导入历史"原生概念 → 仓内 CalendarImportRecordDao/Entity (calendar_import_records 表) 承担记录职责
 
 import EventKit
@@ -59,7 +60,8 @@ struct CalendarImportResult {
     var updated: Int
     var unchanged: Int
     var skippedEdited: Int
-    /// 期望闹钟(.audio)但只落普通提醒的计数 (← Android alarmFallback)
+    /// 期望闹钟(.alarm)但 16.4 系统默认提醒呈现的计数 (← Android alarmFallback; 平台裁决: EKAlarm 无闹钟类型)
+    var skippedInvalid: Int
     var alarmFallback: Int
     var errors: Int
 }
@@ -69,7 +71,7 @@ final class SystemCalendarManager {
     private let store = EKEventStore()
     private let markerPrefix = "Sleepy import key:"
 
-    private enum ReminderMethod: String, Comparable {
+    enum ReminderMethod: String, Comparable {
         case alert, alarm
         static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
     }
@@ -82,6 +84,9 @@ final class SystemCalendarManager {
         var week: Int
         var start: Date
         var end: Date
+        /// 节次时间字符串 (HH:mm), 供预览行展示 — spec.start/end 是当日零点起算的 Date, 无法直接反解
+        var startHHmm: String
+        var endHHmm: String
         var description: String
         var key: String
         var reminderMinutes: Int?
@@ -91,9 +96,9 @@ final class SystemCalendarManager {
 
     // MARK: - 权限 / 日历发现
 
-    /// ← Android hasCalendarPermissions (iOS 16.4 无 fullAccess/writeOnly, 授权即 .authorized)
+    /// ← Android hasCalendarPermissions (iOS 16.4: 静态 authorizationStatus, 授权即 .authorized)
     func hasCalendarPermissions() -> Bool {
-        store.authorizationStatus(for: .event) == .authorized
+        EKEventStore.authorizationStatus(for: .event) == .authorized
     }
 
     /// 未授权时弹一次授权; 用户拒绝/未决 = false
@@ -107,9 +112,12 @@ final class SystemCalendarManager {
         }
     }
 
-    /// ← Android findWritableCalendar: isSelectable && 非 calDAV
+    /// ← Android findWritableCalendar: 可写(AccessLevel>=CONTRIBUTOR & VISIBLE) && 非 calDAV
+    /// (16.4 无 isSelectable; 平台等价 = allowsContentModifications 且排除 .local/.calDAV 源)
     func writableCalendars() -> [EKCalendar] {
-        store.calendars(for: .event).filter { $0.isSelectable && $0.source.type != .calDAV }
+        store.calendars(for: .event).filter {
+            $0.allowsContentModifications && $0.type != .local && $0.type != .calDAV
+        }
     }
 
     // MARK: - 日期区间 (← Android selectedDateRange, 公式逐一对齐)
@@ -117,13 +125,13 @@ final class SystemCalendarManager {
     func selectedDateRange(table: TimeTableEntity, range: String, today: Date) -> (start: Date, end: Date) {
         let cal = DateUtils.isoCalendar
         let tableStart = DateUtils.parseDate(table.startDate) ?? today
-        let semesterStart = DateUtils.isoMondayOfWeek(tableStart)
-        let semesterEnd = DateUtils.isoAddDays(semesterStart, 7 * table.maxWeek)
+        let semesterStart = Calendar.isoMondayOfWeek(tableStart)
+        let semesterEnd = Calendar.isoAddDays(semesterStart, 7 * table.maxWeek)
         let requestedEnd: Date
         switch range {
         case "NEXT_MONTH": requestedEnd = cal.date(byAdding: .month, value: 1, to: today) ?? today
         case "SEMESTER": requestedEnd = semesterEnd
-        default: requestedEnd = DateUtils.isoAddDays(today, 7)
+        default: requestedEnd = Calendar.isoAddDays(today, 7)
         }
         return (max(today, semesterStart), min(requestedEnd, semesterEnd))
     }
@@ -143,8 +151,8 @@ final class SystemCalendarManager {
         let rows = specs.map { spec -> CalendarPreviewRow in
             CalendarPreviewRow(
                 date: spec.date,
-                startHHmm: Self.hhmmString(TimeTableUtils.hmMinutes(spec.start) ?? 0),
-                endHHmm: Self.hhmmString(TimeTableUtils.hmMinutes(spec.end) ?? 0),
+                startHHmm: spec.startHHmm,
+                endHHmm: spec.endHHmm,
                 courseName: spec.course.courseName,
                 teacher: spec.course.teacher,
                 room: spec.course.room,
@@ -198,6 +206,8 @@ final class SystemCalendarManager {
                     week: week,
                     start: start,
                     end: end,
+                    startHHmm: startHHmm,
+                    endHHmm: endHHmm,
                     description: buildDescription(course: course, week: week, transferred: transferred, classDay: classDay, eventDate: day),
                     key: "\(table.id):\(course.id):\(DateUtils.fullDate(day))",
                     reminderMinutes: options.reminderMinutes.map { $0.clamped0999 },
@@ -207,7 +217,7 @@ final class SystemCalendarManager {
                         && (TimeTableUtils.hmMinutes(startHHmm) ?? 0) < 720
                 ))
             }
-            day = DateUtils.isoAddDays(day, 1)
+            day = Calendar.isoAddDays(day, 1)
         }
         return (specs, invalid)
     }
@@ -226,7 +236,7 @@ final class SystemCalendarManager {
     func firstPeriodAlarmKeys(_ specs: [EventSpec]) -> [Date: String] {
         var best: [Date: (start: Date, courseKey: Int64, key: String)] = [:]
         for spec in specs where spec.wantsAlarm {
-            let cand = (spec.start, spec.course.id, spec.key)
+            let cand = (start: spec.start, courseKey: spec.course.id, key: spec.key)
             if let old = best[spec.date] {
                 if cand.start < old.start || (cand.start == old.start && cand.courseKey < old.courseKey) {
                     best[spec.date] = cand
@@ -254,7 +264,7 @@ final class SystemCalendarManager {
         }
         let db = AppDatabase.getShared()
         let batchId = UUID().uuidString  // ← Android caller-generated UUID per batch
-        let (specs, _) = buildEventSpecs(table: table, courses: courses, options: options, from: from, until: until)
+        let (specs, invalid) = buildEventSpecs(table: table, courses: courses, options: options, from: from, until: until)
         let alarmKeys = firstPeriodAlarmKeys(specs)
 
         let startInclusive = DateUtils.fullDate(from)
@@ -270,6 +280,7 @@ final class SystemCalendarManager {
             }
 
         var inserted = 0, updated = 0, unchanged = 0, skippedEdited = 0, alarmFallback = 0, errors = 0
+        let skippedInvalid = invalid
 
         for spec in specs {
             let recordKey = "\(spec.course.id):\(DateUtils.fullDate(spec.date))"
@@ -341,7 +352,7 @@ final class SystemCalendarManager {
                 batchId: batchId,
                 fingerprint: fingerprint(after, afterReminders),
                 alarmRequested: wantsAlarm,
-                createdAt: Date.now.timeIntervalSince1970 * 1000,
+                createdAt: Int64(Date.now.timeIntervalSince1970 * 1000),
                 id: 0
             )
             try db.calendarImportRecordDao.upsert(newRecord)
@@ -356,6 +367,7 @@ final class SystemCalendarManager {
             updated: updated,
             unchanged: unchanged,
             skippedEdited: skippedEdited,
+            skippedInvalid: skippedInvalid,
             alarmFallback: alarmFallback,
             errors: errors
         )
@@ -380,7 +392,8 @@ final class SystemCalendarManager {
                 edited += 1  // 用户改过 → 事件与记录都保留
                 continue
             }
-            if store.remove(event, commit: true, span: .defaultEventSpan) {
+            // 16.4: save/remove 的 label 顺序 span: 先于 commit:, 且可能 throw → try?
+            if (try? store.remove(event, span: .thisEvent, commit: true)) != nil {
                 try? db.calendarImportRecordDao.deleteById(record.id)
                 deleted += 1
             }
@@ -407,17 +420,17 @@ final class SystemCalendarManager {
             ?? store.calendarItems(withExternalIdentifier: eventId).first else { return nil }
         return (item.alarms ?? []).map { alarm in
             let minutes = Int((-alarm.relativeOffset / 60).rounded())
-            // 平台裁决: .audio = 闹钟语义(ALARM), 其余 = 普通提醒(ALERT)
-            let method: ReminderMethod = alarm.type == .audio ? .alarm : .alert
-            return ReminderDesc(method: method, minutes: minutes)
+            // 平台裁决: 16.4 无 EKAlarm.type → 读回恒 .alert(期望 method 由记录 alarmRequested 承载)
+            return ReminderDesc(method: .alert, minutes: minutes)
         }
     }
 
     /// marker 恢复: 当天窗口内按 notes 尾部 key 精确匹配 (← Android LIKE %"Sleepy import key:…"% 于当天事件)
     private func findEventByMarker(calendarId: String, key: String, date: Date) -> EKEvent? {
         guard let cal = store.calendar(withIdentifier: calendarId) else { return nil }
-        let rangeEnd = DateUtils.isoAddDays(date, 1)
-        let predicate = EKEvent.predicate(forEventsIn: date, to: rangeEnd, calendars: [cal])
+        let rangeEnd = Calendar.isoAddDays(date, 1)
+        // 16.4 Swift 改名: predicateForEventsWithStartDate: → predicateForEvents(withStart:end:calendars:)
+        let predicate = store.predicateForEvents(withStart: date, end: rangeEnd, calendars: [cal])
         let suffix = "\(markerPrefix)\(key)"
         for candidate in store.events(matching: predicate) where candidate.calendar?.calendarIdentifier == calendarId {
             if candidate.notes?.hasSuffix(suffix) == true { return candidate }
@@ -435,7 +448,7 @@ final class SystemCalendarManager {
         event.title = spec.course.courseName
         event.location = spec.course.room.isEmpty ? nil : spec.course.room
         event.notes = spec.description
-        guard store.save(event, span: .defaultEventSpan) else { return nil }
+        guard (try? store.save(event, span: .thisEvent)) != nil else { return nil }
         return event.calendarItemExternalIdentifier.isEmpty ? nil : event
     }
 
@@ -445,22 +458,21 @@ final class SystemCalendarManager {
         event.notes = spec.description
         event.startDate = spec.start
         event.endDate = spec.end
-        return store.save(event, commit: true, span: .defaultEventSpan)
+        return (try? store.save(event, span: .thisEvent, commit: true)) != nil
     }
 
     /// 提醒替换 (← Android replaceReminder; 返回值 = 实际生效的 method, nil = 未挂提醒)
     private func replaceReminder(event: EKEvent, desiredMethod: ReminderMethod?, desiredMinutes: Int?, alarmRequested: Bool) -> ReminderMethod? {
         for alarm in (event.alarms ?? []) { event.removeAlarm(alarm) }
         guard let method = desiredMethod, let minutes = desiredMinutes else {
-            _ = store.save(event, commit: true, span: .defaultEventSpan)
+            _ = try? store.save(event, span: .thisEvent, commit: true)
             return nil
         }
+        // 16.4: EKAlarm 无 type/soundName → 系统默认提醒呈现; 期望 .alarm 由 alarmRequested 记录承载
         let alarm = EKAlarm(relativeOffset: -Double(minutes * 60))
-        // 闹钟(ALARM) → .audio(系统铃声); 普通提醒(ALERT) → .display(通知横幅)
-        alarm.type = method == .alarm ? .audio : .display
         event.addAlarm(alarm)
-        _ = store.save(event, commit: true, span: .defaultEventSpan)
-        // 复核: 期望闹钟但 EventKit 只落成了 .display → 对齐 Android 的 ALERT 兜底返回
+        _ = try? store.save(event, span: .thisEvent, commit: true)
+        // 复核: 期望闹钟但系统未给闹钟 → 对齐 Android 的 ALERT 兜底返回(读回恒 .alert)
         if alarmRequested, method == .alarm {
             let actual = readReminder(eventId: event.calendarItemExternalIdentifier) ?? []
             if actual.allSatisfy({ $0.method == .alert }) { return .alert }
@@ -479,7 +491,7 @@ final class SystemCalendarManager {
         parts.append(event.notes ?? "")
         parts.append(Int64(event.startDate.timeIntervalSince1970 * 1000).description)
         parts.append(Int64(event.endDate.timeIntervalSince1970 * 1000).description)
-        parts.append(TimeZone.local.identifier)
+        parts.append(TimeZone.current.identifier)
         let sorted = reminders.sorted {
             if $0.method != $1.method { return $0.method.rawValue < $1.method.rawValue }
             return $0.minutes < $1.minutes
@@ -521,7 +533,7 @@ final class SystemCalendarManager {
     /// "HH:mm" 拼到当日零点起 (24:00 = 次日 0 点, 对齐节次时间解析语义)
     private func appendTime(_ day: Date, _ hm: String) -> Date {
         switch hm {
-        case "24:00": return DateUtils.isoAddDays(day, 1)
+        case "24:00": return Calendar.isoAddDays(day, 1)
         default:
             let parts = hm.split(separator: ":").compactMap { Int($0) }
             guard parts.count == 2 else { return day }
@@ -532,9 +544,9 @@ final class SystemCalendarManager {
     private static func hhmmString(_ minutes: Int) -> String {
         String(format: "%02d:%02d", minutes / 60, minutes % 60)
     }
+}
 
-    private extension Int {
-        /// ← Android coerceIn(0, 999)
-        var clamped0999: Int { Swift.min(Swift.max(self, 0), 999) }
-    }
+/// ← Android coerceIn(0, 999)
+private extension Int {
+    var clamped0999: Int { Swift.min(Swift.max(self, 0), 999) }
 }
