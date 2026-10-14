@@ -281,3 +281,97 @@ final class ScheduleViewModel: ObservableObject {
         }
     }
 }
+
+// MARK: - PeriodTable 面 (issue#40 / v1.0.56 T7-T9, ← ScheduleViewModel.kt L297-497)
+
+extension ScheduleViewModel {
+
+    /// 全部作息表(管理页列表)。
+    func loadAllPeriodTables() -> [PeriodTableEntity] {
+        return (try? repo.getAllPeriodTables()) ?? []
+    }
+
+    /// 复制作息表预填名 — 原名参与全局唯一名顺延, 原名本身不占位。nil = 源不存在。
+    func suggestPeriodTableCopyName(sourceId: Int64) -> String? {
+        guard let src = (try? repo.getAllPeriodTables())?.first(where: { $0.id == sourceId }) else { return nil }
+        let courseNames = ((try? repo.getAllTables()) ?? []).map { $0.name }
+        let periodNames = ((try? repo.getAllPeriodTables()) ?? []).map { $0.name }
+        return TimeTableUtils.suggestUniqueName(src.name, courseTableNames: courseNames, periodTableNames: periodNames)
+    }
+
+    /// 按用户确认的名字建副本。返回新副本 id; 源不存在 -1; 撞名 -2。
+    func copyPeriodTableAs(sourceId: Int64, newName: String) -> Int64 {
+        guard let src = try? repo.getPeriodTable(sourceId) else { return -1 }
+        let courseNames = ((try? repo.getAllTables()) ?? []).map { $0.name }
+        let periodNames = ((try? repo.getAllPeriodTables()) ?? []).map { $0.name }
+        if !newName.isBlank,
+           TimeTableUtils.isTableNameTaken(newName, courseTableNames: courseNames, periodTableNames: periodNames) {
+            return -2
+        }
+        let finalName = newName.isBlank ? src.name : newName
+        return (try? repo.copyPeriodTableAs(sourceId: sourceId, newName: finalName)) ?? -1
+    }
+
+    /// 新建空白时间节次表(创建即落库, 编辑页把它当"未保存新表"处理)。
+    @discardableResult
+    func insertPeriodTable(
+        name: String,
+        timeJson: String = TimeTableUtils.DEFAULT_TIME_JSON,
+        nodesPerDay: Int = 12,
+        smartConfigJson: String = ""
+    ) -> Int64 {
+        let entity = PeriodTableEntity(
+            name: name, nodesPerDay: nodesPerDay,
+            timeJson: timeJson, smartConfigJson: smartConfigJson
+        )
+        return (try? repo.insertPeriodTable(entity)) ?? -1
+    }
+
+    /// 新建作息表(自动唯一命名) — 全局唯一名顺延, 空名走默认名。
+    @discardableResult
+    func insertPeriodTableWithUniqueName(
+        name: String,
+        defaultName: String,
+        timeJson: String = TimeTableUtils.DEFAULT_TIME_JSON,
+        nodesPerDay: Int = 12,
+        smartConfigJson: String = ""
+    ) -> Int64 {
+        let courseNames = ((try? repo.getAllTables()) ?? []).map { $0.name }
+        let periodNames = ((try? repo.getAllPeriodTables()) ?? []).map { $0.name }
+        let unique = TimeTableUtils.suggestUniqueName(
+            name, courseTableNames: courseNames, periodTableNames: periodNames, defaultName: defaultName
+        )
+        return insertPeriodTable(name: unique, timeJson: timeJson, nodesPerDay: nodesPerDay, smartConfigJson: smartConfigJson)
+    }
+
+    /// issue#40: 修改共享时间节次表内容 — 全部绑定课表立即生效, 课程行零改动(← Android updatePeriodTableContent)
+    /// repo.savePeriodTable 是同步方法; 行为与 updateTable 保持一致 — 在 fire-and-forget Task 内执行,
+    /// 失败吞(→ repo update 抛错时上层按 updateTable 同语义吞掉, 数据层不会半写)。
+    func updatePeriodTableContent(_ table: PeriodTableEntity) {
+        Task { try? repo.savePeriodTable(table) }
+    }
+
+    /// 删除时间节次表(被引用时 false, UI 提示先改绑)。
+    @discardableResult
+    func deletePeriodTable(id: Int64) -> Bool {
+        return (try? repo.deletePeriodTable(id)) ?? false
+    }
+
+    /// 丢弃一个从未保存过的新建时间节次表(残留清理; 不走删除守卫)。
+    func discardNewPeriodTable(id: Int64) {
+        _ = try? repo.deletePeriodTable(id)
+    }
+
+    /// issue#40: 全库课程(保存预览用) — 预览须覆盖所有绑定表的课。
+    func getAllCoursesOnce() -> [CourseEntity] {
+        return (try? repo.getAllCourses()) ?? []
+    }
+
+    /// v1.0.56 T9: 全局唯一名预填用 — 课表名 + 作息表名。
+    func getAllTableNamesOnce() -> [String] {
+        return ((try? repo.getAllTables()) ?? []).map { $0.name }
+    }
+    func getAllPeriodTableNamesOnce() -> [String] {
+        return ((try? repo.getAllPeriodTables()) ?? []).map { $0.name }
+    }
+}

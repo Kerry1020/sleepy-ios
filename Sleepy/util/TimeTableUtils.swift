@@ -415,3 +415,147 @@ enum TimeTableUtils {
         }
     }
 }
+
+// MARK: - 作息表改动预览 (← previewPeriodTableChange / CourseTimeChange / PeriodTablePreview, v1.0.60)
+
+extension TimeTableUtils {
+
+    /// 逐课时间变化(← data class CourseTimeChange)
+    struct CourseTimeChange: Equatable {
+        let courseId: Int64
+        let courseName: String
+        let startNode: Int
+        let step: Int
+        /// 旧表解释的 "HH:mm-HH:mm"; 旧表缺该节次行 = nil(无法解释)
+        let oldTime: String?
+        /// 新表解释的 "HH:mm-HH:mm"; 新表缺该节次行 = nil
+        let newTime: String?
+        /// 2026-09-16: 逐节对比 — 真正变化了的节次列表(空 = 首尾对变了但节次没变, 理论不出现)
+        var changedNodes: [Int] = []
+    }
+
+    /// 预览结果(← data class PeriodTablePreview)
+    struct PeriodTablePreview: Equatable {
+        let changedCourses: [CourseTimeChange]
+        let unchangedCount: Int
+    }
+
+    /**
+     * 对一批课程, 用 oldTimeJson/newTimeJson 各自解释节次编号(§5.2:
+     * "按新旧两份 timeJson 对同一批节次编号解析"), 产出逐课时间变化。
+     *
+     * 2026-09-16 逐节对比修复: 不只比 (首节.start, 末节.end) 一对 — 逐节次
+     * (start,end) 对比, 任一节变了即变(连堂课改单节时长不再漏报)。
+     *
+     * 纯函数 — 不触库不写库; 取消保存时丢弃结果即可, 数据库零改动。
+     */
+    static func previewPeriodTableChange(
+        oldTimeJson: String,
+        newTimeJson: String,
+        courses: [CourseEntity]
+    ) -> PeriodTablePreview {
+        var changed: [CourseTimeChange] = []
+        var unchanged = 0
+        let oldNodes = parseNodes(oldTimeJson)
+        let newNodes = parseNodes(newTimeJson)
+
+        func nodeTime(_ nodes: [NodeTime], _ n: Int) -> (String, String)? {
+            nodes.first { $0.node == n }.map { (formatTime($0.start), formatTime($0.end)) }
+        }
+
+        for c in courses {
+            if c.ownTime || c.isIrregularTime { continue }  // 自定义时间: 起止照旧, 不参与解释
+            let endNode = c.startNode + c.step - 1
+            var changedNodes: [Int] = []
+            for n in c.startNode...max(endNode, c.startNode) {
+                let o = nodeTime(oldNodes, n)
+                let w = nodeTime(newNodes, n)
+                // 元组无 Equatable — 逐分量对比(← Kotlin Pair ==)
+                let differs: Bool
+                switch (o, w) {
+                case (nil, nil): differs = false
+                case let (os?, ws?): differs = os.0 != ws.0 || os.1 != ws.1
+                default: differs = true
+                }
+                if differs { changedNodes.append(n) }
+            }
+            let oldParts = courseTimeParts(courseStartNode: c.startNode, courseStep: c.step, timeJson: oldTimeJson)
+            let newParts = courseTimeParts(courseStartNode: c.startNode, courseStep: c.step, timeJson: newTimeJson)
+            if changedNodes.isEmpty {
+                unchanged += 1
+            } else {
+                changed.append(CourseTimeChange(
+                    courseId: c.id,
+                    courseName: c.courseName,
+                    startNode: c.startNode,
+                    step: c.step,
+                    oldTime: oldParts.map { "\($0.0)-\($0.1)" },
+                    newTime: newParts.map { "\($0.0)-\($0.1)" },
+                    changedNodes: changedNodes))
+            }
+        }
+        return PeriodTablePreview(changedCourses: changed, unchangedCount: unchanged)
+    }
+}
+
+// MARK: - 全局唯一名 (← isTableNameTaken / suggestUniqueName, v1.0.60)
+
+extension TimeTableUtils {
+
+    /**
+     * 全局唯一名判定: 课表名 ∪ 作息表名。
+     * excludeId 场景(重命名自己)传名单+byId 映射剔除"自己那一份"后判撞;
+     * 其余场景(新建/复制/导入确认)传名单即可。
+     * 纯函数 — DAO 全名列表由调用方查好传入, 本函数零库访问。
+     */
+    static func isTableNameTaken(
+        _ name: String,
+        courseTableNames: [String],
+        periodTableNames: [String],
+        excludeCourseTableId: Int64? = nil,
+        courseTableNamesById: [Int64: String] = [:],
+        excludePeriodTableId: Int64? = nil,
+        periodTableNamesById: [Int64: String] = [:]
+    ) -> Bool {
+        if name.isBlank { return false }
+        let courseHit: Bool
+        if let excludeId = excludeCourseTableId {
+            // 名单本身无 id, 用 byId 映射剔除"自己那一份"后判撞: 总出现次数 > 自己出现次数
+            let selfCount = courseTableNamesById[excludeId] == name ? 1 : 0
+            courseHit = courseTableNames.filter { $0 == name }.count > selfCount
+        } else {
+            courseHit = courseTableNames.contains(name)
+        }
+        let periodHit: Bool
+        if let excludeId = excludePeriodTableId {
+            let selfCount = periodTableNamesById[excludeId] == name ? 1 : 0
+            periodHit = periodTableNames.filter { $0 == name }.count > selfCount
+        } else {
+            periodHit = periodTableNames.contains(name)
+        }
+        return courseHit || periodHit
+    }
+
+    /**
+     * 撞名自动顺延: 原名 → 原名2 → 原名3…(导入自动建表/复制预填用)。
+     * 兼容历史 "名字(2)" 形态, 顺延跳过 plain 与 paren 两种占用。
+     * 空名回退 defaultName 参与顺延。
+     */
+    static func suggestUniqueName(
+        _ base: String,
+        courseTableNames: [String],
+        periodTableNames: [String],
+        defaultName: String = ""
+    ) -> String {
+        let effective = base.isBlank ? defaultName : base
+        if !isTableNameTaken(effective, courseTableNames: courseTableNames, periodTableNames: periodTableNames) {
+            return effective
+        }
+        var index = 2
+        while isTableNameTaken("\(effective)\(index)", courseTableNames: courseTableNames, periodTableNames: periodTableNames)
+            || isTableNameTaken("\(effective)(\(index))", courseTableNames: courseTableNames, periodTableNames: periodTableNames) {
+            index += 1
+        }
+        return "\(effective)\(index)"
+    }
+}

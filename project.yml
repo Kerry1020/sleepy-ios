@@ -117,8 +117,11 @@ targets:
       # extension 独立编译(不能链接主 app binary)。
       # 排除: SleepyApp 入口 / Info.plist / ui 屏幕+组件(UIApplication 等 app-only API;
       # widget 用不到屏层, 渲染逻辑已抽到 widget/ 与 util/)
+      # + notification 下 BatterySettingsLauncher(UIApplication.shared,
+      #   extension 里禁用 — Swift 无 per-target 编译旗标, 走文件级排除)
       - path: Sleepy
-        excludes: ["resources", "SleepyApp.swift", "Info.plist", "ui", "app"]
+        excludes: ["resources", "SleepyApp.swift", "Info.plist", "ui", "app",
+                   "widget/notification/BatterySettingsLauncher.swift"]
       - path: Sleepy/resources
         buildPhase: resources
     dependencies:

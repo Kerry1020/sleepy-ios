@@ -20,6 +20,14 @@ enum MigrationBackup {
         var version: Int = VERSION
         var createdAt: Int64
         var modules: [String]
+
+        /// 显式便利 init — 调用方只需 createdAt + modules,format/version 用默认。
+        init(createdAt: Int64, modules: [String]) {
+            self.format = FORMAT
+            self.version = VERSION
+            self.createdAt = createdAt
+            self.modules = modules
+        }
     }
 
     private static let encoder: JSONEncoder = {

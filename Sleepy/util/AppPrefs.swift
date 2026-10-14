@@ -20,6 +20,19 @@ final class AppPrefs {
     static let KEY_BEFORE_CLASS_BANNER = "before_class_banner"         // bool default true
     static let KEY_BEFORE_CLASS_FLUID = "before_class_fluid"            // bool default false
     static let KEY_BEFORE_CLASS_FLUID_FIELDS = "before_class_fluid_fields" // legacy multi-select
+    // ← v1.0.60 新增: 次日预告 + 上课自动勿扰
+    static let KEY_TOMORROW_REMINDER_ENABLED = "tomorrow_reminder"             // bool default false
+    static let KEY_TOMORROW_REMINDER_TIME = "tomorrow_reminder_time"           // "HH:mm" default "22:00"
+    static let DEFAULT_TOMORROW_REMINDER_ENABLED = false
+    static let DEFAULT_TOMORROW_REMINDER_TIME = "22:00"
+    static let KEY_CLASS_DND_ENABLED = "class_dnd_enabled"                     // bool default false — 上课自动勿扰
+    // ← v1.0.60 系统日历导入
+    static let KEY_CALENDAR_TARGET_ID = "calendar_import_target_id"
+    static let KEY_CALENDAR_IMPORT_RANGE = "calendar_import_range"
+    static let KEY_CALENDAR_APPLY_TRANSFERS = "calendar_import_apply_transfers"
+    static let KEY_CALENDAR_REMINDER_MINUTES = "calendar_import_reminder_minutes"
+    static let KEY_CALENDAR_FIRST_ALARM = "calendar_import_first_alarm"
+    static let KEY_CALENDAR_FIRST_ALARM_MINUTES = "calendar_import_first_alarm_minutes"
     static let KEY_BEFORE_CLASS_FLUID_PRIMARY = "before_class_fluid_primary" // name/time/room
     static let KEY_THEME = "theme_key"
     static let KEY_LANG = "language"
@@ -35,6 +48,10 @@ final class AppPrefs {
     static let KEY_SHOW_DATE = "show_date"       // boolean
     static let KEY_VISIBLE_DAYS = "visible_days" // "1,2,3,4,5,6,7"
     static let KEY_VERT_PUNCT_REPLACE = "vert_punct_replace" // bool default false (方案B开关)
+    static let KEY_PERIOD_HEADER_LAYOUT = "period_header_layout" // "legacy" / "three_line", default legacy
+    static let KEY_PERIOD_HEADER_STYLE = "period_header_style" // arabic / chinese / financial / circled / roman, default arabic
+    static let KEY_PERIOD_HEADER_HANGING = "period_header_hanging" // Float time-width units, -1..1, default 0
+    static let KEY_PERIOD_HEADER_SHOW_X = "period_header_show_x" // boolean default false
     static let KEY_WIDGET_COLORLESS = "widget_colorless" // bool default false
     static let KEY_COURSE_COLORLESS = "course_colorless" // bool default false (App 课程胶囊专用)
     static let KEY_WIDGET_SEPARATOR = "widget_separator" // bool default true (WeekView 纯文字课程间分隔线)
@@ -60,6 +77,10 @@ final class AppPrefs {
     static let KEY_WEEK_USE_ALIAS = "week_use_alias"  // bool default false — 周视图显示别名 (issue#26)
     static let KEY_GRID_USE_ALIAS = "grid_use_alias"  // bool default false — 网格视图显示别名 (issue#26)
     static let KEY_WIDGET_USE_ALIAS = "widget_use_alias"  // bool default false — widget 场景显示别名 (issue#26, 全局一档)
+    // ★ widget v1.0.60 对齐键 (← AppPrefs.kt)
+    static let KEY_NEAREST_BUSY_DAY = "nearest_busy_day" // bool default false — 今天没课时自动显示最近一个有课的日子
+    static let KEY_COMPACT_WINDOW_TODAY_FIRST = "compact_window_today_first" // bool default true — 最小档三天窗口锚点(2026-09-15 用户令)
+    static let KEY_WIDGET_SCROLL_ENABLED = "widget_scroll_enabled" // bool default false — 强制滚动(实验), 默认 FIXED 固定窗口
     static let GRID_SCALE_RANGE: ClosedRange<Double> = 0.7...1.3
     static let CORNER_RATIO_RANGE: ClosedRange<Double> = 0.0...2.0
 
@@ -158,6 +179,64 @@ final class AppPrefs {
         sp().object(forKey: Self.KEY_BEFORE_CLASS_MINUTES) as? Int ?? 10
     }
     func setBeforeClassMinutes(_ minutes: Int) { sp().set(minutes, forKey: Self.KEY_BEFORE_CLASS_MINUTES) }
+
+    // MARK: - v1.0.60 次日预告提醒
+
+    func isTomorrowReminderEnabled() -> Bool {
+        sp().object(forKey: Self.KEY_TOMORROW_REMINDER_ENABLED) as? Bool ?? Self.DEFAULT_TOMORROW_REMINDER_ENABLED
+    }
+    func setTomorrowReminderEnabled(_ v: Bool) { sp().set(v, forKey: Self.KEY_TOMORROW_REMINDER_ENABLED) }
+
+    func getTomorrowReminderTime() -> String {
+        sp().string(forKey: Self.KEY_TOMORROW_REMINDER_TIME) ?? Self.DEFAULT_TOMORROW_REMINDER_TIME
+    }
+    func setTomorrowReminderTime(_ s: String) { sp().set(s, forKey: Self.KEY_TOMORROW_REMINDER_TIME) }
+
+    // MARK: - v1.0.60 上课自动勿扰
+
+    func isClassDndEnabled() -> Bool {
+        sp().bool(forKey: Self.KEY_CLASS_DND_ENABLED)
+    }
+    func setClassDndEnabled(_ v: Bool) { sp().set(v, forKey: Self.KEY_CLASS_DND_ENABLED) }
+
+    // MARK: - v1.0.60 系统日历导入
+
+    func getCalendarTargetId() -> String {
+        sp().string(forKey: Self.KEY_CALENDAR_TARGET_ID) ?? ""
+    }
+    func setCalendarTargetId(_ id: String) { sp().set(id, forKey: Self.KEY_CALENDAR_TARGET_ID) }
+
+    func getCalendarImportRange() -> String {
+        sp().string(forKey: Self.KEY_CALENDAR_IMPORT_RANGE) ?? "NEXT_WEEK"
+    }
+    func setCalendarImportRange(_ v: String) { sp().set(v, forKey: Self.KEY_CALENDAR_IMPORT_RANGE) }
+
+    func isCalendarApplyTransfers() -> Bool {
+        sp().bool(forKey: Self.KEY_CALENDAR_APPLY_TRANSFERS)
+    }
+    func setCalendarApplyTransfers(_ v: Bool) { sp().set(v, forKey: Self.KEY_CALENDAR_APPLY_TRANSFERS) }
+
+    func getCalendarReminderMinutes() -> Int? {
+        guard sp().object(forKey: Self.KEY_CALENDAR_REMINDER_MINUTES) != nil else { return nil }
+        return sp().integer(forKey: Self.KEY_CALENDAR_REMINDER_MINUTES)
+    }
+    func setCalendarReminderMinutes(_ v: Int?) {
+        guard let v = v else {
+            sp().removeObject(forKey: Self.KEY_CALENDAR_REMINDER_MINUTES)
+            return
+        }
+        sp().set(v, forKey: Self.KEY_CALENDAR_REMINDER_MINUTES)
+    }
+
+    func isCalendarFirstAlarmEnabled() -> Bool {
+        sp().bool(forKey: Self.KEY_CALENDAR_FIRST_ALARM)
+    }
+    func setCalendarFirstAlarmEnabled(_ v: Bool) { sp().set(v, forKey: Self.KEY_CALENDAR_FIRST_ALARM) }
+
+    func getCalendarFirstAlarmMinutes() -> Int {
+        sp().object(forKey: Self.KEY_CALENDAR_FIRST_ALARM_MINUTES) as? Int ?? 60
+    }
+    func setCalendarFirstAlarmMinutes(_ v: Int) { sp().set(v, forKey: Self.KEY_CALENDAR_FIRST_ALARM_MINUTES) }
 
     func isBeforeClassBannerEnabled() -> Bool {
         sp().object(forKey: Self.KEY_BEFORE_CLASS_BANNER) as? Bool ?? true
@@ -418,6 +497,30 @@ final class AppPrefs {
     func isCourseColorless() -> Bool { sp().bool(forKey: Self.KEY_COURSE_COLORLESS) }
     func setCourseColorless(_ v: Bool) { sp().set(v, forKey: Self.KEY_COURSE_COLORLESS) }
 
+    // ===== widget v1.0.60 对齐键 (← AppPrefs.kt 同名键) =====
+
+    /// 今天没课时自动显示最近一个有课的日子 — 默认 false
+    /// (← KEY_NEAREST_BUSY_DAY; WidgetWeekDataLoader.resolve enabled 入参)
+    func isNearestBusyDay() -> Bool { sp().bool(forKey: Self.KEY_NEAREST_BUSY_DAY) }
+    func setNearestBusyDay(_ v: Bool) {
+        sp().set(v, forKey: Self.KEY_NEAREST_BUSY_DAY)
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// 最小档三天窗口锚点全局旧值 — 默认 true (← KEY_COMPACT_WINDOW_TODAY_FIRST)
+    /// 仅作 per-kind 显式值未设置时的迁移默认 (WidgetCompactWindowStore.resolve)
+    func isCompactWindowTodayFirst() -> Bool { sp().bool(forKey: Self.KEY_COMPACT_WINDOW_TODAY_FIRST) }
+    func setCompactWindowTodayFirst(_ v: Bool) {
+        sp().set(v, forKey: Self.KEY_COMPACT_WINDOW_TODAY_FIRST)
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// 强制滚动(实验)全局旧值 — 默认 false = FIXED 固定窗口
+    /// (← KEY_WIDGET_SCROLL_ENABLED; WidgetScrollStore 迁移默认)
+    /// ★ 平台差异: iOS 无 RemoteViews 滚动条带, 开关仅作迁移语义载体 + 未来
+    ///   ScrollView 扩展位, FIXED 窗口为 iOS 唯一渲染路径。
+    func isWidgetScrollEnabled() -> Bool { sp().bool(forKey: Self.KEY_WIDGET_SCROLL_ENABLED) }
+
     // ===== WeekView 纯文字组件:课程间分隔线 — 默认 true =====
 
     func isWidgetSeparator() -> Bool {
@@ -512,6 +615,43 @@ final class AppPrefs {
             next = existing.filter { $0.sourceDate != sourceDate }
         }
         setHolidayTransfers(tableId, next)
+    }
+
+    // MARK: - 节次表头设置(← AppPrefs.kt getPeriodHeaderLayout/Style/Hanging + isPeriodHeaderShowX, v1.0.60)
+    // iOS 渲染层在 body 内直读(设置页切换触发父级重建),与冲突滑杆/网格缩放同模式 —
+    // 无 changeBus,无 @Published 注入。
+
+    /// Header layout 有两个持久态; 旧值 "vertical" 映射到 "three_line" — 升级时 UI 始终有选项。
+    func getPeriodHeaderLayout() -> String {
+        switch sp().string(forKey: Self.KEY_PERIOD_HEADER_LAYOUT) ?? "legacy" {
+        case "three_line", "vertical": return "three_line"
+        default: return "legacy"
+        }
+    }
+    func setPeriodHeaderLayout(_ value: String) {
+        precondition(value == "legacy" || value == "three_line")
+        sp().set(value, forKey: Self.KEY_PERIOD_HEADER_LAYOUT)
+    }
+    func getPeriodHeaderStyle() -> String {
+        sp().string(forKey: Self.KEY_PERIOD_HEADER_STYLE) ?? "arabic"
+    }
+    func setPeriodHeaderStyle(_ value: String) {
+        let allowed: Set<String> = ["arabic", "chinese", "financial", "circled", "roman"]
+        precondition(allowed.contains(value))
+        sp().set(value, forKey: Self.KEY_PERIOD_HEADER_STYLE)
+    }
+    func getPeriodHeaderHanging() -> Float {
+        let raw = sp().float(forKey: Self.KEY_PERIOD_HEADER_HANGING)
+        return max(-1.0, min(1.0, raw))
+    }
+    func setPeriodHeaderHanging(_ value: Float) {
+        sp().set(max(-1.0, min(1.0, value)), forKey: Self.KEY_PERIOD_HEADER_HANGING)
+    }
+    func isPeriodHeaderShowX() -> Bool {
+        sp().bool(forKey: Self.KEY_PERIOD_HEADER_SHOW_X)
+    }
+    func setPeriodHeaderShowX(_ value: Bool) {
+        sp().set(value, forKey: Self.KEY_PERIOD_HEADER_SHOW_X)
     }
 
     /// 删表时清掉该表映射

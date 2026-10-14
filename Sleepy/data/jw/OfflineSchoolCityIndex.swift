@@ -1,215 +1,203 @@
-// OfflineSchoolCityIndex.swift — ← data/jw/OfflineSchoolCityIndex.kt (v1.0.60)
-// 离线城市边界 SCB1 二进制格式解析 + 点在多边形内查找(缩放 1e4 整数环)。
-// 绝不按"最近的城市中心"猜城市 — 只做严格的 point-in-polygon。
+// OfflineSchoolCityIndex.swift — ← data/jw/OfflineSchoolCityIndex.kt
+// Local point-in-polygon lookup. Never guesses a city from its nearest centre.
+//
+// SCB1 二进制格式 (与 Android 1:1):
+//   magic  int32  0x53434231 ("SCB1")
+//   每个 area: nameLen int32(1..256) + name bytes(UTF-8) + polygonCount int32(1..10000)
+//     每个 polygon: ringCount int32(1..10000)
+//       每个 ring: pointCount int32(3..1000000) + 每点 (longitude int32, latitude int32)
+//   坐标为 度×10000 的缩放整数; 总点数上限 2,000,000; EOF 后不得有尾随字节。
 
 import Foundation
 import Compression
 
-// ← Ring (private data class)
-struct ScbRing {
-    let coordinates: [Int32]
-    let minX: Int32, maxX: Int32, minY: Int32, maxY: Int32
-
-    init(coordinates: [Int32]) {
-        self.coordinates = coordinates
-        var left = Int32.max, right = Int32.min, bottom = Int32.max, top = Int32.min
-        var i = 0
-        while i + 1 < coordinates.count {
-            left = min(left, coordinates[i]); right = max(right, coordinates[i])
-            bottom = min(bottom, coordinates[i + 1]); top = max(top, coordinates[i + 1])
-            i += 2
-        }
-        minX = left; maxX = right; minY = bottom; maxY = top
-    }
-
-    // ← contains (ray casting + on-edge short-circuit)
-    func contains(_ x: Double, _ y: Double) -> Bool {
-        if x < Double(minX) || x > Double(maxX) || y < Double(minY) || y > Double(maxY) { return false }
-        var inside = false
-        var previous = coordinates.count - 2
-        var current = 0
-        while current < coordinates.count {
-            let ax = Double(coordinates[previous])
-            let ay = Double(coordinates[previous + 1])
-            let bx = Double(coordinates[current])
-            let by = Double(coordinates[current + 1])
-            let cross = (x - ax) * (by - ay) - (y - ay) * (bx - ax)
-            if abs(cross) < 1e-6 && x >= min(ax, bx) && x <= max(ax, bx) &&
-                y >= min(ay, by) && y <= max(ay, by) { return true }
-            if (ay > y) != (by > y) && x < (bx - ax) * (y - ay) / (by - ay) + ax { inside.toggle() }
-            previous = current
-            current += 2
-        }
-        return inside
-    }
-}
-
-// ← Polygon (private data class)
-struct ScbPolygon {
-    let rings: [ScbRing]
-
-    // 第一环=外环, 其余=洞
-    func contains(_ x: Double, _ y: Double) -> Bool {
-        guard let outer = rings.first, outer.contains(x, y) else { return false }
-        for hole in rings.dropFirst() where hole.contains(x, y) { return false }
-        return true
-    }
-}
-
-// ← Area (private data class)
-struct ScbArea {
-    let name: String
-    let polygons: [ScbPolygon]
-}
-
-// ← OfflineSchoolCityIndex
 final class OfflineSchoolCityIndex {
-    private let areas: [ScbArea]
+    private struct Ring {
+        let coordinates: [Int32]     // [x0, y0, x1, y1, ...] 缩放整数(度×10000)
+        let minX: Int32, maxX: Int32, minY: Int32, maxY: Int32
 
-    private init(_ areas: [ScbArea]) { self.areas = areas }
-
-    var cityNames: Set<String> { Set(areas.map(\.name)) }
-
-    // ← cityAt
-    func cityAt(latitude: Double, longitude: Double) -> String? {
-        guard latitude.isFinite, longitude.isFinite, (-90.0...90.0).contains(latitude),
-              (-180.0...180.0).contains(longitude) else { return nil }
-        for area in areas {
-            for polygon in area.polygons where
-                polygon.contains(longitude * 10000, latitude * 10000) { return area.name }
+        init(coordinates: [Int32]) {
+            self.coordinates = coordinates
+            var left = Int32.max, right = Int32.min, bottom = Int32.max, top = Int32.min
+            var i = 0
+            while i < coordinates.count {
+                left = min(left, coordinates[i])
+                right = max(right, coordinates[i])
+                bottom = min(bottom, coordinates[i + 1])
+                top = max(top, coordinates[i + 1])
+                i += 2
+            }
+            minX = left; maxX = right; minY = bottom; maxY = top
         }
-        return nil
+
+        /// 射线法 point-in-polygon;边界上的点(叉积≈0 且在段内)算包含。
+        func contains(x: Double, y: Double) -> Bool {
+            if x < Double(minX) || x > Double(maxX) || y < Double(minY) || y > Double(maxY) {
+                return false
+            }
+            var inside = false
+            var previous = coordinates.count - 2
+            var current = 0
+            while current < coordinates.count {
+                let ax = coordinates[previous]
+                let ay = coordinates[previous + 1]
+                let bx = coordinates[current]
+                let by = coordinates[current + 1]
+                let cross = (x - Double(ax)) * (Double(by) - Double(ay))
+                    - (y - Double(ay)) * (Double(bx) - Double(ax))
+                if abs(cross) < 1e-6 && x >= Double(min(ax, bx)) && x <= Double(max(ax, bx))
+                    && y >= Double(min(ay, by)) && y <= Double(max(ay, by)) {
+                    return true
+                }
+                if (Double(ay) > y) != (Double(by) > y)
+                    && x < (Double(bx) - Double(ax)) * (y - Double(ay)) / (Double(by) - Double(ay)) + Double(ax) {
+                    inside.toggle()
+                }
+                previous = current
+                current += 2
+            }
+            return inside
+        }
     }
 
-    // 解析错误 ← require(...){...} 抛 IllegalArgumentException
+    private struct Polygon {
+        let rings: [Ring]
+        func contains(x: Double, y: Double) -> Bool {
+            guard let first = rings.first, first.contains(x: x, y: y) else { return false }
+            for hole in rings.dropFirst() where hole.contains(x: x, y: y) { return false }
+            return true
+        }
+    }
+
+    private struct Area {
+        let name: String
+        let polygons: [Polygon]
+    }
+
+    private let areas: [Area]
+
+    private init(areas: [Area]) {
+        self.areas = areas
+    }
+
+    var cityNames: Set<String> {
+        return Set(areas.map { $0.name })
+    }
+
+    func cityAt(latitude: Double, longitude: Double) -> String? {
+        if latitude.isNaN || longitude.isNaN
+            || latitude.isInfinite || longitude.isInfinite
+            || latitude < -90.0 || latitude > 90.0
+            || longitude < -180.0 || longitude > 180.0 {
+            return nil
+        }
+        return areas.first { area in
+            area.polygons.contains { $0.contains(x: longitude * 10000, y: latitude * 10000) }
+        }?.name
+    }
+
+    // MARK: - SCB1 解析
+
     enum ParseError: Error, LocalizedError {
-        case format, count, coordinate, trailingData, tooLarge, missingName
+        case unsupportedFormat
+        case invalidCount
+        case missingName
+        case tooLarge
+        case invalidCoordinate
+        case trailingData
+        case cancelled
+
         var errorDescription: String? {
             switch self {
-            case .format: return "Unsupported city boundary format"
-            case .count: return "Invalid city boundary count"
-            case .coordinate: return "Invalid city boundary coordinate"
-            case .trailingData: return "Trailing city boundary data"
-            case .tooLarge: return "City boundary data too large"
+            case .unsupportedFormat: return "Unsupported city boundary format"
+            case .invalidCount: return "Invalid city boundary count"
             case .missingName: return "Missing city name"
+            case .tooLarge: return "City boundary data too large"
+            case .invalidCoordinate: return "Invalid city boundary coordinate"
+            case .trailingData: return "Trailing city boundary data"
+            case .cancelled: return "cancelled"
             }
         }
     }
 
-    /// SCB1 直接流式解析为缩放整数环,无 JSON 树、无点对象。
-    /// 调用方拥有输入流;每环与每 256 点检查一次取消。
-    // ← parse(InputStream, checkCancelled)
-    static func parse(_ data: Data, checkCancelled: () throws -> Void = {}) throws -> OfflineSchoolCityIndex {
-        var offset = 0
+    /// SCB1 流式解析 — 不建 JSON 树、不建点对象, 直接读进缩放整数 ring。
+    /// 调用方持有流。每 ring 与每 256 点检查一次取消。
+    static func parse(_ stream: InputStream, checkCancelled: () -> Void = {}) throws -> OfflineSchoolCityIndex {
+        let input = stream
+        input.open()
+        defer { input.close() }
+        checkCancelled()
+
+        var buffer = [UInt8](repeating: 0, count: 4)
+
         func readInt32() throws -> Int32 {
-            guard offset + 4 <= data.count else { throw ParseError.format }
-            let v = data[offset..<offset + 4].reduce(Int32(0)) { ($0 << 8) | Int32($1) }
-            offset += 4
+            var read = 0
+            while read < 4 {
+                let n = input.read(&buffer, maxLength: 4 - read)
+                if n <= 0 { throw ParseError.invalidCount }
+                read += n
+            }
+            // 大端 (Java DataInputStream.writeInt 语义)
+            let v = (Int32(buffer[0]) << 24) | (Int32(buffer[1]) << 16)
+                | (Int32(buffer[2]) << 8) | Int32(buffer[3])
             return v
         }
-        func count(_ minimum: Int32, _ maximum: Int32) throws -> Int32 {
-            let c = try readInt32()
-            guard c >= minimum, c <= maximum else { throw ParseError.count }
-            return c
+
+        func count(minimum: Int32, maximum: Int32) throws -> Int {
+            let v = try readInt32()
+            guard v >= minimum && v <= maximum else { throw ParseError.invalidCount }
+            return Int(v)
         }
-        try checkCancelled()
-        guard try readInt32() == 0x53434231 else { throw ParseError.format } // "SCB1"
+
+        guard try readInt32() == 0x53434231 else { throw ParseError.unsupportedFormat }
+
         var totalPoints = 0
-        var areas: [ScbArea] = []
-        let areaCount = try count(1, 10000)
+        var areas: [Area] = []
+        let areaCount = try count(minimum: 1, maximum: 10000)
         for _ in 0..<areaCount {
-            try checkCancelled()
-            let nameLen = Int(try count(1, 256))
-            guard offset + nameLen <= data.count else { throw ParseError.format }
-            guard let name = String(data: data[offset..<offset + nameLen], encoding: .utf8),
-                  !name.trimmingCharacters(in: .whitespaces).isEmpty else { throw ParseError.missingName }
-            offset += nameLen
-            var polygons: [ScbPolygon] = []
-            let polygonCount = try count(1, 10000)
+            checkCancelled()
+            let nameLen = try count(minimum: 1, maximum: 256)
+            var nameBytes = [UInt8](repeating: 0, count: nameLen)
+            var read = 0
+            while read < nameLen {
+                let n = input.read(&nameBytes, maxLength: nameLen - read)
+                if n <= 0 { throw ParseError.invalidCount }
+                read += n
+            }
+            let name = String(bytes: nameBytes, encoding: .utf8) ?? ""
+            guard !name.isBlank else { throw ParseError.missingName }
+            var polygons: [Polygon] = []
+            let polygonCount = try count(minimum: 1, maximum: 10000)
             for _ in 0..<polygonCount {
-                var rings: [ScbRing] = []
-                let ringCount = try count(1, 10000)
+                var rings: [Ring] = []
+                let ringCount = try count(minimum: 1, maximum: 10000)
                 for _ in 0..<ringCount {
-                    try checkCancelled()
-                    let points = Int(try count(3, 1000000))
+                    checkCancelled()
+                    let points = try count(minimum: 3, maximum: 1_000_000)
                     totalPoints += points
-                    guard totalPoints <= 2000000 else { throw ParseError.tooLarge }
-                    var coordinates: [Int32] = []
-                    coordinates.reserveCapacity(points * 2)
+                    guard totalPoints <= 2_000_000 else { throw ParseError.tooLarge }
+                    var coordinates = [Int32](repeating: 0, count: points * 2)
                     for point in 0..<points {
-                        if point % 256 == 0 { try checkCancelled() }
-                        let lon = try readInt32()
-                        let lat = try readInt32()
-                        guard (-1800000...1800000).contains(lon), (-900000...900000).contains(lat)
-                            else { throw ParseError.coordinate }
-                        coordinates.append(lon)
-                        coordinates.append(lat)
+                        if point % 256 == 0 { checkCancelled() }
+                        let longitude = try readInt32()
+                        let latitude = try readInt32()
+                        guard longitude >= -1_800_000 && longitude <= 1_800_000
+                            && latitude >= -900_000 && latitude <= 900_000 else {
+                            throw ParseError.invalidCoordinate
+                        }
+                        coordinates[point * 2] = longitude
+                        coordinates[point * 2 + 1] = latitude
                     }
-                    rings.append(ScbRing(coordinates: coordinates))
+                    rings.append(Ring(coordinates: coordinates))
                 }
-                polygons.append(ScbPolygon(rings: rings))
+                polygons.append(Polygon(rings: rings))
             }
-            areas.append(ScbArea(name: name, polygons: polygons))
+            areas.append(Area(name: name, polygons: polygons))
         }
-        guard offset == data.count else { throw ParseError.trailingData }
-        try checkCancelled()
-        return OfflineSchoolCityIndex(areas)
-    }
-
-    /// .bin.gz → gunzip → SCB1 解析。iOS 不像 Android AAPT 会解开 gz,需自行解压。
-    static func parseGzip(_ gzipData: Data, checkCancelled: () throws -> Void = {}) throws -> OfflineSchoolCityIndex {
-        let raw = try Self.gunzip(gzipData)
-        return try parse(raw, checkCancelled: checkCancelled)
-    }
-
-    /// RFC1952 gzip 容器: 剥头取裸 DEFLATE 载荷(COMPRESSION_ZLIB 只解 RFC1951)。
-    private static func gunzip(_ data: Data) throws -> Data {
-        let bytes = [UInt8](data)
-        guard bytes.count > 10, bytes[0] == 0x1f, bytes[1] == 0x8b, bytes[2] == 8
-            else { throw ParseError.format }
-        let flags = bytes[3]
-        var offset = 10
-        if flags & 0x04 != 0 { // FEXTRA
-            guard offset + 2 <= bytes.count else { throw ParseError.format }
-            let xlen = Int(bytes[offset]) | (Int(bytes[offset + 1]) << 8)
-            offset += 2 + xlen
-        }
-        if flags & 0x08 != 0 { // FNAME
-            guard let end = bytes[offset...].firstIndex(of: 0) else { throw ParseError.format }
-            offset = end + 1
-        }
-        if flags & 0x10 != 0 { // FCOMMENT
-            guard let end = bytes[offset...].firstIndex(of: 0) else { throw ParseError.format }
-            offset = end + 1
-        }
-        if flags & 0x02 != 0 { offset += 2 } // FHCRC
-        guard offset < bytes.count - 8 else { throw ParseError.format }
-        return try inflate(bytes[offset..<(bytes.count - 8)])
-    }
-
-    /// 裸 DEFLATE (RFC1951) 解压。
-    private static func inflate(_ input: ArraySlice<UInt8>) throws -> Data {
-        let bufferSize = 65536
-        let dstBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
-        defer { dstBuffer.deallocate() }
-        return try input.withContiguousStorageIfAvailable { src in
-            // compression_stream 是 C 结构体: 成员逐一初始化, 无部分参构造
-            var stream = compression_stream(
-                dst_ptr: dstBuffer, dst_size: bufferSize,
-                src_ptr: src.baseAddress!, src_size: src.count, state: nil)
-            let status = compression_stream_init(&stream, COMPRESSION_STREAM_DECODE, COMPRESSION_ZLIB)
-            guard status == COMPRESSION_STATUS_OK else { throw ParseError.format }
-            defer { compression_stream_destroy(&stream) }
-            var out = Data()
-            while true {
-                stream.dst_ptr = dstBuffer
-                stream.dst_size = bufferSize
-                let status = compression_stream_process(&stream, 0)
-                let produced = bufferSize - stream.dst_size
-                if produced > 0 { out.append(dstBuffer, count: produced) }
-                if status == COMPRESSION_STATUS_END { return out }
-                guard status == COMPRESSION_STATUS_OK else { throw ParseError.format }
-            }
-        } ?? { throw ParseError.format }()
+        // EOF 后不得有尾随字节
+        var probe: UInt8 = 0
+        if input.read(&probe, maxLength: 1) != -1 { throw ParseError.trailingData }
+        checkCancelled()
+        return OfflineSchoolCityIndex(areas: areas)
     }
 }

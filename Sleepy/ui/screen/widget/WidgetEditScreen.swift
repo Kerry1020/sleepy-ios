@@ -12,6 +12,9 @@ import WidgetKit
 // ← WidgetEditScope: 传给每个 section 的状态 + 选择回调 (tableId nil = 清绑定回默认)
 //   issue#26: useAlias/onUseAliasChange — widget 场景 课程名显示 原名/别名 (全局一档);
 //   默认参数兜底, 旧构造点(未传)不破编译。
+//   设计 §6 (v1.0.60 对齐): receiverSimpleName → iOS 无 receiver, 等价族信息 =
+//   WidgetKit family (小/中/大); scrollEnabled / compactTodayFirst — per-kind 一档
+//   (差异表#8: Android per-widgetId → iOS per-kind)。
 struct WidgetEditScope {
     let kind: String
     let currentBinding: Int64?
@@ -19,6 +22,14 @@ struct WidgetEditScope {
     let onSelectTable: (Int64?) -> Void
     var useAlias: Bool = false
     var onUseAliasChange: (Bool) -> Void = { _ in }
+    // ← 设计 §6: family = 族判断依据(系统小=Android「· 小」变体); nil = 未知
+    var family: WidgetFamily? = nil
+    // ← 强制滚动(实验) — 本 kind 一档, 默认 false = FIXED 固定窗口
+    var scrollEnabled: Bool = false
+    var onScrollEnabledChange: (Bool) -> Void = { _ in }
+    // ← 最小档三天窗口 — 本 kind 一档 (仅系统小 family 显示); true = 今日居第一位
+    var compactTodayFirst: Bool = true
+    var onCompactTodayFirstChange: (Bool) -> Void = { _ in }
 }
 
 // ← WidgetEditSection.kt 的协议扩展点在 SwiftUI 下不成立(existential View 不能做
@@ -30,8 +41,12 @@ struct WidgetEditScope {
 //   availableTables = 有课的表 (← WidgetEditCore.filterAvailableTables, 保序)
 //   currentBinding = WidgetBindingStore.get(kind); 选择回调写库 + WidgetCenter 通知。
 //   useAlias = AppPrefs.isWidgetUseAlias; 切换回调写库(set 内已刷 timeline)。
-func makeWidgetEditScope(kind: String, onSelect: @escaping (Int64?) -> Void,
-                         onUseAliasChange: @escaping (Bool) -> Void = { _ in }) -> WidgetEditScope {
+func makeWidgetEditScope(kind: String,
+                         family: WidgetFamily? = nil,
+                         onSelect: @escaping (Int64?) -> Void,
+                         onUseAliasChange: @escaping (Bool) -> Void = { _ in },
+                         onScrollEnabledChange: @escaping (Bool) -> Void = { _ in },
+                         onCompactTodayFirstChange: @escaping (Bool) -> Void = { _ in }) -> WidgetEditScope {
     let repo = WidgetLoader.makeRepo()
     let all = repo.map { (try? $0.getAllTables()) ?? [] } ?? []
     var available: [TimeTableEntity] = []
@@ -47,7 +62,16 @@ func makeWidgetEditScope(kind: String, onSelect: @escaping (Int64?) -> Void,
         availableTables: available,
         onSelectTable: onSelect,
         useAlias: AppPrefs.shared.isWidgetUseAlias(),
-        onUseAliasChange: onUseAliasChange
+        onUseAliasChange: onUseAliasChange,
+        family: family,
+        // ← 迁移语义: 显式值 ?: 旧全局 — 显式值由 per-kind store 持有, 旧全局
+        //   走 AppPrefs (compact 默认 true, scroll 默认 false, 与 Android 一致)。
+        //   三天窗口 (WidgetCompactWindow.swift) + 滚动 (WidgetScrollStore.swift)
+        //   已在 v1.0.60 落位, 本节仅接 store 接口。
+        scrollEnabled: WidgetScrollStore.isScrollEnabled(kind: kind),
+        onScrollEnabledChange: onScrollEnabledChange,
+        compactTodayFirst: WidgetCompactWindowStore.isTodayFirst(kind),
+        onCompactTodayFirstChange: onCompactTodayFirstChange
     )
 }
 
@@ -63,6 +87,9 @@ func applyWidgetBinding(kind: String, tableId: Int64?) {
 struct WidgetEditScreen: View {
     @Environment(\.localWakeUpColors) private var colors
     let kind: String
+    // ← 设计 §6: family(系统小/中/大) = Android receiverSimpleName 的 iOS 等价族信息,
+    //   由管理页 WidgetInfo.family 传入 (nil = 未知, 族门控节按各自规则处理)
+    var family: WidgetFamily? = nil
     let onDismiss: () -> Void
 
     // ← state: currentBinding + availableTables (选完 reload, 选中态即时切换)
@@ -75,9 +102,12 @@ struct WidgetEditScreen: View {
             ScrollView {
                 LazyVStack(spacing: 16) {
                     if let s = scope {
+                        // ← Android WidgetEditScreen.kt L52 sections 列表 1:1:
+                        //   Schedule / Alias / Scroll / CompactWindow
                         WidgetEditScheduleSection(scope: s)
-                        // ← sections 列表加一项的等价扩展点 (issue#26 别名节, 排课表节后)
                         WidgetEditAliasSection(scope: s)
+                        WidgetEditScrollSection(scope: s)
+                        WidgetEditCompactWindowSection(scope: s)
                     }
                 }
                 .padding(.horizontal, 16)
@@ -90,10 +120,11 @@ struct WidgetEditScreen: View {
         }
     }
 
-    // ← vm.reload(): 选完/切完重读 scope, 选中态即时切换 — 两个回调同走"写库 + 重读"管线
+    // ← vm.reload(): 选完/切完重读 scope, 选中态即时切换 — 全部回调同走"写库 + 重读"管线
     private func reloadScope() {
         scope = makeWidgetEditScope(
             kind: kind,
+            family: family,
             onSelect: { tableId in
                 applyWidgetBinding(kind: kind, tableId: tableId)
                 reloadScope()
@@ -101,6 +132,19 @@ struct WidgetEditScreen: View {
             onUseAliasChange: { v in
                 // ← vm.setUseAlias: 写 AppPrefs(内部已 WidgetCenter 全量刷) + reload
                 AppPrefs.shared.setWidgetUseAlias(v)
+                reloadScope()
+            },
+            onScrollEnabledChange: { v in
+                // ← vm.setScrollEnabled: 写 per-kind store + reload + 全量重推
+                //   (评审 #25: 否则「看着没生效」)
+                WidgetScrollStore.setScrollEnabled(kind: kind, enabled: v)
+                WidgetCenter.shared.reloadAllTimelines()
+                reloadScope()
+            },
+            onCompactTodayFirstChange: { v in
+                // ← vm.setCompactTodayFirst: 与 setScrollEnabled 同管线
+                WidgetCompactWindowStore.setTodayFirst(kind, v)
+                WidgetCenter.shared.reloadAllTimelines()
                 reloadScope()
             }
         )
@@ -222,6 +266,143 @@ private struct WidgetEditAliasSection: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
             .background(selected ? colors.primaryContainer : colors.surfaceContainer)
+        }
+        .buttonStyle(SleepyButtonStyle())
+    }
+}
+
+// ← WidgetEditScrollSection (设计 §6): "滚动方式" 分区 — 强制滚动(实验) 本 kind 一档。
+//   出厂默认关 = FIXED 固定窗口; 开启前确认弹窗如实告知厂商 ROM 风险, 取消即回弹
+//   (不写入); 关闭无需确认。
+//   ★ iOS 平台差异: Android 该节依赖厂商 ROM 的 RemoteViews 滚动服务; WidgetKit
+//     无逐帧滚动条带, 但保留本节与存储 (WidgetKit 列表型 timeline 语义上的"滚动"),
+//     族门控同 Android: WeekGrid 族隐藏(网格无滚动形态), 未知(nil)按显示处理。
+private struct WidgetEditScrollSection: View {
+    @Environment(\.localWakeUpColors) private var colors
+    let scope: WidgetEditScope
+    @State private var showConfirm = false
+
+    // ← 族注入 (评审 #15): WeekGrid 族隐藏; 未知(nil)按显示处理
+    private var isWeekGridFamily: Bool {
+        scope.kind.contains("WeekGrid")
+    }
+
+    var body: some View {
+        if !isWeekGridFamily {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(L10n.format("widget_edit_section_scroll"))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(colors.onSurface)
+                Spacer().frame(height: 8)
+                VStack(spacing: 0) {
+                    Button {
+                        // ← 行点击与 Switch 同逻辑: 已开 → 直接关; 未开 → 确认弹窗
+                        if scope.scrollEnabled {
+                            scope.onScrollEnabledChange(false)
+                        } else {
+                            showConfirm = true
+                        }
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 0) {
+                                Text(L10n.format("widget_scroll_dialog_title"))
+                                    .font(.system(size: 16))
+                                    .foregroundColor(colors.onSurface)
+                                Text(L10n.format("widget_edit_scroll_subtitle"))
+                                    .font(.system(size: 12))
+                                    .foregroundColor(colors.onSurfaceVariant)
+                            }
+                            Spacer()
+                            Toggle("", isOn: Binding(
+                                get: { scope.scrollEnabled },
+                                set: { on in
+                                    if on { showConfirm = true }
+                                    else { scope.onScrollEnabledChange(false) }
+                                }))
+                                .labelsHidden()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                    }
+                    .buttonStyle(SleepyButtonStyle())
+                }
+                .background(colors.surfaceContainer)
+                .cornerRadius(16)
+            }
+            .alert(L10n.format("widget_scroll_dialog_title"), isPresented: $showConfirm) {
+                // 2026-09-16 用户: 裸 TextButton 无边界无色块 — 平台差异:
+                // iOS 原生 alert 按钮即系统样式, 无裸文本问题, 等价意图成立
+                Button(L10n.format("widget_scroll_dialog_confirm")) {
+                    showConfirm = false
+                    scope.onScrollEnabledChange(true)
+                }
+                Button(L10n.format("widget_scroll_dialog_cancel"), role: .cancel) {
+                    showConfirm = false
+                }
+            } message: {
+                Text(L10n.format("widget_scroll_dialog_body"))
+            }
+        }
+    }
+}
+
+// ← WidgetEditCompactWindowSection (2026-09-15 用户定稿): "三天窗口" 分区 —
+//   三天窗口档位, 本 kind 一档。仅系统小 family (Android「· 小」变体的
+//   WeekListSmall/WeekViewSmall) 显示; 未知族隐藏 (档位对其它变体无效果)。
+private struct WidgetEditCompactWindowSection: View {
+    @Environment(\.localWakeUpColors) private var colors
+    let scope: WidgetEditScope
+
+    /// 纯函数门控 — 单测锁死, 防止族名漂移。
+    /// Android appliesTo(receiverSimpleName) == WeekListSmall/WeekViewSmall →
+    /// iOS 等价 = family == .systemSmall (「· 小」变体在 WidgetKit 的唯一表达)。
+    static func appliesTo(family: WidgetFamily?) -> Bool {
+        family == .systemSmall
+    }
+
+    var body: some View {
+        if Self.appliesTo(family: scope.family) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(L10n.format("widget_edit_compact_title"))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(colors.onSurface)
+                Spacer().frame(height: 8)
+                VStack(spacing: 0) {
+                    optionRow(
+                        label: L10n.format("widget_edit_compact_today_first"),
+                        selected: scope.compactTodayFirst
+                    ) {
+                        scope.onCompactTodayFirstChange(true)
+                    }
+                    optionRow(
+                        label: L10n.format("widget_edit_compact_today_second"),
+                        selected: !scope.compactTodayFirst
+                    ) {
+                        scope.onCompactTodayFirstChange(false)
+                    }
+                }
+                .background(colors.surfaceContainer)
+                .cornerRadius(16)
+            }
+        }
+    }
+
+    // ← OptionRow: RadioButton + bodyLarge 16, padding horizontal 16 vertical 4
+    //   (RadioButton 原生保留 — Android 此节原样用 M3 RadioButton, 非色块选中态规则场景)
+    private func optionRow(label: String, selected: Bool, onSelect: @escaping () -> Void) -> some View {
+        Button(action: onSelect) {
+            HStack(spacing: 0) {
+                Image(systemName: selected ? "circle.inset.filled" : "circle")
+                    .font(.system(size: 20))
+                    .foregroundColor(selected ? colors.primary : colors.onSurfaceVariant)
+                Text(label)
+                    .font(.system(size: 16))
+                    .foregroundColor(colors.onSurface)
+                    .padding(.leading, 4)
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 4)
         }
         .buttonStyle(SleepyButtonStyle())
     }

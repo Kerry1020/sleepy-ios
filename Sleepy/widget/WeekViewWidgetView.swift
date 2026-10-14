@@ -156,19 +156,20 @@ struct WeekViewWidget: Widget {
     }
 }
 
-// ← weekViewCompactColumns: SMALL 紧凑档选列(纯函数)。
+// ← weekViewCompactColumns / compactDays: SMALL 紧凑档选列(纯函数)。
 // 池 = 有课日(空则全周), 今天不在池必补入; 按 |dow−today| 排序取 maxColumns, 输出升序。
 // tie-break 按池内原序(Kotlin sortedBy 稳定排序语义)。
+//
+// 单一事实源已迁至 WidgetCompactHelpers.weekViewCompactColumns (←
+// WidgetBitmapRenderers.kt 同名函数); 此处保留旧签名 ([DayData] 重载) 作为
+// 转发, 不破现有 WeekList/WeekGrid 调用点。
 extension WeekViewWidgetEntryView {
     static func weekViewCompactColumns(days: [DayData], todayDow: Int, maxColumns: Int = 3) -> [Int] {
-        var pool = days.filter { !$0.courses.isEmpty }.map { $0.dayOfWeek }
-        if pool.isEmpty { pool = days.map { $0.dayOfWeek } }
-        if !pool.contains(todayDow) { pool.append(todayDow) }
-        let ranked = pool.enumerated().sorted { a, b in
-            let da = abs(a.element - todayDow), db = abs(b.element - todayDow)
-            return da != db ? da < db : a.offset < b.offset
-        }
-        return ranked.prefix(maxColumns).map { $0.element }.sorted()
+        WidgetCompactHelpers.weekViewCompactColumns(
+            WeekData(days: days, hasTable: !days.isEmpty),
+            todayDow: todayDow,
+            maxColumns: maxColumns
+        )
     }
 
     // ← renderWeekViewCompact 数据侧换列: 先按 visibleDays 收窄可选池(空集回退全周防御), 再选 compact 列

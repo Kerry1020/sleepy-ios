@@ -251,7 +251,7 @@ enum MigrationDatabaseCodec {
             }
             for row in snapshot.courses {
                 guard let newTableId = tableIdMap[row.tableId] else { continue }
-                try courseDao.insertKeepIdInDb(db, toEntity(row).withTableId(newTableId))
+                try courseDao.insertInDb(db, toEntity(row).withId(0).withTableId(newTableId))
             }
             for row in snapshot.importDrafts {
                 try importDraftDao.upsertInDb(db, toEntity(row))

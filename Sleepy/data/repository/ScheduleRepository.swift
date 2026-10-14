@@ -87,7 +87,7 @@ final class ScheduleRepository {
         let orphanCourseIds = try courseDao.getByTable(id).map { $0.id }
         try tableDao.deleteById(id)
         if !orphanCourseIds.isEmpty {
-            NotificationScheduler.shared.cancelCourseNotifications(orphanCourseIds)
+            NotificationScheduler.shared.cancelCourseAlarms(courseIds: orphanCourseIds)
         }
         onDataChanged()
     }
@@ -99,9 +99,121 @@ final class ScheduleRepository {
 
     func tableCount() throws -> Int { try tableDao.count() }
 
+    // ========== PeriodTable (issue#40 独立时间节次表) ==========
+
+    private let periodTableDao = PeriodTableDao(db: AppDatabase.getShared().dbQueue)
+
+    func getAllPeriodTables() throws -> [PeriodTableEntity] { try periodTableDao.getAll() }
+
+    func getPeriodTable(_ id: Int64) throws -> PeriodTableEntity? { try periodTableDao.getById(id) }
+
+    /// 某时间节次表被多少张课程表绑定 — 管理页"已绑定 N 张课表"与删除守卫共用。
+    func periodTableBoundCount(_ id: Int64) throws -> Int { try periodTableDao.boundTableCount(id) }
+
+    /// 有效时间节次表解析(设计 §5.1): 绑定表存在 → 返回它; 悬空/未绑定 → nil, 调用方回退旧兼容列。
+    func effectivePeriodTable(tableId: Int64) throws -> PeriodTableEntity? {
+        guard let table = try tableDao.getById(tableId) else { return nil }
+        guard let boundId = table.periodTableId else { return nil }
+        return try periodTableDao.getById(boundId)
+    }
+
+    /// 新建时间节次表, 返回新 id。独立写动作 = 独立撤回单元。
+    @discardableResult
+    func insertPeriodTable(_ table: PeriodTableEntity) throws -> Int64 {
+        try captureForUndo()
+        var withStamp = table
+        if withStamp.createdAt == 0 {
+            let now = Int64(Date().timeIntervalSince1970 * 1000)
+            withStamp.createdAt = now
+            withStamp.updatedAt = now
+        }
+        return try periodTableDao.insert(withStamp)
+    }
+
+    /// 复制时间节次表(设计 §4.2): 生成新实体, 原表与原绑定关系零改动。返回新副本 id。
+    @discardableResult
+    func copyPeriodTable(sourceId: Int64) throws -> Int64 {
+        guard let src = try periodTableDao.getById(sourceId) else { return -1 }
+        try captureForUndo()
+        let now = Int64(Date().timeIntervalSince1970 * 1000)
+        var copy = src
+        copy.id = 0
+        copy.createdAt = now
+        copy.updatedAt = now
+        return try periodTableDao.insert(copy)
+    }
+
+    /// v1.0.56 T8: 按指定名建副本 — 复制弹窗确认后调用, 名字已由 UI 层查重。
+    @discardableResult
+    func copyPeriodTableAs(sourceId: Int64, newName: String) throws -> Int64 {
+        guard let src = try periodTableDao.getById(sourceId) else { return -1 }
+        try captureForUndo()
+        let now = Int64(Date().timeIntervalSince1970 * 1000)
+        var copy = src
+        copy.id = 0
+        copy.name = newName
+        copy.createdAt = now
+        copy.updatedAt = now
+        return try periodTableDao.insert(copy)
+    }
+
+    /// 绑定/解绑独立作息表: 绑定是单向指针, 不改本课表的兼容列。
+    /// 首次绑定存 preBindSnapshotJson; 解绑恢复; 悬空目标拒绝。
+    func bindPeriodTable(timeTableId: Int64, periodTableId: Int64?) throws {
+        guard let table = try tableDao.getById(timeTableId) else { return }
+        if let pid = periodTableId, try periodTableDao.getById(pid) == nil { return }
+        if table.periodTableId == periodTableId { return }
+        try captureForUndo()
+        let next: TimeTableEntity
+        if table.periodTableId == nil && periodTableId != nil {
+            next = TimeTableEntity.snapshotForBind(table: table, targetId: periodTableId!)
+        } else if table.periodTableId != nil && periodTableId == nil {
+            next = TimeTableEntity.restoredForUnbind(table: table)
+        } else {
+            next = { var t = table; t.periodTableId = periodTableId; return t }()
+        }
+        try tableDao.update(next)
+        onDataChanged()
+    }
+
+    /// 修改时间节次表内容(设计 §5.2): 更新实体+updatedAt。
+    func updatePeriodTable(_ table: PeriodTableEntity) throws {
+        try captureForUndo()
+        var stamped = table
+        stamped.updatedAt = Int64(Date().timeIntervalSince1970 * 1000)
+        try periodTableDao.update(stamped)
+        onDataChanged()
+    }
+
+    /// 保存独立作息表内容, 返回绑定课表数(供 UI 预览文案)。
+    @discardableResult
+    func savePeriodTable(_ table: PeriodTableEntity) throws -> Int {
+        guard try periodTableDao.getById(table.id) != nil else { return 0 }
+        try captureForUndo()
+        let bound = try periodTableDao.boundTableCount(table.id)
+        var stamped = table
+        stamped.updatedAt = Int64(Date().timeIntervalSince1970 * 1000)
+        try periodTableDao.update(stamped)
+        onDataChanged()
+        return bound
+    }
+
+    /// 删除守卫(设计 §7): 被引用的时间节次表禁止删除, 无绑定才真删。
+    @discardableResult
+    func deletePeriodTable(_ id: Int64) throws -> Bool {
+        if try periodTableDao.boundTableCount(id) > 0 { return false }
+        try captureForUndo()
+        try periodTableDao.deleteById(id)
+        onDataChanged()
+        return true
+    }
+
     // ========== Course ==========
 
     func getCourses(_ tableId: Int64) throws -> [CourseEntity] { try courseDao.getByTable(tableId) }
+
+    /// issue#40: 全库课程 — 时间节次表保存预览须统计所有绑定表的课。
+    func getAllCourses() throws -> [CourseEntity] { try courseDao.getAllCourses() }
 
     func getCoursesByDay(_ tableId: Int64, day: Int) throws -> [CourseEntity] {
         try courseDao.getByTableAndDay(tableId, day: day)

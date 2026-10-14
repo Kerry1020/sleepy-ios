@@ -1,276 +1,263 @@
-// SchoolLocationLookup.swift — ← data/jw/SchoolLocationLookup.kt (v1.0.60) + SchoolCityLocator.kt
-// 单次用户发起的前台定位查找。坐标绝不存储、绝不记日志。
-// 平台映射: Android LocationManager providers → iOS CLLocationManager 单一 provider;
-// 缓存 fix = manager.getLastKnownLocation → CLLocation(新鲜时)。
+// SchoolCityLocator.swift — ← data/jw/SchoolCityLocator.kt
+// One user-initiated foreground lookup. Coordinates are never stored or logged.
+//
+// iOS 适配 (CoreLocation):
+//   - Android ACCESS_COARSE/FINE → iOS whenInUse authorization + desiredAccuracy
+//   - LocationManager providers → CLLocationManager 单一源, 用 desiredAccuracy 语义
+//     区分 precise (kCLLocationAccuracyBest) / approximate (kCLLocationAccuracyKilometer);
+//     providers 列表对 Android 契约保留 "gps"/"network" 名以复用 SchoolLocationPolicy
+//   - getLastKnownLocation → CLLocationManager.location (最后一次 fix)
+//   - getCurrentLocation + CancellationSignal → requestLocation + continuation
+//   - SystemClock.elapsedRealtimeNanos → systemUptime (ProcessInfo.systemUptime)
+//   - 12s 超时 → withTimeout 自实现 (Task sleep race)
 
 import Foundation
 import CoreLocation
 
-// ← sealed interface SchoolLocationState
-enum SchoolLocationState: Equatable {
-    case idle
-    case locating
-    case ready(city: String)
-    case permissionDenied
-    case accuracyInsufficient
-    case locationDisabled
-    case positionUnavailable
-    case unavailable
-}
-
-// ← object SchoolLocationLookup(provider race 与城市质量检查, 与平台 API 解耦)
-enum SchoolLocationLookup {
-    static func findCity(
-        mode: SchoolLocationMode,
-        availableProviders: [String],
-        cached: [SchoolLocationFix],
-        loadIndex: @escaping () async -> OfflineSchoolCityIndex?,
-        requestFix: @escaping (String) async -> SchoolLocationFix?
-    ) async -> SchoolLocationState {
-        let providers = SchoolLocationPolicy.providers(mode, available: availableProviders)
-        if providers.isEmpty { return .positionUnavailable }
-        async let indexRequest = loadIndex()
-        // 顺序消费各 provider 的结果(Android 端为并发竞态, iOS 单 provider 场景顺序等价)
-        let index = await indexRequest
-        guard let index else { return .unavailable }
-        var rejected: SchoolLocationState = .positionUnavailable
-        func resolve(_ fix: SchoolLocationFix?) -> SchoolLocationState? {
-            guard let fix else { return nil }
-            if !SchoolLocationPolicy.usable(mode, fix) {
-                if (0...SchoolLocationPolicy.maxAgeNanos).contains(fix.ageNanos) {
-                    rejected = .accuracyInsufficient
-                }
-                return nil
-            }
-            let cityFix = SchoolLocationPolicy.forCityLookup(mode, fix)
-            if let city = SchoolLocationPolicy.city(index, cityFix) { return .ready(city: city) }
-            if index.cityAt(latitude: cityFix.latitude, longitude: cityFix.longitude) != nil {
-                rejected = .accuracyInsufficient
-            } else if rejected != .accuracyInsufficient {
-                rejected = .unavailable
-            }
-            return nil
-        }
-        // ← 缓存的 fix 按新到旧、精度好到差排序后先试
-        let recent = cached
-            .filter { SchoolLocationPolicy.usable(mode, $0) }
-            .sorted { a, b in
-                if a.ageNanos != b.ageNanos { return a.ageNanos < b.ageNanos }
-                return a.accuracyMeters < b.accuracyMeters
-            }
-        for fix in recent {
-            if let ready = resolve(fix) { return ready }
-        }
-        for provider in providers {
-            let fix = await requestFix(provider)
-            if let ready = resolve(fix) { return ready }
-        }
-        return rejected
-    }
-}
-
-// ← class SchoolCityLocator(平台桥接: CoreLocation 版)
 final class SchoolCityLocator: NSObject, CLLocationManagerDelegate {
-    private let manager = CLLocationManager()
-    /// 测试注入: 非 nil 时完全绕过 CoreLocation
-    var testHook: ((SchoolLocationMode) async -> SchoolLocationState)? = nil
+
+    private let locationManager = CLLocationManager()
+    private var authorizationContinuation: CheckedContinuation<CLAuthorizationStatus, Never>?
+    private var locationContinuation: CheckedContinuation<CLLocation?, Never>?
 
     override init() {
         super.init()
-        manager.delegate = self
-        manager.desiredAccuracy = kCLLocationAccuracyKilometer
+        locationManager.delegate = self
     }
 
-    // ← requestLocation(): launcher.launch 等价 — 未决定时弹系统授权框,
-    //   授权变更回调里一次性触发 completion(granted); 已授权/已拒绝立即回调。
-    //   Android launcher 回调 granted → locateSchoolCity; iOS 由调用方完成同样接线。
-    private let authLock = NSLock()
-    private var authCompletion: ((Bool) -> Void)? = nil
-
-    func requestPermission(completion: ((Bool) -> Void)? = nil) {
-        authLock.lock()
-        authCompletion = completion ?? authCompletion
-        authLock.unlock()
-        manager.requestWhenInUseAuthorization()
-    }
-
-    // iOS 14+ 授权状态变更(含 delegate 初始回调): 有 pending 回调才上报, 一次性消费
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        authLock.lock()
-        let pending = authCompletion
-        authCompletion = nil
-        authLock.unlock()
-        guard let pending else { return }
-        let s = manager.authorizationStatus
-        pending(s == .authorizedWhenInUse || s == .authorizedAlways)
-    }
-
-    // ← locate()
+    /// 单次前台定位 → 城市。坐标永不落盘、永不记日志。
     func locate() async -> SchoolLocationState {
-        // ← modeForPermissions: iOS 无 fine/coarse 授权细分, 授权即 precise
-        let status = manager.authorizationStatus
-        let coarse = status == .authorizedAlways || status == .authorizedWhenInUse
-        guard let mode = SchoolLocationPolicy.modeForPermissions(coarse: coarse, fine: coarse) else {
+        // 权限模式判定 — coarse/在 iOS 端 = whenInUse 已授权;fine = 也只有 whenInUse
+        // (iOS 无 coarse/fine 二分; 精度由 desiredAccuracy 决定)
+        let status = await authorizationStatus()
+        let granted: Bool
+        if #available(iOS 14.0, *) {
+            granted = status == .authorizedWhenInUse || status == .authorizedAlways
+        } else {
+            granted = status == .authorizedWhenInUse || status == .authorizedAlways
+        }
+        guard granted else {
             return .permissionDenied
         }
-        if await MainActor.run(body: { CLLocationManager.locationServicesEnabled() }) == false {
+        // iOS: 已授权即视为两档都有 — mode 走 precise(用户授权定位时 iOS 系统给到设备精度)
+        let mode = SchoolLocationMode.precise
+
+        guard CLLocationManager.locationServicesEnabled() else {
             return .locationDisabled
         }
-        if let hook = testHook { return await hook(mode) }
-        let providers = SchoolLocationPolicy.providers(mode, available: ["gps"])
-        let cached = Self.cachedFix()
-        return await withTimeout(nanoseconds: 12_000_000_000) {
-            await SchoolLocationLookup.findCity(
-                mode: mode,
-                availableProviders: providers,
-                cached: cached,
-                loadIndex: { await Self.offlineIndex() },
-                requestFix: { [weak self] _ in await self?.requestFix() ?? nil })
+
+        // 12s 超时 — 与 Android withTimeoutOrNull(12_000) 1:1
+        return await withTimeout(seconds: 12) {
+            await self.findCity(mode: mode)
         } ?? .positionUnavailable
     }
 
-    // ← cancelSchoolLocation 由 ViewModel 层调 Task.cancel; 取消/超时时续体必须安全结束
-    private let continuationLock = NSLock()
-    private var continuation: CheckedContinuation<SchoolLocationFix?, Never>? = nil
+    // MARK: - 定位到城市
 
-    private func takeContinuation() -> CheckedContinuation<SchoolLocationFix?, Never>? {
-        continuationLock.lock()
-        defer { continuationLock.unlock() }
-        let pending = continuation
-        continuation = nil
-        return pending
+    private func findCity(mode: SchoolLocationMode) async -> SchoolLocationState {
+        // providers — Android 契约名; iOS CLLocationManager 是单一源
+        let providers = ["gps", "network"]
+        let cached: [SchoolLocationFix] = {
+            guard let last = locationManager.location else { return [] }
+            return [last.toFix()]
+        }()
+        return await SchoolLocationLookup.findCity(
+            mode: mode,
+            availableProviders: providers,
+            cached: cached,
+            loadIndex: { await self.offlineIndex() },
+            requestFix: { _ in
+                await self.requestOneFix()
+            }
+        )
     }
 
-    private func requestFix() async -> SchoolLocationFix? {
-        await withTaskCancellationHandler {
-            await withCheckedContinuation { (cont: CheckedContinuation<SchoolLocationFix?, Never>) in
-                continuationLock.lock()
-                // 取消可能发生在处理器注册之前
-                if Task.isCancelled {
-                    continuationLock.unlock()
-                    cont.resume(returning: nil)
-                    return
-                }
-                continuation = cont
-                continuationLock.unlock()
-                manager.requestLocation()
+    private func requestOneFix() async -> SchoolLocationFix? {
+        let location = await withCheckedContinuation { (continuation: CheckedContinuation<CLLocation?, Never>) in
+            self.locationContinuation = continuation
+            self.locationManager.desiredAccuracy =
+                kCLLocationAccuracyNearestTenMeters
+            self.locationManager.requestLocation()
+        }
+        return location?.toFix()
+    }
+
+    private func authorizationStatus() async -> CLAuthorizationStatus {
+        // 未决策时等回调; 已决策直接返回
+        let current: CLAuthorizationStatus
+        if #available(iOS 14.0, *) {
+            current = locationManager.authorizationStatus
+        } else {
+            current = CLLocationManager.authorizationStatus()
+        }
+        if current == .notDetermined {
+            locationManager.requestWhenInUseAuthorization()
+            return await withCheckedContinuation { continuation in
+                self.authorizationContinuation = continuation
             }
-        } onCancel: {
-            if let pending = takeContinuation() { pending.resume(returning: nil) }
+        }
+        return current
+    }
+
+    private func offlineIndex() async -> OfflineSchoolCityIndex? {
+        // 双检锁单例 — Android companion object @Volatile + Mutex;
+        // 解析在后台线程 (750KB gunzip + 200 万点扫描)
+        if let cached = await SchoolCityLocator.cachedOfflineIndex.read() {
+            return cached
+        }
+        let parsed: OfflineSchoolCityIndex? = await Task.detached(priority: .utility) {
+            guard let url = Bundle.main.url(forResource: "school_city_boundaries", withExtension: "bin.gz")
+                ?? Bundle.main.url(forResource: "school_city_boundaries", withExtension: "bin")
+            else { return nil }
+            do {
+                let raw = try Data(contentsOf: url)
+                let decompressed = url.pathExtension == "gz" ? (raw.gunzipped() ?? raw) : raw
+                let stream = InputStream(data: decompressed)
+                return try OfflineSchoolCityIndex.parse(stream)
+            } catch {
+                return nil
+            }
+        }.value
+        if let parsed = parsed {
+            await SchoolCityLocator.cachedOfflineIndex.write(parsed)
+        }
+        return parsed
+    }
+
+    /// 线程安全缓存盒 — 对齐 Android @Volatile var + Mutex。
+    private actor OfflineIndexCache {
+        private var value: OfflineSchoolCityIndex?
+        func read() -> OfflineSchoolCityIndex? { value }
+        func write(_ v: OfflineSchoolCityIndex) { value = v }
+    }
+    private static let cachedOfflineIndex = OfflineIndexCache()
+
+    // MARK: - CLLocationManagerDelegate
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        if #available(iOS 14.0, *) {
+            if let cont = authorizationContinuation, manager.authorizationStatus != .notDetermined {
+                authorizationContinuation = nil
+                cont.resume(returning: manager.authorizationStatus)
+            }
         }
     }
 
-    // CLLocationManagerDelegate: 一次性续体(取出即清空, 天然防双 resume)
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let cont = takeContinuation() else { return }
-        guard let location = locations.last else { cont.resume(returning: nil); return }
-        let fix = SchoolLocationFix(
-            latitude: location.coordinate.latitude,
-            longitude: location.coordinate.longitude,
-            accuracyMeters: location.horizontalAccuracy,
-            ageNanos: Int64(-location.timestamp.timeIntervalSinceNow * 1_000_000_000))
-        cont.resume(returning: fix)
+        locationContinuation?.resume(returning: locations.last)
+        locationContinuation = nil
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        guard let cont = takeContinuation() else { return }
-        cont.resume(returning: nil)
-    }
-
-    // ← getLastKnownLocation 等价: 系统缓存位置(30 秒内才可用)
-    static func cachedFix() -> [SchoolLocationFix] {
-        guard let location = CLLocationManager().location else { return [] }
-        let age = Int64(-location.timestamp.timeIntervalSinceNow * 1_000_000_000)
-        return [SchoolLocationFix(
-            latitude: location.coordinate.latitude,
-            longitude: location.coordinate.longitude,
-            accuracyMeters: location.horizontalAccuracy,
-            ageNanos: age)]
-    }
-
-    // ← offlineIndex(): 单例缓存, gz → SCB1 流式解析
-    // Swift 5.8 无 nonisolated(unsafe): 静态可变状态一律经 indexLock 访问(快路径也加锁)。
-    private static let indexLock = NSLock()
-    private static var cachedIndex: OfflineSchoolCityIndex?
-
-    static func offlineIndex() async -> OfflineSchoolCityIndex? {
-        indexLock.lock()
-        if let cached = cachedIndex {
-            indexLock.unlock()
-            return cached
-        }
-        indexLock.unlock()
-        return await Task.detached(priority: .userInitiated) {
-            indexLock.lock()
-            defer { indexLock.unlock() }
-            if let cached = cachedIndex { return cached }
-            guard let url = Bundle.main.url(forResource: "school_city_boundaries.bin", withExtension: "gz")
-                ?? Bundle.main.url(forResource: "school_city_boundaries.bin", withExtension: nil),
-                  let data = try? Data(contentsOf: url) else { return nil }
-            guard let parsed = try? OfflineSchoolCityIndex.parseGzip(data) else { return nil }
-            cachedIndex = parsed
-            return parsed
-        }.value
-    }
-
-    // ← withTimeoutOrNull(12s)
-    // 超时/外层取消/正常结果 三方竞争同一续体 — TimeoutGate 保证只 resume 一次。
-    private final class TimeoutGate {
-        private let lock = NSLock()
-        private var continuation: CheckedContinuation<SchoolLocationState?, Never>? = nil
-        private var worker: Task<Void, Never>? = nil
-        private var done = false
-
-        func begin(_ cont: CheckedContinuation<SchoolLocationState?, Never>,
-                   nanoseconds: UInt64,
-                   body: @escaping () async -> SchoolLocationState) {
-            lock.lock()
-            if done {  // 取消发生在 begin 之前
-                lock.unlock()
-                cont.resume(returning: nil)
-                return
-            }
-            continuation = cont
-            let w = Task { [weak self] in
-                let result = await body()
-                self?.finish(with: result)
-            }
-            worker = w
-            lock.unlock()
-            Task { [weak self] in
-                try? await Task.sleep(nanoseconds: nanoseconds)
-                self?.finish(with: nil)  // 超时 = 取消
-            }
-        }
-
-        func cancel() { finish(with: nil) }
-
-        private func finish(with value: SchoolLocationState?) {
-            lock.lock()
-            if done {
-                lock.unlock()
-                return
-            }
-            done = true
-            let cont = continuation
-            let w = worker
-            continuation = nil
-            worker = nil
-            lock.unlock()
-            w?.cancel()
-            cont?.resume(returning: value)
-        }
-    }
-
-    private func withTimeout(nanoseconds: UInt64, _ body: @escaping () async -> SchoolLocationState) async -> SchoolLocationState? {
-        let gate = TimeoutGate()
-        return await withTaskCancellationHandler {
-            await withCheckedContinuation { (cont: CheckedContinuation<SchoolLocationState?, Never>) in
-                gate.begin(cont, nanoseconds: nanoseconds, body: body)
-            }
-        } onCancel: {
-            gate.cancel()
-        }
+        locationContinuation?.resume(returning: nil)
+        locationContinuation = nil
     }
 }
 
+// MARK: - helpers
+
+private extension CLLocation {
+    /// 年龄用单调钟 — iOS 等价 elapsedRealtimeNanos 是 systemUptime。
+    func toFix() -> SchoolLocationFix {
+        let ageNanos = Int64(max(0, ProcessInfo.processInfo.systemUptime - timestamp.timeIntervalSince1970) * 1_000_000_000)
+        return SchoolLocationFix(
+            latitude: coordinate.latitude,
+            longitude: coordinate.longitude,
+            accuracyMeters: horizontalAccuracy.isFinite && horizontalAccuracy > 0
+                ? Double(horizontalAccuracy) : Double.nan,
+            ageNanos: ageNanos
+        )
+    }
+}
+
+/// withTimeout — Kotlin withTimeoutOrNull 的 Swift 实现 (nil = 超时)。
+private func withTimeout<T: Sendable>(seconds: Double, _ body: @escaping () async -> T) async -> T? {
+    await withTaskGroup(of: T?.self) { group in
+        group.addTask { await body() }
+        group.addTask {
+            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            return nil
+        }
+        let first = await group.next() ?? nil
+        group.cancelAll()
+        return first
+    }
+}
+
+// MARK: - gzip 解压 (libcompression)
+
+import Compression
+
+private extension Data {
+    /// gunzip: 剥 gzip 容器 (RFC 1952) → raw deflate (RFC 1951) → libcompression inflate。
+    /// 校验 magic; 不校验尾 CRC(与 Android GZIPInputStream 行为一致 — 解出即可用)。
+    func gunzipped() -> Data? {
+        guard count > 18, self[startIndex] == 0x1f, self[startIndex + 1] == 0x8b else {
+            return nil
+        }
+        // gzip header: [1f 8b] [CM] [FLG] [mtime×4] [XFL] [OS] = 10 字节
+        var offset = 10
+        let flags = self[startIndex + 3]
+        if flags & 0x04 != 0 { // FEXTRA: xlen + extra
+            guard startIndex + offset + 1 < endIndex else { return nil }
+            let xlen = Int(self[startIndex + offset]) | (Int(self[startIndex + offset + 1]) << 8)
+            offset += 2 + xlen
+        }
+        if flags & 0x08 != 0 { // FNAME: 零结尾
+            while offset < count && self[startIndex + offset] != 0 { offset += 1 }
+            offset += 1
+        }
+        if flags & 0x10 != 0 { // FCOMMENT: 零结尾
+            while offset < count && self[startIndex + offset] != 0 { offset += 1 }
+            offset += 1
+        }
+        if flags & 0x02 != 0 { offset += 2 } // FHCRC
+        guard offset + 8 <= count else { return nil }
+        // 尾 8 字节 = crc32 + isize; 中间为 raw deflate
+        let deflateStart = startIndex + offset
+        let deflateEnd = endIndex - 8
+        guard deflateStart < deflateEnd else { return nil }
+        let deflateData = subdata(in: deflateStart..<deflateEnd)
+        return deflateData.inflateRawDeflate()
+    }
+
+    private func inflateRawDeflate() -> Data? {
+        var src = [UInt8](self)
+        let srcSize = src.count
+        let bufferSize = 64 * 1024
+        // 指针必须在整个解压期间保持有效 — withUnsafeMutableBufferPointer 持有
+        return src.withUnsafeMutableBufferPointer { srcPtr -> Data? in
+            var dstBuffer = [UInt8](repeating: 0, count: bufferSize)
+            return dstBuffer.withUnsafeMutableBufferPointer { dstPtr -> Data? in
+                var stream = compression_stream(
+                    dst_ptr: dstPtr.baseAddress!,
+                    dst_size: bufferSize,
+                    src_ptr: srcPtr.baseAddress!,
+                    src_size: srcSize,
+                    state: nil
+                )
+                let status = compression_stream_init(&stream, COMPRESSION_STREAM_DECODE, COMPRESSION_ZLIB)
+                guard status == COMPRESSION_STATUS_OK else {
+                    compression_stream_destroy(&stream)
+                    return nil
+                }
+                defer { compression_stream_destroy(&stream) }
+                var output = Data()
+                let flags = Int32(COMPRESSION_STREAM_FINALIZE.rawValue)
+                let base = dstPtr.baseAddress!
+                while true {
+                    let result = compression_stream_process(&stream, flags)
+                    let produced = bufferSize - stream.dst_size
+                    if produced > 0 {
+                        output.append(base, count: produced)
+                    }
+                    if result == COMPRESSION_STATUS_END { return output }
+                    if result == COMPRESSION_STATUS_ERROR { return nil }
+                    // OK (需要更多输出空间) — 重置 dst 继续
+                    stream.dst_ptr = base
+                    stream.dst_size = bufferSize
+                }
+            }
+        }
+    }
+}

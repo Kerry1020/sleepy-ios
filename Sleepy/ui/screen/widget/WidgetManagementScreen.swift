@@ -86,7 +86,9 @@ struct WidgetManagementScreen: View {
         .task { items = await loadPlacedWidgets() }
         // ← onSelect(widgetId) 导航: fullScreenCover 叠放(manage → edit 两级)
         .fullScreenCover(item: $editTarget) { target in
-            WidgetEditScreen(kind: target.kind, onDismiss: { editTarget = nil })
+            // ← family 透传 (设计 §6): 编辑页族门控 (滚动/三天窗口节) 依据
+            WidgetEditScreen(kind: target.kind, family: target.family,
+                             onDismiss: { editTarget = nil })
         }
     }
 }

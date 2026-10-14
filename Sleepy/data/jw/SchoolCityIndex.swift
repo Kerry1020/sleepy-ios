@@ -1,42 +1,50 @@
-// SchoolCityIndex.swift — ← data/jw/SchoolCityIndex.kt (v1.0.60)
-// 城市元数据与导入目录分离 — 解析结果只影响推荐卡, 不能改变 URL 或协议。
+// SchoolCityIndex.swift — ← data/jw/SchoolCityIndex.kt
+// City metadata is separate from the import directory, so it cannot alter URLs or protocols.
 
 import Foundation
 
-// ← object SchoolCityIndex
 enum SchoolCityIndex {
-    /// school_cities.json → 城市 → 校名列表(过滤空白项)。 ← parse
-    static func parse(_ text: String) -> [String: [String]] {
+    /// 解析 school_cities.json → 学校名 → 城市列表。
+    static func parse(_ text: String) throws -> [String: [String]] {
         guard let data = text.data(using: .utf8),
-              let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
-              let schools = root["schools"] as? [String: Any] else { return [:] }
-        var result: [String: [String]] = [:]
-        for (name, value) in schools {
-            guard let cities = value as? [String] else { continue }
-            result[name] = cities.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+              let root = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let schools = root["schools"] as? [String: Any] else {
+            return [:]
         }
-        return result
+        var out: [String: [String]] = [:]
+        for (name, raw) in schools {
+            if let cities = raw as? [String] {
+                out[name] = cities.filter { !$0.isBlank }
+            }
+        }
+        return out
     }
 
-    /// 去尾"市" + 去首尾空白 — "哈尔滨市"/"哈尔滨" 归一。 ← normalizeCity
+    /// 城市名归一: 去首尾空白 + 去"市"后缀。
     static func normalizeCity(_ city: String) -> String {
-        var c = city.trimmingCharacters(in: .whitespaces)
-        if c.hasSuffix("市") { c.removeLast() }
-        return c
+        return city.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "市", with: "", options: .backwards, range: nil)
     }
 
-    /// 同城学校: 过滤 → 校名去重 → 不支持靠后 → sortKeyFull(缺省 name)升序。 ← schoolsInCity
+    /// 同城学校列表 — 按 supported 优先 + sortKeyFull 字典序。
+    /// normalizeCity 后缀"市"的剥离是单向的: "北京市"→"北京", "北京"→"北京"。
     static func schoolsInCity(_ schools: [JwSchoolInfo], city: String) -> [JwSchoolInfo] {
         let normalized = normalizeCity(city)
         if normalized.isEmpty { return [] }
         var seen = Set<String>()
-        return schools
-            .filter { school in school.cities.contains { normalizeCity($0) == normalized } }
-            .filter { seen.insert($0.name).inserted }
-            .sorted { a, b in
-                if a.isSupported != b.isSupported { return a.isSupported }
-                return (a.sortKeyFull.isEmpty ? a.name : a.sortKeyFull)
-                    < (b.sortKeyFull.isEmpty ? b.name : b.sortKeyFull)
+        let matched = schools.filter { school in
+            guard !seen.contains(school.name) else { return false }
+            if school.cities.contains(where: { normalizeCity($0) == normalized }) {
+                seen.insert(school.name)
+                return true
             }
+            return false
+        }
+        return matched.sorted { a, b in
+            if a.isSupported != b.isSupported { return a.isSupported }
+            let ka = a.sortKeyFull.isEmpty ? a.name : a.sortKeyFull
+            let kb = b.sortKeyFull.isEmpty ? b.name : b.sortKeyFull
+            return ka < kb
+        }
     }
 }

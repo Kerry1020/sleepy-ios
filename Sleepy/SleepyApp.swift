@@ -339,6 +339,9 @@ struct AppRoot: View {
     }
 
     // 4 个 tab 的数据:共用于 docked / floating 两个分支,避免重复
+    // ← v1.0.60 差量: Mine tab badge = UpdateNotifier.noticeVisible (更新红点,
+    //   与 Android SleepyNavHost badge = updateNoticeVisible && tab == Mine 同一状态源)
+    @ObservedObject private var updateNotifier = UpdateNotifier.shared
     private var navItems: [PillNavItemData] {
         [
             PillNavItemData(id: "schedule", icon: "calendar",
@@ -352,7 +355,8 @@ struct AppRoot: View {
                             selected: root.currentTab == .manage) { root.currentTab = .manage },
             PillNavItemData(id: "mine", icon: "person",
                             label: L10n.format("tab_mine"),
-                            selected: root.currentTab == .mine) { root.currentTab = .mine },
+                            selected: root.currentTab == .mine,
+                            badge: updateNotifier.noticeVisible) { root.currentTab = .mine },
         ]
     }
 
