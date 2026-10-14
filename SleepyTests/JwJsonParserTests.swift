@@ -350,15 +350,17 @@ final class JwJsonParserTests: XCTestCase {
     }
 
     func testNeuEvenWeekType0() throws {
-        // 1-16双周: 上游协议剥"(双)", Sleepy 按 weekly 0 处理, 无端点修正
+        // 1-16双周: 线协议单/双信息仍存在, Sleepy 保留 type=2 并做端点修正
+        // (双周起点须偶数 → startWeek 1→2) — 对齐 Android v1.0.60
+        // JwNeuParserTest "双周课 carries parity type 2 with even endpoint correction"
         let courses = try JwNeuParser(try loadFixture("neu_courses")).generateCourseList()
         let eng = try XCTUnwrap(courses.first { $0.name == "英语口语" })
         XCTAssertEqual(eng.day, 2)
         XCTAssertEqual(eng.startNode, 9)
         XCTAssertEqual(eng.endNode, 10)
-        XCTAssertEqual(eng.startWeek, 1)
+        XCTAssertEqual(eng.startWeek, 2)  // 端点修正: 双周起点须偶数
         XCTAssertEqual(eng.endWeek, 16)
-        XCTAssertEqual(eng.type, 0)
+        XCTAssertEqual(eng.type, 2)
     }
 
     func testNeuTeacherExtraction() throws {

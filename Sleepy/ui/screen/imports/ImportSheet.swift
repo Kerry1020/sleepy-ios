@@ -81,7 +81,12 @@ struct ImportSheet: View {
     let onDismiss: () -> Void
     var onImported: () -> Void = {}
     var onOpenEditTable: (Int64) -> Void = { _ in }
+    // ← Android ImportSheet(drafts/onRestoreDraft/onDeleteDraft, 默认空 = 零行为变化)
+    var drafts: [ImportDraftRowModel] = []
+    var onRestoreDraft: (String) -> Void = { _ in }
+    var onDeleteDraft: (String) -> Void = { _ in }
 
+    @State private var showDrafts = false
     @State private var textExpanded = false
     @State private var inputText = ""
     @State private var isLoading = false
@@ -101,11 +106,28 @@ struct ImportSheet: View {
         let state = viewModel.state
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                // 标题
-                Text(L10n.format("import_title"))
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundColor(colors.onSurface)
-                    .padding(.bottom, 4)
+                // 标题与草稿入口 (← Android 标题 Row + Inventory2 IconButton)
+                HStack {
+                    Text(L10n.format("import_title"))
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundColor(colors.onSurface)
+                    Spacer()
+                    Button {
+                        showDrafts = true
+                    } label: {
+                        // 2026-09-16 用户: 书签不像草稿箱 — Android 换带盖收纳箱
+                        // Inventory2; iOS 等价 SF Symbol "shippingbox"(带盖收纳箱)
+                        Image(systemName: "shippingbox")
+                            .font(.system(size: 22))
+                            .foregroundColor(colors.onPrimaryContainer)
+                            .frame(width: 48, height: 48)   // ← M3 IconButton 48×48
+                            .background(Circle().fill(colors.primaryContainer))
+                    }
+                    .buttonStyle(SleepyButtonStyle())
+                    .accessibilityLabel(L10n.format("import_drafts"))
+                    .accessibilityIdentifier("import_drafts_btn")
+                }
+                .padding(.bottom, 4)
                 Text(L10n.format("import_preview_sub"))
                     .font(.system(size: 14))
                     .foregroundColor(colors.onSurfaceVariant)
@@ -331,6 +353,17 @@ struct ImportSheet: View {
                     }
                 })
                 .sheetDetents([.large])
+        }
+        // 草稿箱弹窗 (← Android if (showDrafts) ImportDraftSheet(...))
+        .sheet(isPresented: $showDrafts) {
+            ImportDraftSheet(
+                drafts: drafts,
+                onDismiss: { showDrafts = false },
+                onRestore: { id in
+                    showDrafts = false
+                    onRestoreDraft(id)
+                },
+                onDelete: onDeleteDraft)
         }
         // 格式详情弹窗 ("支持格式"每行 ⓘ 点开)
         .sheet(item: $detailFormat) { fmt in
