@@ -1,49 +1,48 @@
-// BackgroundReliabilityProbe.swift — ← widget/notification/BackgroundReliabilityProbe.kt
-// Reads public iOS reliability facts in one place.
-// A failed probe remains UNKNOWN and never disables standard notifications.
+// BackgroundReliabilityProbe.swift — ← BackgroundReliabilityProbe.kt
+// 单点读取 iOS 可观测的后台可靠性事实。注入式读取便于单测(与 Android probe 同思路)。
 //
-// iOS 事实映射:
-//  - notificationPermissionGranted → UNUserNotificationCenter settings .authorized
-//  - exactAlarmAllowed → 同授权(iOS 日历触发器无精确闹钟权限二分, 授权即精确)
-//  - batteryOptimizationIgnored → BGTaskScheduler 注册成功(等价"后台刷新可用")
-//  - widgetBound → WidgetCenter getCurrentConfigurations 任一 kind 存在
+// 平台映射(禁止 silent skip):
+// - notificationPermissionGranted ← POST_NOTIFICATIONS 检查 → UNUserNotificationCenter
+//   .notificationSettings().authorizationStatus == .authorized
+// - exactAlarmAllowed ← AlarmManager.canScheduleExactAlarms → timeSensitiveSetting == .enabled
+// - batteryOptimizationIgnored ← PowerManager.isIgnoringBatteryOptimizations → !isLowPowerModeEnabled
+// - vendor/liveCardState/widgetBound/promotedOngoingAllowed: Android-only 事实,
+//   iOS 无对应物(no-analog), 见 BackgroundReliabilitySnapshot.swift 头部映射表;
+//   "失败的私有厂商探测保持 UNKNOWN 且永不禁用标准通知"(Android 注释)在 iOS 侧天然成立:
+//   单厂商, 探测不存在, 标准通知路径不受本 probe 影响。
 
 import Foundation
 import UserNotifications
-import WidgetKit
 
-enum BackgroundReliabilityProbe {
+final class BackgroundReliabilityProbe {
+    static let shared = BackgroundReliabilityProbe()
 
-    static func snapshot() async -> BackgroundReliabilitySnapshot {
-        let notifGranted = await notificationPermissionGranted()
+    /// 可注入的原始事实(测试用); nil = 运行时真实读取
+    var factsOverride: RelayFacts?
+
+    struct RelayFacts {
+        let notificationPermissionGranted: Bool
+        let timeSensitiveAllowed: Bool
+        let lowPowerModeActive: Bool
+    }
+
+    /// ← snapshot(context): 异步聚合三 facts → snapshot
+    func snapshot(
+        center: UNUserNotificationCenter = .current(),
+        processInfo: ProcessInfo = .processInfo
+    ) async -> BackgroundReliabilitySnapshot {
+        if let f = factsOverride {
+            return BackgroundReliabilitySnapshot(
+                notificationPermissionGranted: f.notificationPermissionGranted,
+                timeSensitiveAllowed: f.timeSensitiveAllowed,
+                lowPowerModeActive: f.lowPowerModeActive
+            )
+        }
+        let settings = await center.notificationSettings()
         return BackgroundReliabilitySnapshot(
-            notificationPermissionGranted: notifGranted,
-            exactAlarmAllowed: notifGranted,
-            // iOS 无电池白名单 — 后台刷新由系统调度, 本 app 侧无开关可读。
-            // 恒 true: 不因"优化"降级通知通路(iOS 等价语义 = 通知授权即通路)。
-            batteryOptimizationIgnored: true,
-            widgetBound: await widgetBound(),
-            liveCardState: .notApplicable,
-            promotedOngoingAllowed: nil
+            notificationPermissionGranted: settings.authorizationStatus == .authorized,
+            timeSensitiveAllowed: settings.timeSensitiveSetting == .enabled,
+            lowPowerModeActive: processInfo.isLowPowerModeEnabled
         )
-    }
-
-    private static func notificationPermissionGranted() async -> Bool {
-        return await withCheckedContinuation { cont in
-            UNUserNotificationCenter.current().getNotificationSettings { settings in
-                cont.resume(returning: settings.authorizationStatus == .authorized)
-            }
-        }
-    }
-
-    private static func widgetBound() async -> Bool {
-        return await withCheckedContinuation { cont in
-            WidgetCenter.shared.getCurrentConfigurations { result in
-                switch result {
-                case .success(let configs): cont.resume(returning: !configs.isEmpty)
-                case .failure: cont.resume(returning: false)
-                }
-            }
-        }
     }
 }

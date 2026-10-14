@@ -1,97 +1,110 @@
-// SystemCalendarManager.swift — ← data/calendar/SystemCalendarManager.kt
-// Direct EventKit integration. The event-date expansion stays inside this flow.
+// SystemCalendarManager.swift — 系统日历导入引擎 (v1.0.61 对齐, ← Android SystemCalendarManager.kt 441L, 行为对齐非逐行翻译)
 //
-// iOS 适配:
-//   - Android CalendarContract ContentResolver → EventKit EKEventStore
-//   - METHOD_ALARM/METHOD_ALERT 区分 → EKAlarm (相对分钟数; iOS 无 alarm method 概念,
-//     全部映射为 relativeOffset 提醒; alarmFallback 语义退化为"提醒是否存在")
-//   - fingerprint: SHA-256(calendarId/title/location/description/start/end/timezone/reminder)
-//     与 Android 1:1 的拼接顺序, 用 \u001f 分隔
-//   - marker 恢复: 描述尾部 "Sleepy import key:" 前缀, findEventByMarker 用 predicate 搜索
+// 平台映射:
+// - 内容库 ContentProvider 写系统日历 → EventKit EKEventStore (系统 framework, 无新 SPM 依赖)
+// - WRITE/READ_CALENDAR 权限 → EKEventStore.requestAccess(to: .event);
+//   16.4 SDK 无 .fullAccess/.writeOnly 分支, 授权即 authorizationStatus == .authorized
+// - 可写日历 = allowsContentModifications && type != .local/.calDAV (← Android ACCESS_LEVEL >= CONTRIBUTOR && VISIBLE, 16.4 无 isSelectable)
+// - 记录 eventId ← 内容库 _ID(Long) → EKCalendarItem.externalIdentifier (String)
+// - 描述行尾 marker "Sleepy import key: tableId:courseId:yyyy-MM-dd" 保留(存 EKCalendarItem.notes),
+//   记录丢失后可按 marker 恢复, 对齐 Android findEventByMarker
+// - Android "ALARM(闹钟)" 提醒 → iOS 16.4 EKAlarm 无 type/soundName(.audio/.display 均不可用),
+//   提醒恒以 EKAlarm(relativeOffset:) 写入、系统默认提醒呈现; 期望的 method(ALARM/ALERT) 由我方记录
+//   alarmRequested 字段承载, 读回(readReminder)恒分类为 .alert; 对齐 Android insertReminder(ALERT) 兜底:
+//   期望闹钟而系统未给闹钟 → 事件仍写入, alarmFallback 计数(← Android imported.alarmFallback)
+// - 事件时区 EKEvent 无公开 API → 指纹恒以 TimeZone.current.identifier 固定(与 Android ZoneId.systemDefault().id 同位)
+// - EventKit 无"导入历史"原生概念 → 仓内 CalendarImportRecordDao/Entity (calendar_import_records 表) 承担记录职责
 
-import Foundation
 import EventKit
-import GRDB
+import Foundation
+import CryptoKit
 
-enum CalendarImportRange: String, CaseIterable {
-    case NEXT_WEEK
-    case NEXT_MONTH
-    case SEMESTER
-}
-
-struct SystemCalendarInfo: Identifiable {
-    let id: String                  // EKCalendar.calendarIdentifier
-    let displayName: String
-    let accountName: String         // EKSource.sourceIdentifier
-    let accountType: String         // sourceType 描述
-}
+// MARK: - 选项 / 预览 / 结果 (与 Android data class 同名同字段)
 
 struct CalendarImportOptions {
+    /// 目标 EKCalendar.calendarIdentifier (← Android calendarId: Long, 平台映射)
     var calendarId: String
-    var range: CalendarImportRange
-    var applyHolidayTransfers: Bool
+    /// "NEXT_WEEK" / "NEXT_MONTH" / "SEMESTER"
+    var range: String
+    var applyTransfers: Bool
+    /// 普通提醒提前分钟; nil = 不加普通提醒 (← Android reminderMinutes: Int?)
     var reminderMinutes: Int?
     var firstPeriodAlarmEnabled: Bool
+    /// 首次课强制提醒提前分钟 (← Android firstPeriodAlarmMinutes)
     var firstPeriodAlarmMinutes: Int
 }
 
-struct CalendarImportPreviewRow: Identifiable {
-    let date: Date
-    let start: String
-    let end: String
-    let courseName: String
-    let teacher: String
-    let room: String
-    let week: Int
-    let transferred: Bool
-    let firstPeriodAlarm: Bool
-    var id: String { "\(date.timeIntervalSince1970)-\(courseName)-\(start)" }
+enum CalendarImportError: Error { case permissionDenied, noWritableCalendar }
+
+struct CalendarPreviewRow {
+    var date: Date
+    var startHHmm: String
+    var endHHmm: String
+    var courseName: String
+    var teacher: String
+    var room: String
+    var week: Int
+    var transferred: Bool
+    var firstPeriodAlarm: Bool
 }
 
 struct CalendarImportPreview {
-    let rows: [CalendarImportPreviewRow]
-    let skippedInvalidTime: Int
-    let startDate: Date
-    let endDateExclusive: Date
+    var rows: [CalendarPreviewRow]
+    var invalid: Int
+    var from: Date
+    var until: Date
 }
 
 struct CalendarImportResult {
-    var inserted: Int = 0
-    var updated: Int = 0
-    var unchanged: Int = 0
-    var skippedEdited: Int = 0
-    var skippedInvalidTime: Int = 0
-    var alarmFallback: Int = 0
-    var errors: Int = 0
+    var inserted: Int
+    var updated: Int
+    var unchanged: Int
+    var skippedEdited: Int
+    /// 期望闹钟(.alarm)但 16.4 系统默认提醒呈现的计数 (← Android alarmFallback; 平台裁决: EKAlarm 无闹钟类型)
+    var skippedInvalid: Int
+    var alarmFallback: Int
+    var errors: Int
 }
 
-struct CalendarDeleteResult {
-    let deleted: Int
-    let skippedEdited: Int
-    let missing: Int
-}
+final class SystemCalendarManager {
 
-/// 系统日历直连 — 事件日期展开留在本流程内。
-enum SystemCalendarManager {
-    private static let SLEEPY_MARKER_PREFIX = "Sleepy import key:"
-    private static let timeFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm"
-        return f
-    }()
-    private static let fullDateFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
-    private static var store = EKEventStore()
+    private let store = EKEventStore()
+    private let markerPrefix = "Sleepy import key:"
 
-    // MARK: - 权限
+    enum ReminderMethod: String, Comparable {
+        case alert, alarm
+        static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
+    }
 
-    static func requestAccess() async -> Bool {
-        // 本工具链 (Xcode 14.3 / iOS 16.4 SDK) 无 requestFullAccessToEvents;
-        // requestWriteOnlyAccessToEvents 同缺。统一走 requestAccess(to: .event)
-        // (iOS 17 上系统自动映射 full-access 提示)。
+    struct ReminderDesc { var method: ReminderMethod; var minutes: Int }
+
+    struct EventSpec {
+        var course: CourseEntity
+        var date: Date
+        var week: Int
+        var start: Date
+        var end: Date
+        /// 节次时间字符串 (HH:mm), 供预览行展示 — spec.start/end 是当日零点起算的 Date, 无法直接反解
+        var startHHmm: String
+        var endHHmm: String
+        var description: String
+        var key: String
+        var reminderMinutes: Int?
+        /// 首次课且早间课 (← Android wantsAlarm)
+        var wantsAlarm: Bool
+    }
+
+    // MARK: - 权限 / 日历发现
+
+    /// ← Android hasCalendarPermissions (iOS 16.4: 静态 authorizationStatus, 授权即 .authorized)
+    func hasCalendarPermissions() -> Bool {
+        EKEventStore.authorizationStatus(for: .event) == .authorized
+    }
+
+    /// 未授权时弹一次授权; 用户拒绝/未决 = false
+    @MainActor
+    func ensureCalendarPermissions() async -> Bool {
+        if hasCalendarPermissions() { return true }
         return await withCheckedContinuation { cont in
             store.requestAccess(to: .event) { granted, _ in
                 cont.resume(returning: granted)
@@ -99,456 +112,441 @@ enum SystemCalendarManager {
         }
     }
 
-    static func hasCalendarPermissions() -> Bool {
-        return EKEventStore.authorizationStatus(for: .event) == .authorized
+    /// ← Android findWritableCalendar: 可写(AccessLevel>=CONTRIBUTOR & VISIBLE) && 非 calDAV
+    /// (16.4 无 isSelectable; 平台等价 = allowsContentModifications 且排除 .local/.calDAV 源)
+    func writableCalendars() -> [EKCalendar] {
+        store.calendars(for: .event).filter {
+            $0.allowsContentModifications && $0.type != .local && $0.type != .calDAV
+        }
     }
 
-    // MARK: - 日历列表
+    // MARK: - 日期区间 (← Android selectedDateRange, 公式逐一对齐)
 
-    /// 可写日历 — allowsContentModifications + 标题不区分大小写排序。
-    /// (Android isPrimary 排序在 iOS 无对应字段 — EKCalendar.isPrimary 是 macOS-only)
-    static func writableCalendars() -> [SystemCalendarInfo] {
-        guard hasCalendarPermissions() else { return [] }
-        let writable = store.calendars(for: .event)
-            .filter { $0.allowsContentModifications }
-            .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
-        return writable.map { cal in
-                SystemCalendarInfo(
-                    id: cal.calendarIdentifier,
-                    displayName: cal.title.isBlank ? (cal.source.title) : cal.title,
-                    accountName: cal.source.title,
-                    accountType: "\(cal.source.sourceType)"
-                )
-            }
+    func selectedDateRange(table: TimeTableEntity, range: String, today: Date) -> (start: Date, end: Date) {
+        let cal = DateUtils.isoCalendar
+        let tableStart = DateUtils.parseDate(table.startDate) ?? today
+        let semesterStart = Calendar.isoMondayOfWeek(tableStart)
+        let semesterEnd = Calendar.isoAddDays(semesterStart, 7 * table.maxWeek)
+        let requestedEnd: Date
+        switch range {
+        case "NEXT_MONTH": requestedEnd = cal.date(byAdding: .month, value: 1, to: today) ?? today
+        case "SEMESTER": requestedEnd = semesterEnd
+        default: requestedEnd = Calendar.isoAddDays(today, 7)
+        }
+        return (max(today, semesterStart), min(requestedEnd, semesterEnd))
     }
 
-    // MARK: - 预览 (纯计算, 不触 EventKit)
+    // MARK: - 预览
 
-    static func buildPreview(
+    /// ← Android buildPreview(table, courses, options, today)
+    func buildPreview(
         table: TimeTableEntity,
         courses: [CourseEntity],
         options: CalendarImportOptions,
-        today: Date = Date()
+        today: Date
     ) -> CalendarImportPreview {
         let (from, until) = selectedDateRange(table: table, range: options.range, today: today)
         let (specs, invalid) = buildEventSpecs(table: table, courses: courses, options: options, from: from, until: until)
-        let alarms = firstPeriodAlarmKeys(specs)
-        let rows = specs.map { spec in
-            CalendarImportPreviewRow(
+        let alarmKeys = firstPeriodAlarmKeys(specs)
+        let rows = specs.map { spec -> CalendarPreviewRow in
+            CalendarPreviewRow(
                 date: spec.date,
-                start: timeFormatter.string(from: spec.start),
-                end: timeFormatter.string(from: spec.end),
-                courseName: spec.title,
+                startHHmm: spec.startHHmm,
+                endHHmm: spec.endHHmm,
+                courseName: spec.course.courseName,
                 teacher: spec.course.teacher,
-                room: spec.location,
+                room: spec.course.room,
                 week: spec.week,
                 transferred: spec.description.contains("调课安排："),
-                firstPeriodAlarm: alarms[spec.date] == spec.key
+                firstPeriodAlarm: alarmKeys[spec.date] == spec.key
             )
         }
-        return CalendarImportPreview(rows: rows, skippedInvalidTime: invalid, startDate: from, endDateExclusive: until)
+        return CalendarImportPreview(rows: rows, invalid: invalid, from: from, until: until)
     }
 
-    // MARK: - 导入
-
-    static func `import`(
-        table: TimeTableEntity,
-        courses: [CourseEntity],
-        options: CalendarImportOptions,
-        batchId: String
-    ) async -> CalendarImportResult {
-        guard hasCalendarPermissions() else { return CalendarImportResult(errors: 1) }
-        let calendars = writableCalendars()
-        guard let calendar = calendars.first(where: { $0.id == options.calendarId }),
-              let ekCalendar = store.calendar(withIdentifier: options.calendarId) else {
-            return CalendarImportResult(errors: 1)
-        }
-        let preview = buildPreview(table: table, courses: courses, options: options)
-        let startInclusive = preview.startDate
-        let endExclusive = preview.endDateExclusive
-        let (specs, _) = buildEventSpecs(table: table, courses: courses, options: options, from: startInclusive, until: endExclusive)
-        let alarmKeys = firstPeriodAlarmKeys(specs)
-
-        let db = AppDatabase.getShared()
-        let dao = CalendarImportRecordDao(db: db.dbQueue)
-        var result = CalendarImportResult(skippedInvalidTime: preview.skippedInvalidTime)
-        let startStr = fullDateFormatter.string(from: startInclusive)
-        let endStr = fullDateFormatter.string(from: endExclusive)
-        let allRecords: [CalendarImportRecordEntity] = (try? dao.forTable(table.id)) ?? []
-        var existingRecords: [String: CalendarImportRecordEntity] = [:]
-        for record in allRecords {
-            guard record.calendarId == calendar.id, record.eventDate >= startStr, record.eventDate < endStr else {
-                continue
-            }
-            existingRecords["\(record.courseId):\(record.eventDate)"] = record
-        }
-
-        for spec in specs {
-            let key = "\(spec.course.id):\(fullDateFormatter.string(from: spec.date))"
-            let record = existingRecords[key]
-            let wantsAlarm = alarmKeys[spec.date] == spec.key
-            let wantsReminder = wantsAlarm || options.reminderMinutes != nil
-            let minutes = wantsAlarm ? min(max(options.firstPeriodAlarmMinutes, 0), 999) : options.reminderMinutes
-
-            if let record = record {
-                guard let old = readEvent(eventId: record.eventId) else {
-                    try? dao.deleteById(record.id)
-                    // fall through to insert below
-                    if let eventId = insertEvent(spec: spec, calendar: ekCalendar, wantsReminder: wantsReminder, minutes: minutes) {
-                        if let created = readEvent(eventId: eventId) {
-                            try? dao.upsert(recordFor(tableId: table.id, spec: spec, calendarId: calendar.id,
-                                                      eventId: eventId, batchId: batchId,
-                                                      fingerprint: fingerprint(created), alarmRequested: wantsAlarm))
-                            result.inserted += 1
-                        } else { result.errors += 1 }
-                    } else { result.errors += 1 }
-                    continue
-                }
-                if fingerprint(old) != record.fingerprint {
-                    result.skippedEdited += 1
-                    continue
-                }
-                if eventMatchesSpec(old, spec: spec, calendarId: calendar.id)
-                    && remindersMatch(old, wantsReminder: wantsReminder, minutes: minutes) {
-                    result.unchanged += 1
-                    continue
-                }
-                guard writeEvent(old: old, spec: spec, calendar: ekCalendar, wantsReminder: wantsReminder, minutes: minutes) else {
-                    result.errors += 1
-                    continue
-                }
-                // 保存后重读拿真实指纹
-                if let after = readEvent(eventId: record.eventId) {
-                    try? dao.upsert(recordFor(tableId: table.id, spec: spec, calendarId: calendar.id,
-                                              eventId: record.eventId, batchId: batchId,
-                                              fingerprint: fingerprint(after), alarmRequested: wantsAlarm))
-                    result.updated += 1
-                } else { result.errors += 1 }
-                continue
-            }
-
-            // 进程死亡恢复 — 描述 marker 唯一定位
-            if let recovered = findEventByMarker(calendarId: calendar.id, key: spec.key) {
-                if !eventMatchesSpec(recovered, spec: spec, calendarId: calendar.id) {
-                    result.skippedEdited += 1
-                    continue
-                }
-                try? dao.upsert(recordFor(tableId: table.id, spec: spec, calendarId: calendar.id,
-                                          eventId: recovered.eventId, batchId: batchId,
-                                          fingerprint: fingerprint(recovered), alarmRequested: wantsAlarm))
-                result.unchanged += 1
-                continue
-            }
-
-            guard let eventId = insertEvent(spec: spec, calendar: ekCalendar, wantsReminder: wantsReminder, minutes: minutes) else {
-                result.errors += 1
-                continue
-            }
-            if let created = readEvent(eventId: eventId) {
-                try? dao.upsert(recordFor(tableId: table.id, spec: spec, calendarId: calendar.id,
-                                          eventId: eventId, batchId: batchId,
-                                          fingerprint: fingerprint(created), alarmRequested: wantsAlarm))
-                result.inserted += 1
-            } else { result.errors += 1 }
-        }
-        return result
-    }
-
-    static func deleteManagedForTable(tableId: Int64) async -> CalendarDeleteResult {
-        guard hasCalendarPermissions() else { return CalendarDeleteResult(deleted: 0, skippedEdited: 0, missing: 0) }
-        let db = AppDatabase.getShared()
-        let dao = CalendarImportRecordDao(db: db.dbQueue)
-        let records: [CalendarImportRecordEntity] = (try? dao.forTable(tableId)) ?? []
-        var deleted = 0, edited = 0, missing = 0
-        for record in records {
-            guard let snapshot = readEvent(eventId: record.eventId) else {
-                try? dao.deleteById(record.id)
-                missing += 1
-                continue
-            }
-            if fingerprint(snapshot) == record.fingerprint,
-               let liveEvent = store.event(withIdentifier: record.eventId) {
-                do {
-                    try store.remove(liveEvent, span: .thisEvent)
-                    try? dao.deleteById(record.id)
-                    deleted += 1
-                } catch {
-                    edited += 1
-                }
-            } else {
-                edited += 1
-            }
-        }
-        return CalendarDeleteResult(deleted: deleted, skippedEdited: edited, missing: missing)
-    }
-
-    // MARK: - EventKit 原语
-
-    private struct EventSpec {
-        let course: CourseEntity
-        let date: Date
-        let week: Int
-        let start: Date
-        let end: Date
-        let title: String
-        let location: String
-        let description: String
-        let key: String
-        let reminderMinutes: Int?
-        let wantsAlarm: Bool
-    }
-
-    private struct ExistingEvent {
-        let eventId: String
-        let calendarId: String
-        let title: String
-        let location: String
-        let descriptionText: String
-        let startDate: Date
-        let endDate: Date
-        let timezone: String
-        let hasReminder: Bool
-    }
-
-    private static func insertEvent(spec: EventSpec, calendar: EKCalendar, wantsReminder: Bool, minutes: Int?) -> String? {
-        let event = EKEvent(eventStore: store)
-        applySpec(event, spec: spec, calendar: calendar)
-        applyReminder(event, wantsReminder: wantsReminder, minutes: minutes)
-        do {
-            try store.save(event, span: .thisEvent)
-            return event.calendarItemExternalIdentifier
-        } catch { return nil }
-    }
-
-    private static func writeEvent(old: ExistingEvent, spec: EventSpec, calendar: EKCalendar, wantsReminder: Bool, minutes: Int?) -> Bool {
-        guard let event = store.event(withIdentifier: old.eventId) else { return false }
-        applySpec(event, spec: spec, calendar: calendar)
-        applyReminder(event, wantsReminder: wantsReminder, minutes: minutes)
-        do {
-            try store.save(event, span: .thisEvent)
-            return true
-        } catch { return false }
-    }
-
-    private static func applySpec(_ event: EKEvent, spec: EventSpec, calendar: EKCalendar) {
-        event.calendar = calendar
-        event.title = spec.title
-        event.location = spec.location
-        event.notes = spec.description
-        event.startDate = spec.start
-        event.endDate = spec.end
-        event.isAllDay = false
-        event.availability = .busy
-        event.timeZone = .current
-    }
-
-    private static func applyReminder(_ event: EKEvent, wantsReminder: Bool, minutes: Int?) {
-        event.alarms = nil
-        if wantsReminder, let minutes = minutes {
-            // EKAlarm relativeOffset 负值 = 提前 N 秒
-            event.addAlarm(EKAlarm(relativeOffset: -Double(minutes) * 60))
-        }
-    }
-
-    private static func readEvent(eventId: String) -> ExistingEvent? {
-        guard let event = store.event(withIdentifier: eventId) else { return nil }
-        return existingFrom(event)
-    }
-
-    private static func existingFrom(_ event: EKEvent) -> ExistingEvent {
-        return ExistingEvent(
-            eventId: event.calendarItemExternalIdentifier,
-            calendarId: event.calendar?.calendarIdentifier ?? "",
-            title: event.title ?? "",
-            location: event.location ?? "",
-            descriptionText: event.notes ?? "",
-            startDate: event.startDate,
-            endDate: event.endDate,
-            timezone: event.timeZone?.identifier ?? TimeZone.current.identifier,
-            hasReminder: !(event.alarms ?? []).isEmpty
-        )
-    }
-
-    private static func findEventByMarker(calendarId: String, key: String) -> ExistingEvent? {
-        let marker = "\(SLEEPY_MARKER_PREFIX)\(key)"
-        let cal = Calendar.current
-        let start = cal.date(byAdding: .day, value: -400, to: Date()) ?? Date.distantPast
-        let end = cal.date(byAdding: .day, value: 400, to: Date()) ?? Date.distantFuture
-        let predicate = store.predicateForEvents(withStart: start, end: end, calendars: nil)
-        let events = store.events(matching: predicate)
-        return events
-            .filter { $0.calendar?.calendarIdentifier == calendarId && ($0.notes ?? "").contains(marker) }
-            .map(existingFrom)
-            .first
-    }
-
-    private static func recordFor(tableId: Int64, spec: EventSpec, calendarId: String, eventId: String,
-                                  batchId: String, fingerprint: String, alarmRequested: Bool) -> CalendarImportRecordEntity {
-        return CalendarImportRecordEntity(
-            tableId: tableId,
-            courseId: spec.course.id,
-            eventDate: fullDateFormatter.string(from: spec.date),
-            calendarId: calendarId,
-            eventId: eventId,
-            batchId: batchId,
-            fingerprint: fingerprint,
-            alarmRequested: alarmRequested
-        )
-    }
-
-    private static func fingerprint(_ event: ExistingEvent) -> String {
-        let raw = [
-            event.calendarId, event.title, event.location, event.descriptionText,
-            "\(event.startDate.timeIntervalSince1970)", "\(event.endDate.timeIntervalSince1970)",
-            event.timezone, event.hasReminder ? "1" : "0"
-        ].joined(separator: "\u{1f}")
-        return sha256Hex(raw)
-    }
-
-    private static func sha256Hex(_ text: String) -> String {
-        let data = Data(text.utf8)
-        // CryptoKit iOS 13+; 项目 deployment 15.6 → 可用
-        let digest = CryptoKitSHA256.hex(data)
-        return digest
-    }
-
-    private static func eventMatchesSpec(_ event: ExistingEvent, spec: EventSpec, calendarId: String) -> Bool {
-        return event.calendarId == calendarId && event.title == spec.title && event.location == spec.location
-            && event.descriptionText == spec.description
-            && event.startDate == spec.start && event.endDate == spec.end
-            && event.timezone == TimeZone.current.identifier
-    }
-
-    private static func remindersMatch(_ event: ExistingEvent, wantsReminder: Bool, minutes: Int?) -> Bool {
-        if !wantsReminder || minutes == nil { return !event.hasReminder }
-        return event.hasReminder
-    }
-
-    // MARK: - 日期展开
-
-    private static func selectedDateRange(table: TimeTableEntity, range: CalendarImportRange, today: Date) -> (Date, Date) {
-        let cal = Calendar.current
-        let semesterStart = mondayOf(DateUtils.parseDate(table.startDate) ?? today)
-        let semesterEnd = cal.date(byAdding: .weekOfYear, value: table.maxWeek, to: semesterStart) ?? semesterStart
-        let start = max(today, semesterStart)
-        let requestedEnd: Date
-        switch range {
-        case .NEXT_WEEK: requestedEnd = cal.date(byAdding: .day, value: 7, to: today) ?? today
-        case .NEXT_MONTH: requestedEnd = cal.date(byAdding: .month, value: 1, to: today) ?? today
-        case .SEMESTER: requestedEnd = semesterEnd
-        }
-        return (start, min(requestedEnd, semesterEnd))
-    }
-
-    private static func mondayOf(_ date: Date) -> Date {
-        let cal = Calendar.current
-        let comps = cal.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date)
-        return cal.date(from: comps) ?? date
-    }
-
-    private static func buildEventSpecs(
+    /// 生成事件 spec (← Android buildEventSpecs: 逐日 调课映射 + 周过滤 + 节次→时间 + marker 描述)
+    func buildEventSpecs(
         table: TimeTableEntity,
         courses: [CourseEntity],
         options: CalendarImportOptions,
         from: Date,
         until: Date
-    ) -> ([EventSpec], Int) {
-        if !(from < until) { return ([], 0) }
-        let transfers = options.applyHolidayTransfers
-            ? AppPrefs.shared.getHolidayTransfers(table.id) : []
-        var specs: [EventSpec] = []
+    ) -> (specs: [EventSpec], invalid: Int) {
         var invalid = 0
-        let cal = Calendar.current
-        var date = from
-        while date < until {
-            let week = DateUtils.currentWeek(startDate: table.startDate, today: date)
-            let nativeDow = cal.component(.weekday, from: date)             // 1=Sun..7=Sat
-            let isoDow = nativeDow == 1 ? 7 : nativeDow - 1                 // 1=Mon..7=Sun
-            let classDay = transfers.isEmpty ? isoDow
-                : HolidayTransferOps.effectiveDayOfWeek(date, transfers)
+        var specs: [EventSpec] = []
+        guard from < until else { return ([], 0) }
+        let transfers = options.applyTransfers
+            ? AppPrefs.shared.getHolidayTransfers(table.id)
+            : []
+        var day = DateUtils.dayStart(from)
+        let limit = DateUtils.dayStart(until)
+        while day < limit {
+            let week = DateUtils.currentWeek(startDate: table.startDate, today: day)
+            let naturalDow = DateUtils.todayDayOfWeek(today: day)
+            let classDay = transfers.isEmpty ? naturalDow : HolidayTransferOps.effectiveDayOfWeek(day, transfers)
             for course in courses where course.day == classDay && course.inWeek(week) {
-                let interval = TimeTableUtils.effectiveCourseTime(
+                guard let (startHHmm, endHHmm) = TimeTableUtils.effectiveCourseTime(
                     isIrregularTime: course.isIrregularTime,
-                    startTime: course.startTime, endTime: course.endTime,
-                    startNode: course.startNode, step: course.step,
+                    startTime: course.startTime,
+                    endTime: course.endTime,
+                    startNode: course.startNode,
+                    step: course.step,
                     timeJson: table.timeJson
-                )
-                guard let startStr = interval?.0, let endStr = interval?.1,
-                      let start = parseHHmm(startStr, on: date),
-                      let end = parseHHmm(endStr, on: date), end > start else {
+                ) else {
                     invalid += 1
                     continue
                 }
-                let transferred = classDay != isoDow
-                let markerKey = "\(table.id):\(course.id):\(fullDateFormatter.string(from: date))"
-                let marker = "\(SLEEPY_MARKER_PREFIX)\(markerKey)"
-                var description = "第\(week)周 · 第\(course.startNode)—\(course.startNode + course.step - 1)节"
-                if !course.teacher.isBlank { description += "\n教师：\(course.teacher)" }
-                if !course.note.isBlank { description += "\n备注：\(course.note)" }
-                if transferred { description += "\n调课安排：按\(DateUtils.chineseDay(classDay))课程" }
-                description += "\n\(marker)"
+                let start = appendTime(day, startHHmm)
+                let end = appendTime(day, endHHmm)
+                guard end > start else { invalid += 1; continue }
+                let transferred = transfers.isEmpty ? false : classDay != naturalDow
                 specs.append(EventSpec(
-                    course: course, date: date, week: week, start: start, end: end,
-                    title: course.courseName, location: course.room,
-                    description: description, key: markerKey,
-                    reminderMinutes: options.reminderMinutes.map { min(max($0, 0), 999) },
-                    wantsAlarm: options.firstPeriodAlarmEnabled && course.startNode <= 1
-                        && course.startNode + course.step > 1 && start < noon(of: date)
+                    course: course,
+                    date: day,
+                    week: week,
+                    start: start,
+                    end: end,
+                    startHHmm: startHHmm,
+                    endHHmm: endHHmm,
+                    description: buildDescription(course: course, week: week, transferred: transferred, classDay: classDay, eventDate: day),
+                    key: "\(table.id):\(course.id):\(DateUtils.fullDate(day))",
+                    reminderMinutes: options.reminderMinutes.map { $0.clamped0999 },
+                    wantsAlarm: options.firstPeriodAlarmEnabled
+                        && course.startNode <= 1
+                        && course.startNode + course.step > 1
+                        && (TimeTableUtils.hmMinutes(startHHmm) ?? 0) < 720
                 ))
             }
-            date = cal.date(byAdding: .day, value: 1, to: date) ?? until
+            day = Calendar.isoAddDays(day, 1)
         }
         return (specs, invalid)
     }
 
-    private static func firstPeriodAlarmKeys(_ specs: [EventSpec]) -> [Date: String] {
-        // 同日多节都要早课提醒 → 取开始时间最早(并列取 course.id 小)的那节
-        var byDate: [Date: [EventSpec]] = [:]
+    /// 描述 (← Android: 周/节次 + 教师 + 备注 + 调课提示 + 行尾 marker)
+    private func buildDescription(course: CourseEntity, week: Int, transferred: Bool, classDay: Int, eventDate: Date) -> String {
+        var text = "第\(week)周 · 第\(course.startNode)—\(course.startNode + course.step - 1)节"
+        if !course.teacher.isEmpty { text += "\n教师：\(course.teacher)" }
+        if !course.note.isEmpty { text += "\n备注：\(course.note)" }
+        if transferred { text += "\n调课安排：按\(DateUtils.chineseDay(classDay))课程" }
+        text += "\n\(markerPrefix)\(course.tableId):\(course.id):\(DateUtils.fullDate(eventDate))"
+        return text
+    }
+
+    /// 每天只取最早的 (起始时间, courseId) 那条 spec 的 key (← Android firstPeriodAlarmKeys)
+    func firstPeriodAlarmKeys(_ specs: [EventSpec]) -> [Date: String] {
+        var best: [Date: (start: Date, courseKey: Int64, key: String)] = [:]
         for spec in specs where spec.wantsAlarm {
-            byDate[spec.date, default: []].append(spec)
-        }
-        var out: [Date: String] = [:]
-        for (date, rows) in byDate {
-            let winner = rows.min { a, b in
-                if a.start != b.start { return a.start < b.start }
-                return a.course.id < b.course.id
+            let cand = (start: spec.start, courseKey: spec.course.id, key: spec.key)
+            if let old = best[spec.date] {
+                if cand.start < old.start || (cand.start == old.start && cand.courseKey < old.courseKey) {
+                    best[spec.date] = cand
+                }
+            } else {
+                best[spec.date] = cand
             }
-            if let w = winner { out[date] = w.key }
         }
-        return out
+        return best.mapValues { $0.key }
     }
 
-    private static func parseHHmm(_ s: String, on date: Date) -> Date? {
-        let parts = s.split(separator: ":")
-        guard parts.count == 2, let h = Int(parts[0]), let m = Int(parts[1]) else { return nil }
-        let cal = Calendar.current
-        var comps = cal.dateComponents([.year, .month, .day], from: date)
-        comps.hour = h; comps.minute = m
-        return cal.date(from: comps)
+    // MARK: - 导入 (← Android import: 逐 spec 读旧/比对/写入 → 记录 upsert)
+
+    @discardableResult
+    func importCourses(
+        table: TimeTableEntity,
+        courses: [CourseEntity],
+        options: CalendarImportOptions,
+        from: Date,
+        until: Date
+    ) throws -> CalendarImportResult {
+        guard hasCalendarPermissions() else { throw CalendarImportError.permissionDenied }
+        guard store.calendars(for: .event).contains(where: { $0.calendarIdentifier == options.calendarId }) else {
+            throw CalendarImportError.noWritableCalendar
+        }
+        let db = AppDatabase.getShared()
+        let batchId = UUID().uuidString  // ← Android caller-generated UUID per batch
+        let (specs, invalid) = buildEventSpecs(table: table, courses: courses, options: options, from: from, until: until)
+        let alarmKeys = firstPeriodAlarmKeys(specs)
+
+        let startInclusive = DateUtils.fullDate(from)
+        let endExclusive = DateUtils.fullDate(until)
+        let existing = try db.calendarImportRecordDao.forTable(table.id)
+            .filter {
+                $0.calendarId == options.calendarId
+                    && ($0.eventDate as String).compare(startInclusive) != .orderedAscending
+                    && ($0.eventDate as String).compare(endExclusive) == .orderedAscending
+            }
+            .reduce(into: [String: CalendarImportRecordEntity]()) { dict, rec in
+                dict["\(rec.courseId):\(rec.eventDate)"] = rec
+            }
+
+        var inserted = 0, updated = 0, unchanged = 0, skippedEdited = 0, alarmFallback = 0, errors = 0
+        let skippedInvalid = invalid
+
+        for spec in specs {
+            let recordKey = "\(spec.course.id):\(DateUtils.fullDate(spec.date))"
+            var record = existing[recordKey]
+            let wantsAlarm = alarmKeys[spec.date] == spec.key
+            let desiredMethod: ReminderMethod? = wantsAlarm ? .alarm : (spec.reminderMinutes != nil ? .alert : nil)
+            let desiredMinutes: Int? = wantsAlarm ? options.firstPeriodAlarmMinutes.clamped0999 : spec.reminderMinutes
+
+            if let rec = record {
+                let old = readEvent(eventId: rec.eventId)
+                if old == nil {
+                    // ← Android: 记录有但事件没了 → 删记录后 fall-through 到 marker 恢复/新建
+                    try? db.calendarImportRecordDao.deleteById(rec.id)
+                    record = nil
+                } else {
+                    let oldReminders = readReminder(eventId: rec.eventId) ?? []
+                    if fingerprint(old!, oldReminders) != rec.fingerprint {
+                        skippedEdited += 1
+                        continue
+                    }
+                    if eventMatchesSpec(old!, spec: spec, calendarId: options.calendarId)
+                        && remindersMatch(oldReminders, expectedMethod: desiredMethod, expectedMinutes: desiredMinutes, allowAlarmFallback: wantsAlarm) {
+                        unchanged += 1
+                        continue
+                    }
+                    guard writeEventValues(old!, spec: spec) else { errors += 1; continue }
+                    let finalMethod = replaceReminder(event: old!, desiredMethod: desiredMethod, desiredMinutes: desiredMinutes, alarmRequested: wantsAlarm)
+                    if wantsAlarm && finalMethod != .alarm { alarmFallback += 1 }
+                    if desiredMethod != nil && finalMethod == nil { errors += 1 }
+                    guard let after = readEvent(eventId: old!.calendarItemExternalIdentifier) else { errors += 1; continue }
+                    let afterReminders = readReminder(eventId: after.calendarItemExternalIdentifier) ?? []
+                    record = CalendarImportRecordEntity(
+                        tableId: table.id,
+                        courseId: spec.course.id,
+                        eventDate: DateUtils.fullDate(spec.date),
+                        calendarId: options.calendarId,
+                        eventId: after.calendarItemExternalIdentifier,
+                        batchId: batchId,
+                        fingerprint: fingerprint(after, afterReminders),
+                        alarmRequested: wantsAlarm,
+                        createdAt: rec.createdAt,
+                        id: rec.id
+                    )
+                    try db.calendarImportRecordDao.upsert(record!)
+                    updated += 1
+                    continue
+                }
+            }
+
+            // marker 恢复 / 新建
+            let recovered = findEventByMarker(calendarId: options.calendarId, key: spec.key, date: spec.date)
+            if let r = recovered, !eventMatchesSpec(r, spec: spec, calendarId: options.calendarId) {
+                skippedEdited += 1
+                continue
+            }
+            let target = recovered ?? insertEvent(spec: spec, calendarId: options.calendarId)
+            if target == nil { errors += 1; continue }
+            let finalMethod = replaceReminder(event: target!, desiredMethod: desiredMethod, desiredMinutes: desiredMinutes, alarmRequested: wantsAlarm)
+            if wantsAlarm && finalMethod != .alarm { alarmFallback += 1 }
+            if desiredMethod != nil && finalMethod == nil { errors += 1 }
+            guard let after = readEvent(eventId: target!.calendarItemExternalIdentifier) else { errors += 1; continue }
+            let afterReminders = readReminder(eventId: after.calendarItemExternalIdentifier) ?? []
+            let newRecord = CalendarImportRecordEntity(
+                tableId: table.id,
+                courseId: spec.course.id,
+                eventDate: DateUtils.fullDate(spec.date),
+                calendarId: options.calendarId,
+                eventId: after.calendarItemExternalIdentifier,
+                batchId: batchId,
+                fingerprint: fingerprint(after, afterReminders),
+                alarmRequested: wantsAlarm,
+                createdAt: Int64(Date.now.timeIntervalSince1970 * 1000),
+                id: 0
+            )
+            try db.calendarImportRecordDao.upsert(newRecord)
+            if recovered != nil {
+                unchanged += 1  // ← Android: marker 恢复路径计 unchanged
+            } else {
+                inserted += 1
+            }
+        }
+        return CalendarImportResult(
+            inserted: inserted,
+            updated: updated,
+            unchanged: unchanged,
+            skippedEdited: skippedEdited,
+            skippedInvalid: skippedInvalid,
+            alarmFallback: alarmFallback,
+            errors: errors
+        )
     }
 
-    private static func noon(of date: Date) -> Date {
-        return parseHHmm("12:00", on: date) ?? date
+    // MARK: - 删除已管理事件 (← Android deleteManagedForTable: 指纹不一致 = 用户改过 → 保留)
+
+    /// 返回 (deleted, edited, missing)
+    func deleteManagedForTable(tableId: Int64, calendarId: String? = nil) -> (deleted: Int, edited: Int, missing: Int) {
+        guard hasCalendarPermissions() else { return (0, 0, 0) }
+        let db = AppDatabase.getShared()
+        var deleted = 0, edited = 0, missing = 0
+        for record in (try? db.calendarImportRecordDao.forTable(tableId)) ?? [] {
+            if let cid = calendarId, record.calendarId != cid { continue }
+            guard let event = readEvent(eventId: record.eventId) else {
+                try? db.calendarImportRecordDao.deleteById(record.id)
+                missing += 1
+                continue
+            }
+            let reminders = readReminder(eventId: event.calendarItemExternalIdentifier) ?? []
+            guard fingerprint(event, reminders) == record.fingerprint else {
+                edited += 1  // 用户改过 → 事件与记录都保留
+                continue
+            }
+            // 16.4: save/remove 的 label 顺序 span: 先于 commit:, 且可能 throw → try?
+            if (try? store.remove(event, span: .thisEvent, commit: true)) != nil {
+                try? db.calendarImportRecordDao.deleteById(record.id)
+                deleted += 1
+            }
+        }
+        return (deleted, edited, missing)
+    }
+
+    func deleteAllForTable(tableId: Int64) throws {
+        try AppDatabase.getShared().calendarImportRecordDao.deleteForTable(tableId)
+    }
+
+    // MARK: - 事件读写 (记录 eventId = EKCalendarItem.externalIdentifier, String)
+
+    private func readEvent(eventId: String) -> EKEvent? {
+        guard let item = store.calendarItem(withIdentifier: eventId) as? EKEvent else {
+            // externalIdentifier 跨库稳定; 本地 identifier 失效时按 external 兜底
+            return store.calendarItems(withExternalIdentifier: eventId).first as? EKEvent
+        }
+        return item
+    }
+
+    private func readReminder(eventId: String) -> [ReminderDesc]? {
+        guard let item = store.calendarItem(withIdentifier: eventId)
+            ?? store.calendarItems(withExternalIdentifier: eventId).first else { return nil }
+        return (item.alarms ?? []).map { alarm in
+            let minutes = Int((-alarm.relativeOffset / 60).rounded())
+            // 平台裁决: 16.4 无 EKAlarm.type → 读回恒 .alert(期望 method 由记录 alarmRequested 承载)
+            return ReminderDesc(method: .alert, minutes: minutes)
+        }
+    }
+
+    /// marker 恢复: 当天窗口内按 notes 尾部 key 精确匹配 (← Android LIKE %"Sleepy import key:…"% 于当天事件)
+    private func findEventByMarker(calendarId: String, key: String, date: Date) -> EKEvent? {
+        guard let cal = store.calendar(withIdentifier: calendarId) else { return nil }
+        let rangeEnd = Calendar.isoAddDays(date, 1)
+        // 16.4 Swift 改名: predicateForEventsWithStartDate: → predicateForEvents(withStart:end:calendars:)
+        let predicate = store.predicateForEvents(withStart: date, end: rangeEnd, calendars: [cal])
+        let suffix = "\(markerPrefix)\(key)"
+        for candidate in store.events(matching: predicate) where candidate.calendar?.calendarIdentifier == calendarId {
+            if candidate.notes?.hasSuffix(suffix) == true { return candidate }
+        }
+        return nil
+    }
+
+    private func insertEvent(spec: EventSpec, calendarId: String) -> EKEvent? {
+        guard let cal = store.calendar(withIdentifier: calendarId) else { return nil }
+        let event = EKEvent(eventStore: store)
+        event.calendar = cal
+        event.isAllDay = false
+        event.startDate = spec.start
+        event.endDate = spec.end
+        event.title = spec.course.courseName
+        event.location = spec.course.room.isEmpty ? nil : spec.course.room
+        event.notes = spec.description
+        guard (try? store.save(event, span: .thisEvent)) != nil else { return nil }
+        return event.calendarItemExternalIdentifier.isEmpty ? nil : event
+    }
+
+    private func writeEventValues(_ event: EKEvent, spec: EventSpec) -> Bool {
+        event.title = spec.course.courseName
+        event.location = spec.course.room.isEmpty ? nil : spec.course.room
+        event.notes = spec.description
+        event.startDate = spec.start
+        event.endDate = spec.end
+        return (try? store.save(event, span: .thisEvent, commit: true)) != nil
+    }
+
+    /// 提醒替换 (← Android replaceReminder; 返回值 = 实际生效的 method, nil = 未挂提醒)
+    private func replaceReminder(event: EKEvent, desiredMethod: ReminderMethod?, desiredMinutes: Int?, alarmRequested: Bool) -> ReminderMethod? {
+        for alarm in (event.alarms ?? []) { event.removeAlarm(alarm) }
+        guard let method = desiredMethod, let minutes = desiredMinutes else {
+            _ = try? store.save(event, span: .thisEvent, commit: true)
+            return nil
+        }
+        // 16.4: EKAlarm 无 type/soundName → 系统默认提醒呈现; 期望 .alarm 由 alarmRequested 记录承载
+        let alarm = EKAlarm(relativeOffset: -Double(minutes * 60))
+        event.addAlarm(alarm)
+        _ = try? store.save(event, span: .thisEvent, commit: true)
+        // 复核: 期望闹钟但系统未给闹钟 → 对齐 Android 的 ALERT 兜底返回(读回恒 .alert)
+        if alarmRequested, method == .alarm {
+            let actual = readReminder(eventId: event.calendarItemExternalIdentifier) ?? []
+            if actual.allSatisfy({ $0.method == .alert }) { return .alert }
+        }
+        return method
+    }
+
+    // MARK: - 指纹 / 比对 (← Android fingerprint / eventMatchesSpec / remindersMatch, 字段顺序一致)
+
+    /// SHA-256 hex of [calendarId, title, location, notes, startMs, endMs, tz, 排序 "method:minutes"] (分隔符 \u{1F})
+    func fingerprint(_ event: EKEvent, _ reminders: [ReminderDesc]) -> String {
+        var parts: [String] = []
+        parts.append(event.calendar?.calendarIdentifier ?? "")
+        parts.append(event.title ?? "")
+        parts.append(event.location ?? "")
+        parts.append(event.notes ?? "")
+        parts.append(Int64(event.startDate.timeIntervalSince1970 * 1000).description)
+        parts.append(Int64(event.endDate.timeIntervalSince1970 * 1000).description)
+        parts.append(TimeZone.current.identifier)
+        let sorted = reminders.sorted {
+            if $0.method != $1.method { return $0.method.rawValue < $1.method.rawValue }
+            return $0.minutes < $1.minutes
+        }
+        parts.append(sorted.map { "\($0.method.rawValue):\($0.minutes)" }.joined(separator: ","))
+        let joined = parts.joined(separator: "\u{1F}")
+        return SHA256.hash(data: Data(joined.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// ← Android eventMatchesSpec: 字段逐一比对(用户没改过才重挂提醒)
+    func eventMatchesSpec(_ event: EKEvent, spec: EventSpec, calendarId: String) -> Bool {
+        guard event.calendar?.calendarIdentifier == calendarId else { return false }
+        guard event.title == spec.course.courseName else { return false }
+        guard event.location ?? "" == (spec.course.room.isEmpty ? "" : spec.course.room) else { return false }
+        guard event.notes == spec.description else { return false }
+        guard event.startDate == spec.start, event.endDate == spec.end else { return false }
+        return true
+    }
+
+    /// ← Android remindersMatch
+    func remindersMatch(
+        _ actual: [ReminderDesc],
+        expectedMethod: ReminderMethod?,
+        expectedMinutes: Int?,
+        allowAlarmFallback: Bool
+    ) -> Bool {
+        guard expectedMethod != nil || expectedMinutes != nil else { return actual.isEmpty }
+        guard let m = expectedMethod, let minutes = expectedMinutes else { return false }
+        if actual.count == 1, actual[0].method == m, actual[0].minutes == minutes { return true }
+        return allowAlarmFallback
+            && m == .alarm
+            && actual.count == 1
+            && actual[0].method == .alert
+            && actual[0].minutes == minutes
+    }
+
+    // MARK: - 工具
+
+    /// "HH:mm" 拼到当日零点起 (24:00 = 次日 0 点, 对齐节次时间解析语义)
+    private func appendTime(_ day: Date, _ hm: String) -> Date {
+        switch hm {
+        case "24:00": return Calendar.isoAddDays(day, 1)
+        default:
+            let parts = hm.split(separator: ":").compactMap { Int($0) }
+            guard parts.count == 2 else { return day }
+            return day.addingTimeInterval(TimeInterval(parts[0] * 3600 + parts[1] * 60))
+        }
+    }
+
+    private static func hhmmString(_ minutes: Int) -> String {
+        String(format: "%02d:%02d", minutes / 60, minutes % 60)
     }
 }
 
-// MARK: - CryptoKit SHA-256 hex
-
-import CryptoKit
-
-enum CryptoKitSHA256 {
-    static func hex(_ data: Data) -> String {
-        let digest = SHA256.hash(data: data)
-        return digest.map { String(format: "%02x", $0) }.joined()
-    }
-}
-
-// MARK: - Sequence.associateBy (Kotlin stdlib)
-
-private extension Sequence {
-    func associateBy<K: Hashable>(_ keyFor: (Element) -> K) -> [K: Element] {
-        var out: [K: Element] = [:]
-        for element in self { out[keyFor(element)] = element }
-        return out
-    }
+/// ← Android coerceIn(0, 999)
+private extension Int {
+    var clamped0999: Int { Swift.min(Swift.max(self, 0), 999) }
 }

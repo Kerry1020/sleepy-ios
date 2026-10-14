@@ -126,7 +126,8 @@ private struct DockedBar: View {
                 .fill(colors.secondaryContainer)
                 .frame(width: DockedSpec.thumbWidth, height: DockedSpec.thumbHeight)
                 .offset(x: thumbX, y: DockedSpec.thumbYOffset)
-                .animation(.spring(response: 0.18, dampingFraction: 1.0), value: thumbCenterX)
+                // 同款 — Android SleepyThumbSpring (高硬度+无回弹实测定参), 见 SleepyMotion.swift
+                .animation(sleepyThumbSpring, value: thumbCenterX)
 
             HStack(spacing: 0) {
                 ForEach(Array(items.enumerated()), id: \.element.id) { idx, item in
@@ -309,7 +310,8 @@ private struct FloatingBar: View {
                     .fill(colors.secondaryContainer)
                     .frame(width: DockSpec.thumbWidth, height: DockSpec.thumbHeight)
                     .offset(x: thumbX, y: DockSpec.thumbYOffset)
-                    .animation(.spring(response: 0.18, dampingFraction: 1.0), value: thumbCenterX)
+                    // 同款 — Android SleepyThumbSpring (高硬度+无回弹实测定参), 见 SleepyMotion.swift
+                    .animation(sleepyThumbSpring, value: thumbCenterX)
 
                 // 4 个 tab HStack:itemGap=4 居中分布,内边距 innerPad=8
                 HStack(spacing: DockSpec.itemGap) {

@@ -82,6 +82,13 @@ final class CourseEditorUITests: XCTestCase {
         let createBtn = app.descendants(matching: .any)["course_save"]
         XCTAssertTrue(createBtn.exists)
         createBtn.tap()
+        // M12 冲突闸门: 默认新周块(周一 1-2 周)与种子课"高等数学"(周一 1-2 周)必碰撞 →
+        // 弹 "Schedule conflict" alert → 点 "Save anyway" 强制保存(对应 Android
+        // AddCourseScreen 的 conflict_detail_save_anyway 路径)。不处理这个 alert, 课程不会落库。
+        let saveAnywayBtn = app.buttons["Save anyway"]
+        if saveAnywayBtn.waitForExistence(timeout: 5) {
+            saveAnywayBtn.tap()
+        }
         // 保存后回课表 Tab
         XCTAssertTrue(app.staticTexts["数据结构"].firstMatch.waitForExistence(timeout: 8),
                       "保存后课表应显示新课(周视图或网格)")

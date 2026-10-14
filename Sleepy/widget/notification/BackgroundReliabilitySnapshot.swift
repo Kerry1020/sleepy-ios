@@ -1,57 +1,51 @@
-// BackgroundReliabilitySnapshot.swift — ← widget/notification/BackgroundReliabilitySnapshot.kt
-// Facts observed from the current device and app state.
-// This model deliberately does not claim that a vendor surface is guaranteed.
+// BackgroundReliabilitySnapshot.swift — ← BackgroundReliabilitySnapshot.kt
+// 后台可靠性事实快照: 从当前设备与 App 状态观察到的客观事实模型。
+// 刻意不声称"厂商通道一定可用"(Android 注释原文), iOS 侧对应: 不声称后台刷新一定存活。
+//
+// 平台映射(逐字段, 禁止 silent skip):
+// - notificationPermissionGranted ← 同名: POST_NOTIFICATIONS → UNAuthorizationStatus.authorized
+// - exactAlarmAllowed ← 同名: AlarmManager.canScheduleExactAlarms → iOS 无 exact alarm 概念,
+//   等价事实 = 时效性通知可用(UserNotifications.timeSensitiveSetting == .enabled,
+//   时效性是 iOS 唯一能突破摘要投递/专注模式的"精确通道")
+// - batteryOptimizationIgnored ← PowerManager.isIgnoringBatteryOptimizations → iOS 无电池优化白名单,
+//   等价替代事实 = 低电量模式未开启(ProcessInfo.isLowPowerModeEnabled == false;
+//   低电量模式会推迟后台任务与通知聚合投递, 是 iOS 唯一的"系统级省电干预")
+// - vendor / liveCardState ← LiveCardVendor + VendorCapabilityState: Android 厂商 ROM 探测,
+//   iOS 单一系统厂商无对应物(no-analog, 本结构不设字段; ActivityKit 实况活动属 reminder-live 切片)
+// - widgetBound ← AppWidgetManager.getAppWidgetIds → WidgetKit 无"已在桌面添加"公开 API(no-analog)
+// - promotedOngoingAllowed ← Android 16 promoted notifications → iOS 无对应物(no-analog)
 
 import Foundation
 
-/// 设备/app 当前状态观测事实。
-/// iOS 适配:
-///  - exactAlarmAllowed → 通知授权即"精确"(UNCalendarNotificationTrigger 分钟级, 无 SCHEDULE_EXACT_ALARM 概念)
-///  - batteryOptimizationIgnored → BGAppRefreshTaskRunner 可用性(近似)
-///  - liveCardState → iOS 无厂商 live card, 恒 .notApplicable
-///  - promotedOngoingAllowed → iOS 无 promoted ongoing(Android 16 概念), 恒 nil
-struct BackgroundReliabilitySnapshot {
-    let notificationPermissionGranted: Bool
-    /// iOS: 通知授权即允许日历触发器(等价 Android exact alarm)。
-    let exactAlarmAllowed: Bool
-    /// iOS: BGAppRefresh 可用性近似(实际由系统调度, 无白名单概念)。
-    let batteryOptimizationIgnored: Bool
-    /// 任一 widget kind 仍在桌面(WidgetCenter 当前配置非空)。
-    let widgetBound: Bool
-    /// iOS 恒 notApplicable — 无厂商 live card 生态。
-    let liveCardState: VendorCapabilityState
-    /// iOS 恒 nil — 无 promoted ongoing 概念。
-    let promotedOngoingAllowed: Bool?
-
-    func reminderTransportState() -> ReminderTransportState {
-        if !notificationPermissionGranted { return .blockedNotificationPermission }
-        if !exactAlarmAllowed { return .degradedInexactAlarm }
-        return .ready
-    }
-
-    func standardNotificationAllowed() -> Bool {
-        return notificationPermissionGranted
-    }
-
-    func backgroundPermissionFactsSatisfied() -> Bool {
-        return notificationPermissionGranted && exactAlarmAllowed && batteryOptimizationIgnored
-    }
-
-    func vendorSurfaceGuaranteed() -> Bool {
-        return liveCardState == .enabled
-    }
-}
-
-enum ReminderTransportState {
+/// ← Android ReminderTransportState: 提醒投递链路的就绪度
+enum ReminderTransportState: String {
     case ready
+    /// Android: exact alarm 未授权只能粗颗粒告警; iOS: 时效性通知不可用, 投退化为普通通道
     case degradedInexactAlarm
+    /// Android/iOS 同语义: 通知权限未授权, 一切本地提醒不可达
     case blockedNotificationPermission
 }
 
-/// 厂商 live card 能力 — iOS 端只有 notApplicable 一个实例。
-enum VendorCapabilityState {
-    case enabled
-    case disabled
-    case unknown
-    case notApplicable
+/// ← BackgroundReliabilitySnapshot.kt data class(字段名对齐, 3 项 no-analog 字段见文件头映射表)
+struct BackgroundReliabilitySnapshot {
+    let notificationPermissionGranted: Bool
+    /// ≙ Android exactAlarmAllowed
+    let timeSensitiveAllowed: Bool
+    /// ≙ Android batteryOptimizationIgnored(取反)
+    let lowPowerModeActive: Bool
+
+    /// ← reminderTransportState(): 权限 > 精确通道, 短路判定
+    func reminderTransportState() -> ReminderTransportState {
+        if !notificationPermissionGranted { return .blockedNotificationPermission }
+        if !timeSensitiveAllowed { return .degradedInexactAlarm }
+        return .ready
+    }
+
+    /// ← standardNotificationAllowed()
+    func standardNotificationAllowed() -> Bool { notificationPermissionGranted }
+
+    /// ← backgroundPermissionFactsSatisfied()
+    func backgroundPermissionFactsSatisfied() -> Bool {
+        notificationPermissionGranted && timeSensitiveAllowed && !lowPowerModeActive
+    }
 }

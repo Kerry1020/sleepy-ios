@@ -84,34 +84,34 @@ ported,UpdateManager,app/src/main/java/com/lingion/sleepy/util/UpdateManager.kt,
 ported,WeekDisplayResolver,app/src/main/java/com/lingion/sleepy/util/WeekDisplayResolver.kt,Sleepy/util/WeekDisplayResolver.swift,,
 ported,WidgetContent,app/src/main/java/com/lingion/sleepy/widget/WidgetContent.kt,Sleepy/widget/WidgetContent.swift,,
 ported,WidgetTableResolver,app/src/main/java/com/lingion/sleepy/widget/WidgetTableResolver.kt,Sleepy/widget/WidgetTableResolver.swift,,
-missing,MainActivity,app/src/main/java/com/lingion/sleepy/MainActivity.kt,,,
-missing,Migrations,app/src/main/java/com/lingion/sleepy/data/Migrations.kt,,,
-missing,SystemCalendarManager,app/src/main/java/com/lingion/sleepy/data/calendar/SystemCalendarManager.kt,,,
-missing,JwImportDraft,app/src/main/java/com/lingion/sleepy/data/jw/JwImportDraft.kt,,,
+ported,MainActivity,app/src/main/java/com/lingion/sleepy/MainActivity.kt,Sleepy/SleepyApp.swift,,app-shell slice
+ported,Migrations,app/src/main/java/com/lingion/sleepy/data/Migrations.kt,Sleepy/data/AppDatabase.swift,,iOS 无独立 Migrations.swift: Room Migrations.kt 逐条内联进 AppDatabase.migrator (v1~v11); data-migrations slice (v11.reminderEnabled)
+ported,SystemCalendarManager,app/src/main/java/com/lingion/sleepy/data/calendar/SystemCalendarManager.kt,Sleepy/data/calendar/SystemCalendarManager.swift,,cal-bg-battery slice (EventKit)
+ported,JwImportDraft,app/src/main/java/com/lingion/sleepy/data/jw/JwImportDraft.kt,Sleepy/data/jw/JwImportDraft.swift,,data-migrations slice
 missing,JwNeuParser,app/src/main/java/com/lingion/sleepy/data/jw/JwNeuParser.kt,,,
-missing,OfflineSchoolCityIndex,app/src/main/java/com/lingion/sleepy/data/jw/OfflineSchoolCityIndex.kt,,,
-missing,SchoolCityIndex,app/src/main/java/com/lingion/sleepy/data/jw/SchoolCityIndex.kt,,,
-missing,SchoolCityLocator,app/src/main/java/com/lingion/sleepy/data/jw/SchoolCityLocator.kt,,,
+ported,OfflineSchoolCityIndex,app/src/main/java/com/lingion/sleepy/data/jw/OfflineSchoolCityIndex.kt,Sleepy/data/jw/OfflineSchoolCityIndex.swift,,auto-sweep
+ported,SchoolCityIndex,app/src/main/java/com/lingion/sleepy/data/jw/SchoolCityIndex.kt,Sleepy/data/jw/SchoolCityIndex.swift,,auto-sweep
+ported,SchoolCityLocator,app/src/main/java/com/lingion/sleepy/data/jw/SchoolCityLocator.kt,Sleepy/data/jw/SchoolCityLocator.swift,,auto-sweep
 missing,SchoolLocationLookup,app/src/main/java/com/lingion/sleepy/data/jw/SchoolLocationLookup.kt,,,
-missing,SchoolLocationPolicy,app/src/main/java/com/lingion/sleepy/data/jw/SchoolLocationPolicy.kt,,,
-missing,MigrationBackup,app/src/main/java/com/lingion/sleepy/data/migration/MigrationBackup.kt,,,
-missing,MigrationDatabaseCodec,app/src/main/java/com/lingion/sleepy/data/migration/MigrationDatabaseCodec.kt,,,
-missing,MigrationExecutor,app/src/main/java/com/lingion/sleepy/data/migration/MigrationExecutor.kt,,,
-missing,MigrationPackageCodec,app/src/main/java/com/lingion/sleepy/data/migration/MigrationPackageCodec.kt,,,
-missing,MigrationPrefsCodec,app/src/main/java/com/lingion/sleepy/data/migration/MigrationPrefsCodec.kt,,,
-missing,ImportDraftRepository,app/src/main/java/com/lingion/sleepy/data/repository/ImportDraftRepository.kt,,,
+ported,SchoolLocationPolicy,app/src/main/java/com/lingion/sleepy/data/jw/SchoolLocationPolicy.kt,Sleepy/data/jw/SchoolLocationPolicy.swift,,auto-sweep
+ported,MigrationBackup,app/src/main/java/com/lingion/sleepy/data/migration/MigrationBackup.kt,Sleepy/data/migration/MigrationBackup.swift,,auto-sweep; data-migrations slice 校对对齐
+ported,MigrationDatabaseCodec,app/src/main/java/com/lingion/sleepy/data/migration/MigrationDatabaseCodec.kt,Sleepy/data/migration/MigrationDatabaseCodec.swift,,auto-sweep; data-migrations slice 校对对齐
+ported,MigrationExecutor,app/src/main/java/com/lingion/sleepy/data/migration/MigrationExecutor.kt,Sleepy/data/migration/MigrationExecutor.swift,,auto-sweep; data-migrations slice 校对对齐
+ported,MigrationPackageCodec,app/src/main/java/com/lingion/sleepy/data/migration/MigrationPackageCodec.kt,Sleepy/data/migration/MigrationPackageCodec.swift,,auto-sweep; data-migrations slice 校对对齐
+ported,MigrationPrefsCodec,app/src/main/java/com/lingion/sleepy/data/migration/MigrationPrefsCodec.kt,Sleepy/data/migration/MigrationPrefsCodec.swift,,auto-sweep; data-migrations slice 校对对齐
+ported,ImportDraftRepository,app/src/main/java/com/lingion/sleepy/data/repository/ImportDraftRepository.kt,Sleepy/data/repository/ImportDraftRepository.swift,,data-migrations slice
 missing,ColorPickerDialog,app/src/main/java/com/lingion/sleepy/ui/component/ColorPickerDialog.kt,,,
 missing,DialogActionButtons,app/src/main/java/com/lingion/sleepy/ui/component/DialogActionButtons.kt,,,
 missing,PeriodHeaderCellContent,app/src/main/java/com/lingion/sleepy/ui/component/PeriodHeaderCellContent.kt,,,
 missing,PeriodHeaderLayoutModel,app/src/main/java/com/lingion/sleepy/ui/component/PeriodHeaderLayoutModel.kt,,,
 missing,PeriodTableShareSheet,app/src/main/java/com/lingion/sleepy/ui/component/PeriodTableShareSheet.kt,,,
-missing,SleepyMotion,app/src/main/java/com/lingion/sleepy/ui/component/SleepyMotion.kt,,,
-missing,SleepyMaterialTransition,app/src/main/java/com/lingion/sleepy/ui/nav/SleepyMaterialTransition.kt,,,
-missing,SleepyNavHost,app/src/main/java/com/lingion/sleepy/ui/nav/SleepyNavHost.kt,,,
-missing,SleepyNavigator,app/src/main/java/com/lingion/sleepy/ui/nav/SleepyNavigator.kt,,,
-missing,SleepyRoutes,app/src/main/java/com/lingion/sleepy/ui/nav/SleepyRoutes.kt,,,
-missing,DiagDumpProgress,app/src/main/java/com/lingion/sleepy/ui/screen/imports/DiagDumpProgress.kt,,,
-missing,ExitDraftState,app/src/main/java/com/lingion/sleepy/ui/screen/imports/ExitDraftState.kt,,,
+ported,SleepyMotion,app/src/main/java/com/lingion/sleepy/ui/component/SleepyMotion.kt,Sleepy/ui/component/SleepyMotion.swift,,app-shell slice
+ported,SleepyMaterialTransition,app/src/main/java/com/lingion/sleepy/ui/nav/SleepyMaterialTransition.kt,Sleepy/ui/nav/SleepyMaterialTransition.swift,,app-shell slice
+ported,SleepyNavHost,app/src/main/java/com/lingion/sleepy/ui/nav/SleepyNavHost.kt,Sleepy/ui/nav/SleepyNavHost.swift,,app-shell slice
+ported,SleepyNavigator,app/src/main/java/com/lingion/sleepy/ui/nav/SleepyNavigator.kt,Sleepy/ui/nav/SleepyNavigator.swift,,app-shell slice
+ported,SleepyRoutes,app/src/main/java/com/lingion/sleepy/ui/nav/SleepyRoutes.kt,Sleepy/ui/nav/SleepyRoutes.swift,,app-shell slice
+ported,DiagDumpProgress,app/src/main/java/com/lingion/sleepy/ui/screen/imports/DiagDumpProgress.kt,Sleepy/ui/screen/imports/DiagDumpProgress.swift,,app-shell slice
+ported,ExitDraftState,app/src/main/java/com/lingion/sleepy/ui/screen/imports/ExitDraftState.kt,Sleepy/ui/screen/imports/ExitDraftState.swift,,app-shell slice
 missing,ImportDraftSheet,app/src/main/java/com/lingion/sleepy/ui/screen/imports/ImportDraftSheet.kt,,,
 missing,JwImportActivity,app/src/main/java/com/lingion/sleepy/ui/screen/imports/JwImportActivity.kt,,,
 missing,JwWebViewClientBuilder,app/src/main/java/com/lingion/sleepy/ui/screen/imports/JwWebViewClientBuilder.kt,,,
@@ -133,7 +133,7 @@ missing,WidgetEditCompactWindowSection,app/src/main/java/com/lingion/sleepy/ui/s
 missing,WidgetEditScheduleSection,app/src/main/java/com/lingion/sleepy/ui/screen/widget/WidgetEditScheduleSection.kt,,,
 missing,WidgetEditScrollSection,app/src/main/java/com/lingion/sleepy/ui/screen/widget/WidgetEditScrollSection.kt,,,
 missing,WidgetEditSection,app/src/main/java/com/lingion/sleepy/ui/screen/widget/WidgetEditSection.kt,,,
-missing,NoRippleClickable,app/src/main/java/com/lingion/sleepy/ui/theme/NoRippleClickable.kt,,,
+ported,NoRippleClickable,app/src/main/java/com/lingion/sleepy/ui/theme/NoRippleClickable.kt,Sleepy/ui/theme/NoRippleClickable.swift,,app-shell slice
 missing,HighRefreshRate,app/src/main/java/com/lingion/sleepy/util/HighRefreshRate.kt,,,
 missing,HolidayRange,app/src/main/java/com/lingion/sleepy/util/HolidayRange.kt,,,
 missing,UpdateNoticeCore,app/src/main/java/com/lingion/sleepy/util/UpdateNoticeCore.kt,,,
@@ -157,9 +157,9 @@ missing,WidgetRenderActivity,app/src/main/java/com/lingion/sleepy/widget/WidgetR
 missing,WidgetVariantInfo,app/src/main/java/com/lingion/sleepy/widget/WidgetVariantInfo.kt,,,
 missing,WidgetVendorActions,app/src/main/java/com/lingion/sleepy/widget/WidgetVendorActions.kt,,,
 missing,WidgetWeekDataLoader,app/src/main/java/com/lingion/sleepy/widget/WidgetWeekDataLoader.kt,,,
-missing,BackgroundReliabilityProbe,app/src/main/java/com/lingion/sleepy/widget/notification/BackgroundReliabilityProbe.kt,,,
-missing,BackgroundReliabilitySnapshot,app/src/main/java/com/lingion/sleepy/widget/notification/BackgroundReliabilitySnapshot.kt,,,
-missing,BatteryOptimizationIntents,app/src/main/java/com/lingion/sleepy/widget/notification/BatteryOptimizationIntents.kt,,,
+ported,BackgroundReliabilityProbe,app/src/main/java/com/lingion/sleepy/widget/notification/BackgroundReliabilityProbe.kt,Sleepy/widget/notification/BackgroundReliabilityProbe.swift,,cal-bg-battery slice (UNSettings+LowPowerMode)
+ported,BackgroundReliabilitySnapshot,app/src/main/java/com/lingion/sleepy/widget/notification/BackgroundReliabilitySnapshot.kt,Sleepy/widget/notification/BackgroundReliabilitySnapshot.swift,,cal-bg-battery slice (vendor/liveCard/widgetBound/promotedOngoing no-analog 已记录)
+ported,BatteryOptimizationIntents,app/src/main/java/com/lingion/sleepy/widget/notification/BatteryOptimizationIntents.kt,Sleepy/widget/notification/BatteryOptimizationIntents.swift,,cal-bg-battery slice (厂商省电页/电池优化白名单 no-analog → App 设置深链)
 missing,ClassDndScheduler,app/src/main/java/com/lingion/sleepy/widget/notification/ClassDndScheduler.kt,,,
 missing,CourseLiveCardState,app/src/main/java/com/lingion/sleepy/widget/notification/CourseLiveCardState.kt,,,
 missing,CourseNotificationScheduler,app/src/main/java/com/lingion/sleepy/widget/notification/CourseNotificationScheduler.kt,,,

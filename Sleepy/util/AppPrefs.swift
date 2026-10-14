@@ -588,6 +588,49 @@ final class AppPrefs {
     func isHolidayReminderOrdinaryWeekendEnabled() -> Bool { reminderFlag(Self.KEY_HOLIDAY_REMINDER_ORDINARY_WEEKEND) }
     func setHolidayReminderOrdinaryWeekendEnabled(_ v: Bool) { sp().set(v, forKey: Self.KEY_HOLIDAY_REMINDER_ORDINARY_WEEKEND) }
 
+    // ===== 系统日历导入 (v1.0.61 对齐, ← Android 同名 KEY, 默认值 1:1) =====
+    // iOS 平台映射: Android calendarId 是 Long(内容库 _ID) → iOS 用 EKCalendar.calendarIdentifier(String)。
+    //   "未选"(Android Long -1) 等价 = key 不存在(d.object(forKey:)==nil)。
+    static let KEY_CALENDAR_TARGET_ID = "calendar_import_target_id"       // String?(EKCalendar identifier) 默认 unset
+    static let KEY_CALENDAR_IMPORT_RANGE = "calendar_import_range"        // String "NEXT_WEEK"/"NEXT_MONTH"/"SEMESTER" 默认 NEXT_WEEK
+    static let KEY_CALENDAR_APPLY_TRANSFERS = "calendar_import_apply_transfers" // bool 默认 true
+    static let KEY_CALENDAR_REMINDER_MINUTES = "calendar_import_reminder_minutes" // int 默认 15, -1 = 无普通提醒
+    static let KEY_CALENDAR_FIRST_ALARM = "calendar_import_first_alarm"   // bool 默认 false
+    static let KEY_CALENDAR_FIRST_ALARM_MINUTES = "calendar_import_first_alarm_minutes" // int 默认 60
+
+    /// 目标日历 EKCalendar.calendarIdentifier; 未设置 = nil(← Android getLong 默认 -1)
+    func getCalendarTargetId() -> String? { sp().string(forKey: Self.KEY_CALENDAR_TARGET_ID) }
+    func setCalendarTargetId(_ id: String) { sp().set(id, forKey: Self.KEY_CALENDAR_TARGET_ID) }
+
+    func getCalendarImportRange() -> String {
+        sp().string(forKey: Self.KEY_CALENDAR_IMPORT_RANGE) ?? "NEXT_WEEK"
+    }
+    func setCalendarImportRange(_ range: String) {
+        precondition((["NEXT_WEEK", "NEXT_MONTH", "SEMESTER"] as Set).contains(range))
+        sp().set(range, forKey: Self.KEY_CALENDAR_IMPORT_RANGE)
+    }
+
+    func isCalendarApplyTransfers() -> Bool { sp().bool(forKey: Self.KEY_CALENDAR_APPLY_TRANSFERS) }
+    func setCalendarApplyTransfers(_ enabled: Bool) { sp().set(enabled, forKey: Self.KEY_CALENDAR_APPLY_TRANSFERS) }
+
+    /// nil = 日历事件不加普通提醒(← Android sp.getInt(KEY, 15).takeIf { it >= 0 }; -1 = 关)
+    func getCalendarReminderMinutes() -> Int? {
+        let v = sp().object(forKey: Self.KEY_CALENDAR_REMINDER_MINUTES) as? Int ?? 15
+        return v >= 0 ? v : nil
+    }
+    /// 传 nil 存 -1(关提醒); 数值钳制 0...999(← Android coerceIn)
+    func setCalendarReminderMinutes(_ minutes: Int?) {
+        sp().set(minutes.map { min(max($0, 0), 999) } ?? -1, forKey: Self.KEY_CALENDAR_REMINDER_MINUTES)
+    }
+    func isCalendarFirstAlarmEnabled() -> Bool { sp().bool(forKey: Self.KEY_CALENDAR_FIRST_ALARM) }
+    func setCalendarFirstAlarmEnabled(_ enabled: Bool) { sp().set(enabled, forKey: Self.KEY_CALENDAR_FIRST_ALARM) }
+    func getCalendarFirstAlarmMinutes() -> Int {
+        min(max(sp().object(forKey: Self.KEY_CALENDAR_FIRST_ALARM_MINUTES) as? Int ?? 60, 0), 999)
+    }
+    func setCalendarFirstAlarmMinutes(_ minutes: Int) {
+        sp().set(min(max(minutes, 0), 999), forKey: Self.KEY_CALENDAR_FIRST_ALARM_MINUTES)
+    }
+
     // ===== issue#44 调休映射(按课表隔离, 放假日→补班日) =====
 
     /// 调休映射按课表 ID 单独存 key — 各校补法不同(同一天 A 校补周四、B 校补周一),
