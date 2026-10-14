@@ -142,4 +142,65 @@ enum SleepyNativeExporter {
         // v1 简化: 暂不展开 partition; 等于课程数(当 partition 实现完备后这里同步改)
         courses.count
     }
+
+    // MARK: - v1.0.56 T11: 作息表单独导出(← exportPeriodTableShareText / exportPeriodTableJson)
+
+    /// 纯作息分享文本: 【来自Sleepy】+ 包裹 marker + P 头 + Pd/Pn 行(无 T/N/C 行)。
+    static func exportPeriodTableShareText(_ pt: PeriodTableEntity) -> String {
+        let body = buildPeriodOnlyBody(pt)
+        return "【来自Sleepy】\n作息分享：\n\n<<<SLEEPY-BEGIN>>>\n\(body)\n<<<SLEEPY-END>>>"
+    }
+
+    /// JSON 形态: {"name":"…","tableInfo":{"nodesPerDay":N,"timeList":[{"node":1,"startTime":"08:00","endTime":"08:45"},…]}}
+    /// 字段名 startTime/endTime 与 WakeUp 原生一致 — 解析端 harvest 按此收割, courses 空 + periodTable 非空走 T9 纯作息路径。
+    static func exportPeriodTableJson(_ pt: PeriodTableEntity) -> String {
+        let nodes = TimeTableUtils.parseNodes(pt.timeJson)
+        let timeArr = nodes.map { n -> String in
+            let cal = Calendar(identifier: .gregorian)
+            return "{\"node\":\(n.node),\"startTime\":\(jsonQuote(SleepyNativeFormat.fmtTime(h: cal.component(.hour, from: n.start), min: cal.component(.minute, from: n.start)))),\"endTime\":\(jsonQuote(SleepyNativeFormat.fmtTime(h: cal.component(.hour, from: n.end), min: cal.component(.minute, from: n.end))))}"
+        }.joined(separator: ",")
+        return "{\"name\":\(jsonQuote(pt.name)),\"tableInfo\":{\"nodesPerDay\":\(max(pt.nodesPerDay, 1)),\"timeList\":[\(timeArr)]}}"
+    }
+
+    private static func jsonQuote(_ s: String) -> String {
+        var sb = "\""
+        for ch in s {
+            switch ch {
+            case "\"": sb += "\\\""
+            case "\\": sb += "\\\\"
+            case "\n": sb += "\\n"
+            case "\r": sb += "\\r"
+            case "\t": sb += "\\t"
+            default:
+                if ch < " " { sb += String(format: "\\u%04x", ch.asciiValue ?? 0) }
+                else { sb.append(ch) }
+            }
+        }
+        sb += "\""
+        return sb
+    }
+
+    /// 纯作息 body: magic + P 头 + Pd/Pn 行, 无 T/N/C 行。
+    private static func buildPeriodOnlyBody(_ pt: PeriodTableEntity) -> String {
+        var sb = "#sleepy-v1\n"
+        sb += "P"
+        sb += SleepyNativeFormat.escape(pt.name)
+        sb += "|" + String(pt.id)
+        sb += "|" + String(max(pt.nodesPerDay, 1))
+        sb += "\n"
+        if SleepyNativeFormat.matchesNdPreset(pt.timeJson) {
+            sb += "Pd\n"
+        } else {
+            let cal = Calendar(identifier: .gregorian)
+            for n in TimeTableUtils.parseNodes(pt.timeJson) {
+                sb += "Pn" + String(n.node)
+                sb += "|" + fmtDate(n.start, cal: cal)
+                sb += "|" + fmtDate(n.end, cal: cal)
+                sb += "\n"
+            }
+        }
+        while sb.hasSuffix("\n") { sb.removeLast() }
+        return sb
+    }
+
 }

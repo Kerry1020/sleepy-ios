@@ -153,4 +153,18 @@ extension Calendar {
         f.dateFormat = "yyyy-MM-dd"
         return f.string(from: d)
     }
+
+    // MARK: - epochDay ↔ Date (← Kotlin LocalDate.toEpochDay/ofEpochDay; 供 widget 导航态)
+    // 取当日零点以来的天数; dateFromEpochDay 返回当日零点(语义同 LocalDate.ofEpochDay)。
+
+    static func epochDay(_ d: Date) -> Int {
+        // 当地零点距 epoch 的秒数 → 四舍五入到天(时区偏移 ≤±12h 时落在同一民事日,
+        // 语义同 Kotlin LocalDate.toEpochDay 的 UTC 天序)
+        let start = DateUtils.isoCalendar.startOfDay(for: d)
+        return Int(floor(start.timeIntervalSince1970 / 86400.0 + 0.5))
+    }
+
+    static func dateFromEpochDay(_ epochDay: Int) -> Date {
+        Date(timeIntervalSince1970: TimeInterval(epochDay) * 86400.0)
+    }
 }

@@ -56,12 +56,14 @@ struct PillNavigationBar: View {
     }
 }
 
-/// Tab 数据(← Android PillNavItemSpec {icon, label} — v1 兼容垫片)
+/// Tab 数据(← Android PillNavItemSpec {icon, label, badge} — v1 兼容垫片)
 struct PillNavItemData: Identifiable {
     let id: String
     let icon: String
     let label: String
     let selected: Bool
+    /// ← Android badge (v1.0.60): 更新提醒可见时 Mine tab 图标右上 7dp primary 圆点
+    var badge: Bool = false
     let onClick: () -> Void
 }
 
@@ -204,6 +206,15 @@ private struct DockedBar: View {
                             to: colors.onSurface,
                             fraction: Double(iconCov)))
                 )
+                // ← Android badge (v1.0.60): 图标右上 7dp primary 圆点
+                .overlay(alignment: .topTrailing) {
+                    if item.badge {
+                        Circle()
+                            .fill(colors.primary)
+                            .frame(width: 7, height: 7)
+                            .offset(x: 2, y: -2)
+                    }
+                }
             // label(测字符矩形 + 左缘)
             Text(item.label)
                 .font(.system(size: DockedSpec.labelFontSize,
@@ -345,6 +356,15 @@ private struct FloatingBar: View {
             Image(systemName: item.icon)
                 .font(.system(size: DockSpec.iconSize))
                 .foregroundColor(color)
+                // ← Android badge (v1.0.60): 图标右上 7dp primary 圆点(浮动分支同款)
+                .overlay(alignment: .topTrailing) {
+                    if item.badge {
+                        Circle()
+                            .fill(colors.primary)
+                            .frame(width: 7, height: 7)
+                            .offset(x: 2, y: -2)
+                    }
+                }
             Text(item.label)
                 .font(.system(size: DockSpec.labelFontSize, weight: .medium))
                 .foregroundColor(color)
