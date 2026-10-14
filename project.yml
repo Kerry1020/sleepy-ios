@@ -75,6 +75,10 @@ targets:
         UILaunchStoryboardName: LaunchScreen
         # ★ 城市定位推荐同城学校入口 — 缺此键 → CLLocationManager 授权弹窗直接崩溃
         NSLocationWhenInUseUsageDescription: 用于根据当前位置推荐同城学校入口
+        # ★ 系统日历导入(slice-cal-bg-battery) — 缺此键 → EKEventStore 授权弹窗直接崩溃
+        #   pre-iOS17 走 writeOnly 读 NSCalendarsUsageDescription; iOS17+ requestFullAccessToEvents 读 FullAccess 键
+        NSCalendarsUsageDescription: 用于列出可写日历并把课程表写入系统日历
+        NSCalendarsFullAccessUsageDescription: 用于把课程表写入系统日历并管理已导入事件
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         UISupportedInterfaceOrientations:
@@ -142,6 +146,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.lingion.sleepy.ios.widget
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: "NO"
+        # 共源编译条件: Sleepy/widget/** 双 target 均编, extension 进程内禁 app-only 分支
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: WIDGET_EXT
 
   SleepyTests:
     type: bundle.unit-test
