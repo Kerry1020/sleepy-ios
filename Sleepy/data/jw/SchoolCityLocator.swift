@@ -25,6 +25,34 @@ final class SchoolCityLocator: NSObject, CLLocationManagerDelegate {
         locationManager.delegate = self
     }
 
+    // MARK: - callback 式授权 (SchoolSelectScreen 用 — 授权回调里直接续定位)
+
+    private var permissionCompletion: ((Bool) -> Void)?
+
+    /// 请求 WhenInUse 授权; 已授权则 completion(true) 同步回调。
+    /// completion 传 nil = 清掉滞留回调(onDisappear 防泄漏)。
+    func requestPermission(completion: ((Bool) -> Void)?) {
+        guard let completion = completion else {
+            permissionCompletion = nil
+            return
+        }
+        let status: CLAuthorizationStatus
+        if #available(iOS 14.0, *) {
+            status = locationManager.authorizationStatus
+        } else {
+            status = CLLocationManager.authorizationStatus()
+        }
+        switch status {
+        case .authorizedWhenInUse, .authorizedAlways:
+            completion(true)
+        case .notDetermined:
+            permissionCompletion = completion
+            locationManager.requestWhenInUseAuthorization()
+        default:
+            completion(false)
+        }
+    }
+
     /// 单次前台定位 → 城市。坐标永不落盘、永不记日志。
     func locate() async -> SchoolLocationState {
         // 权限模式判定 — coarse/在 iOS 端 = whenInUse 已授权;fine = 也只有 whenInUse
@@ -136,9 +164,14 @@ final class SchoolCityLocator: NSObject, CLLocationManagerDelegate {
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         if #available(iOS 14.0, *) {
-            if let cont = authorizationContinuation, manager.authorizationStatus != .notDetermined {
+            let status = manager.authorizationStatus
+            if let cont = authorizationContinuation, status != .notDetermined {
                 authorizationContinuation = nil
-                cont.resume(returning: manager.authorizationStatus)
+                cont.resume(returning: status)
+            }
+            if let completion = permissionCompletion, status != .notDetermined {
+                permissionCompletion = nil
+                completion(status == .authorizedWhenInUse || status == .authorizedAlways)
             }
         }
     }

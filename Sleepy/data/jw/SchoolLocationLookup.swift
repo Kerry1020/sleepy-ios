@@ -8,7 +8,7 @@
 
 import Foundation
 
-enum SchoolLocationState {
+enum SchoolLocationState: Equatable {
     case idle
     case locating
     case ready(city: String)

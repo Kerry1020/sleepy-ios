@@ -65,7 +65,7 @@ final class JwImportViewModel: ObservableObject {
                 var cityIndex: [String: [String]] = [:]
                 if let cityUrl = Bundle.main.url(forResource: "school_cities", withExtension: "json"),
                    let cityText = try? String(contentsOf: cityUrl, encoding: .utf8) {
-                    cityIndex = SchoolCityIndex.parse(cityText)
+                    cityIndex = (try? SchoolCityIndex.parse(cityText)) ?? [:]
                 }
                 let list = Self.parseSchoolsJson(text).map { info -> JwSchoolInfo in
                     var v = info
