@@ -86,7 +86,7 @@ ported,WidgetContent,app/src/main/java/com/lingion/sleepy/widget/WidgetContent.k
 ported,WidgetTableResolver,app/src/main/java/com/lingion/sleepy/widget/WidgetTableResolver.kt,Sleepy/widget/WidgetTableResolver.swift,,
 missing,MainActivity,app/src/main/java/com/lingion/sleepy/MainActivity.kt,,,
 missing,Migrations,app/src/main/java/com/lingion/sleepy/data/Migrations.kt,,,
-missing,SystemCalendarManager,app/src/main/java/com/lingion/sleepy/data/calendar/SystemCalendarManager.kt,,,
+ported,SystemCalendarManager,app/src/main/java/com/lingion/sleepy/data/calendar/SystemCalendarManager.kt,Sleepy/data/calendar/SystemCalendarManager.swift,,cal-bg-battery slice (EventKit)
 missing,JwImportDraft,app/src/main/java/com/lingion/sleepy/data/jw/JwImportDraft.kt,,,
 missing,JwNeuParser,app/src/main/java/com/lingion/sleepy/data/jw/JwNeuParser.kt,,,
 ported,OfflineSchoolCityIndex,app/src/main/java/com/lingion/sleepy/data/jw/OfflineSchoolCityIndex.kt,Sleepy/data/jw/OfflineSchoolCityIndex.swift,,auto-sweep
@@ -157,9 +157,9 @@ missing,WidgetRenderActivity,app/src/main/java/com/lingion/sleepy/widget/WidgetR
 missing,WidgetVariantInfo,app/src/main/java/com/lingion/sleepy/widget/WidgetVariantInfo.kt,,,
 missing,WidgetVendorActions,app/src/main/java/com/lingion/sleepy/widget/WidgetVendorActions.kt,,,
 missing,WidgetWeekDataLoader,app/src/main/java/com/lingion/sleepy/widget/WidgetWeekDataLoader.kt,,,
-missing,BackgroundReliabilityProbe,app/src/main/java/com/lingion/sleepy/widget/notification/BackgroundReliabilityProbe.kt,,,
-missing,BackgroundReliabilitySnapshot,app/src/main/java/com/lingion/sleepy/widget/notification/BackgroundReliabilitySnapshot.kt,,,
-missing,BatteryOptimizationIntents,app/src/main/java/com/lingion/sleepy/widget/notification/BatteryOptimizationIntents.kt,,,
+ported,BackgroundReliabilityProbe,app/src/main/java/com/lingion/sleepy/widget/notification/BackgroundReliabilityProbe.kt,Sleepy/widget/notification/BackgroundReliabilityProbe.swift,,cal-bg-battery slice (UNSettings+LowPowerMode)
+ported,BackgroundReliabilitySnapshot,app/src/main/java/com/lingion/sleepy/widget/notification/BackgroundReliabilitySnapshot.kt,Sleepy/widget/notification/BackgroundReliabilitySnapshot.swift,,cal-bg-battery slice (vendor/liveCard/widgetBound/promotedOngoing no-analog 已记录)
+ported,BatteryOptimizationIntents,app/src/main/java/com/lingion/sleepy/widget/notification/BatteryOptimizationIntents.kt,Sleepy/widget/notification/BatteryOptimizationIntents.swift,,cal-bg-battery slice (厂商省电页/电池优化白名单 no-analog → App 设置深链)
 missing,ClassDndScheduler,app/src/main/java/com/lingion/sleepy/widget/notification/ClassDndScheduler.kt,,,
 missing,CourseLiveCardState,app/src/main/java/com/lingion/sleepy/widget/notification/CourseLiveCardState.kt,,,
 missing,CourseNotificationScheduler,app/src/main/java/com/lingion/sleepy/widget/notification/CourseNotificationScheduler.kt,,,
