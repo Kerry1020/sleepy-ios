@@ -28,6 +28,13 @@ struct WidgetData {
     var themeMode: String? = nil
     /// ★ 学期状态(学期外时 Today 渲染状态文案不渲染课程)
     var semesterStatus: DateUtils.SemesterStatus = .inRange
+    /// 是否「今天」— false = 导航态/跳转态 (← v1.0.60 WidgetData.isToday; 标题与
+    /// 时间窗语义都依赖它: 非今天走 HEAD 模式从头部截断)
+    var isToday: Bool = true
+    /// 节假日/周末灰显 (← v1.0.60 WidgetData.isGrey)
+    var isGrey: Bool = false
+    /// 自动跳最近有课日状态 (← v1.0.60 WidgetData.weekDisplayStatus)
+    var weekDisplayStatus: WeekDisplayStatus = .normal
 
     var dayName: String { DateUtils.localizedDay(DateUtils.todayDayOfWeek(today: date)) }
     var dateLabel: String { DateUtils.shortDateSlash(date) }
@@ -103,6 +110,8 @@ struct DayData {
     let dayOfWeek: Int
     let courses: [CourseEntity]
     let timeJson: String
+    /// 节假日/周末灰显 (← v1.0.60 DayData.isGrey; compact 窗口列/WeekList 列渲染用)
+    var isGrey: Bool = false
 
     var dayLabel: String { DateUtils.shortDate(date) }
     var dayName: String { DateUtils.localizedDay(dayOfWeek) }
@@ -123,6 +132,11 @@ struct WeekData {
     var visibleDays: Set<Int> = Set(1...7)
     /// ★ 学期状态(学期外时列头加状态行)
     var semesterStatus: DateUtils.SemesterStatus = .inRange
+    /// 最小档三天窗口 (← v1.0.60 WeekData.compactWindow): 真实日期的 ≤3 列,
+    /// 「列表/周视图 · 小」compact 脸用 (compactShownDays 优先口径, 可跨上下周)
+    var compactWindow: [DayData] = []
+    /// 当前展示周状态 (← v1.0.60 WeekData.weekDisplayStatus)
+    var weekDisplayStatus: WeekDisplayStatus = .normal
 }
 
 /// 两天视图数据 ← TwoDayData

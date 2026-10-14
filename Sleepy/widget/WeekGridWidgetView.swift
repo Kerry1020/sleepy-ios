@@ -594,19 +594,11 @@ private struct WeekGridMinimumTodayFace: View {
                                                      nowMin: WidgetWindows.nowMinutes()))
     }
 
-    // ← weekGridMinimumTodayData 逐行: 今日 DayData → WidgetData
+    // ← weekGridMinimumTodayData 逐行: 今日 DayData → WidgetData。
+    // v1.0.60 单一事实源已迁至 WidgetCompactHelpers.weekGridMinimumTodayData
+    // (← WidgetBitmapRenderers.kt 同名函数, NEAREST_BUSY_DAY 时 targetDate = 最早有课日)。
     static func minimumTodayData(_ data: WeekData) -> WidgetData {
-        let timeJson = data.days.first?.timeJson ?? ""
-        let todayDow = DateUtils.todayDayOfWeek(today: Date())
-        let todayDay = data.days.first { $0.dayOfWeek == todayDow }
-        return WidgetData(date: Date(),
-                          courses: todayDay?.courses ?? [],
-                          timeJson: timeJson,
-                          hasTable: data.hasTable,
-                          isDark: data.isDark,
-                          themeKey: data.themeKey,
-                          themeMode: data.themeMode,
-                          semesterStatus: data.semesterStatus)
+        WidgetCompactHelpers.weekGridMinimumTodayData(data, today: Date())
     }
 }
 
