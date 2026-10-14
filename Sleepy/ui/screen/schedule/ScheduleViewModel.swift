@@ -344,6 +344,13 @@ extension ScheduleViewModel {
         return insertPeriodTable(name: unique, timeJson: timeJson, nodesPerDay: nodesPerDay, smartConfigJson: smartConfigJson)
     }
 
+    /// issue#40: 修改共享时间节次表内容 — 全部绑定课表立即生效, 课程行零改动(← Android updatePeriodTableContent)
+    /// repo.savePeriodTable 是同步方法; 行为与 updateTable 保持一致 — 在 fire-and-forget Task 内执行,
+    /// 失败吞(→ repo update 抛错时上层按 updateTable 同语义吞掉, 数据层不会半写)。
+    func updatePeriodTableContent(_ table: PeriodTableEntity) {
+        Task { try? repo.savePeriodTable(table) }
+    }
+
     /// 删除时间节次表(被引用时 false, UI 提示先改绑)。
     @discardableResult
     func deletePeriodTable(id: Int64) -> Bool {

@@ -170,6 +170,8 @@ private struct SettingsItem: View {
     let label: String
     let identifier: String       // ← G5: UI 测试稳定锚点
     let onClick: () -> Void
+    /// ← Android highlighted: 更新提醒可见时关于行底色 primary 10% (v1.0.60 差量)
+    var highlighted: Bool = false
 
     var body: some View {
         Button(action: onClick) {
@@ -187,6 +189,9 @@ private struct SettingsItem: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
+            .frame(maxWidth: .infinity)
+            // ← Android: if (highlighted) primary.copy(alpha=0.10f) else surfaceContainer
+            .background(highlighted ? colors.primary.opacity(0.10) : Color.clear)
         }
         .buttonStyle(SleepyButtonStyle())
         .accessibilityIdentifier(identifier)
@@ -244,6 +249,8 @@ private struct SettingsNavList: View {
 
 private struct SettingsNavListB: View {
     @Environment(\.localWakeUpColors) private var colors
+    // ← v1.0.60 差量: 关于行 highlighted = updateNoticeVisible (UpdateNotifier.noticeVisible)
+    @ObservedObject private var updateNotifier = UpdateNotifier.shared
     let onOpenAppearance: () -> Void
     let onOpenGeneral: () -> Void
     let onOpenAbout: () -> Void
@@ -257,7 +264,8 @@ private struct SettingsNavListB: View {
                          identifier: "mine_general", onClick: onOpenGeneral)
             HDivider()
             SettingsItem(icon: "info.circle", label: L10n.format("about_title"),
-                         identifier: "mine_about", onClick: onOpenAbout)
+                         identifier: "mine_about", onClick: onOpenAbout,
+                         highlighted: updateNotifier.noticeVisible)
         }
     }
 }
