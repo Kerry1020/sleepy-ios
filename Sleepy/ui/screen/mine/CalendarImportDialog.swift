@@ -274,7 +274,7 @@ struct CalendarImportDialog: View {
                         .font(.caption)
                         .foregroundColor(colors.onSurfaceVariant)
                 }
-                ForEach(Array(p.rows.prefix(8))) { row in
+                ForEach(Array(p.rows.prefix(8)), id: \.date) { row in
                     Text("\(Self.previewDateFormatter.string(from: row.date))  \(row.start)–\(row.end)  \(row.courseName)\(Self.marks(for: row))")
                         .font(.caption)
                 }
@@ -355,7 +355,7 @@ struct CalendarImportDialog: View {
     }
 
     private func loadState() {
-        selectedCalendarId = prefs.getCalendarTargetId()
+        selectedCalendarId = prefs.getCalendarTargetId() ?? ""
         range = CalendarImportRange(rawValue: prefs.getCalendarImportRange()) ?? .NEXT_WEEK
         transfersEnabled = prefs.isCalendarApplyTransfers()
         reminderEnabled = prefs.getCalendarReminderMinutes() != nil

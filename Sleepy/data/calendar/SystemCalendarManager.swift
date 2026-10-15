@@ -21,20 +21,54 @@ import CryptoKit
 
 // MARK: - 选项 / 预览 / 结果 (与 Android data class 同名同字段)
 
+/// 日历导入范围枚举 (← Android CalendarImportRange enum)
+enum CalendarImportRange: String, CaseIterable, Identifiable {
+    case NEXT_WEEK = "NEXT_WEEK"
+    case NEXT_MONTH = "NEXT_MONTH"
+    case SEMESTER = "SEMESTER"
+    var id: String { rawValue }
+}
+
+/// 可写日历信息 (← Android SystemCalendarInfo data class)
+struct SystemCalendarInfo: Identifiable {
+    let id: String          // EKCalendar.calendarIdentifier
+    let displayName: String // EKCalendar.title
+    let accountName: String // EKCalendar.source.title
+}
+
 struct CalendarImportOptions {
     /// 目标 EKCalendar.calendarIdentifier (← Android calendarId: Long, 平台映射)
     var calendarId: String
-    /// "NEXT_WEEK" / "NEXT_MONTH" / "SEMESTER"
-    var range: String
-    var applyTransfers: Bool
+    /// 导入范围
+    var range: CalendarImportRange
+    var applyHolidayTransfers: Bool
     /// 普通提醒提前分钟; nil = 不加普通提醒 (← Android reminderMinutes: Int?)
     var reminderMinutes: Int?
     var firstPeriodAlarmEnabled: Bool
     /// 首次课强制提醒提前分钟 (← Android firstPeriodAlarmMinutes)
     var firstPeriodAlarmMinutes: Int
+
+    init(
+        calendarId: String,
+        range: CalendarImportRange = .NEXT_WEEK,
+        applyHolidayTransfers: Bool = false,
+        reminderMinutes: Int? = nil,
+        firstPeriodAlarmEnabled: Bool = false,
+        firstPeriodAlarmMinutes: Int = 60
+    ) {
+        self.calendarId = calendarId
+        self.range = range
+        self.applyHolidayTransfers = applyHolidayTransfers
+        self.reminderMinutes = reminderMinutes
+        self.firstPeriodAlarmEnabled = firstPeriodAlarmEnabled
+        self.firstPeriodAlarmMinutes = firstPeriodAlarmMinutes
+    }
 }
 
 enum CalendarImportError: Error { case permissionDenied, noWritableCalendar }
+
+/// ← Android CalendarImportPreviewRow (UI 预览行, 与 CalendarPreviewRow 同构)
+typealias CalendarImportPreviewRow = CalendarPreviewRow
 
 struct CalendarPreviewRow {
     var date: Date
@@ -46,11 +80,16 @@ struct CalendarPreviewRow {
     var week: Int
     var transferred: Bool
     var firstPeriodAlarm: Bool
+
+    /// UI convenience: display start time
+    var start: String { startHHmm }
+    /// UI convenience: display end time
+    var end: String { endHHmm }
 }
 
 struct CalendarImportPreview {
     var rows: [CalendarPreviewRow]
-    var invalid: Int
+    var skippedInvalidTime: Int
     var from: Date
     var until: Date
 }
@@ -61,12 +100,14 @@ struct CalendarImportResult {
     var unchanged: Int
     var skippedEdited: Int
     /// 期望闹钟(.alarm)但 16.4 系统默认提醒呈现的计数 (← Android alarmFallback; 平台裁决: EKAlarm 无闹钟类型)
-    var skippedInvalid: Int
+    var skippedInvalidTime: Int
     var alarmFallback: Int
     var errors: Int
 }
 
 final class SystemCalendarManager {
+
+    static let shared = SystemCalendarManager()
 
     private let store = EKEventStore()
     private let markerPrefix = "Sleepy import key:"
@@ -114,24 +155,30 @@ final class SystemCalendarManager {
 
     /// ← Android findWritableCalendar: 可写(AccessLevel>=CONTRIBUTOR & VISIBLE) && 非 calDAV
     /// (16.4 无 isSelectable; 平台等价 = allowsContentModifications 且排除 .local/.calDAV 源)
-    func writableCalendars() -> [EKCalendar] {
-        store.calendars(for: .event).filter {
+    static func writableCalendars() -> [SystemCalendarInfo] {
+        shared.store.calendars(for: .event).filter {
             $0.allowsContentModifications && $0.type != .local && $0.type != .calDAV
+        }.map { cal in
+            SystemCalendarInfo(
+                id: cal.calendarIdentifier,
+                displayName: cal.title,
+                accountName: cal.source.title
+            )
         }
     }
 
     // MARK: - 日期区间 (← Android selectedDateRange, 公式逐一对齐)
 
-    func selectedDateRange(table: TimeTableEntity, range: String, today: Date) -> (start: Date, end: Date) {
+    static func selectedDateRange(table: TimeTableEntity, range: CalendarImportRange, today: Date) -> (start: Date, end: Date) {
         let cal = DateUtils.isoCalendar
         let tableStart = DateUtils.parseDate(table.startDate) ?? today
         let semesterStart = Calendar.isoMondayOfWeek(tableStart)
         let semesterEnd = Calendar.isoAddDays(semesterStart, 7 * table.maxWeek)
         let requestedEnd: Date
         switch range {
-        case "NEXT_MONTH": requestedEnd = cal.date(byAdding: .month, value: 1, to: today) ?? today
-        case "SEMESTER": requestedEnd = semesterEnd
-        default: requestedEnd = Calendar.isoAddDays(today, 7)
+        case .NEXT_MONTH: requestedEnd = cal.date(byAdding: .month, value: 1, to: today) ?? today
+        case .SEMESTER: requestedEnd = semesterEnd
+        case .NEXT_WEEK: requestedEnd = Calendar.isoAddDays(today, 7)
         }
         return (max(today, semesterStart), min(requestedEnd, semesterEnd))
     }
@@ -139,15 +186,15 @@ final class SystemCalendarManager {
     // MARK: - 预览
 
     /// ← Android buildPreview(table, courses, options, today)
-    func buildPreview(
+    static func buildPreview(
         table: TimeTableEntity,
         courses: [CourseEntity],
-        options: CalendarImportOptions,
-        today: Date
+        options: CalendarImportOptions
     ) -> CalendarImportPreview {
+        let today = Date()
         let (from, until) = selectedDateRange(table: table, range: options.range, today: today)
-        let (specs, invalid) = buildEventSpecs(table: table, courses: courses, options: options, from: from, until: until)
-        let alarmKeys = firstPeriodAlarmKeys(specs)
+        let (specs, invalid) = shared.buildEventSpecs(table: table, courses: courses, options: options, from: from, until: until)
+        let alarmKeys = shared.firstPeriodAlarmKeys(specs)
         let rows = specs.map { spec -> CalendarPreviewRow in
             CalendarPreviewRow(
                 date: spec.date,
@@ -161,7 +208,7 @@ final class SystemCalendarManager {
                 firstPeriodAlarm: alarmKeys[spec.date] == spec.key
             )
         }
-        return CalendarImportPreview(rows: rows, invalid: invalid, from: from, until: until)
+        return CalendarImportPreview(rows: rows, skippedInvalidTime: invalid, from: from, until: until)
     }
 
     /// 生成事件 spec (← Android buildEventSpecs: 逐日 调课映射 + 周过滤 + 节次→时间 + marker 描述)
@@ -175,7 +222,7 @@ final class SystemCalendarManager {
         var invalid = 0
         var specs: [EventSpec] = []
         guard from < until else { return ([], 0) }
-        let transfers = options.applyTransfers
+        let transfers = options.applyHolidayTransfers
             ? AppPrefs.shared.getHolidayTransfers(table.id)
             : []
         var day = DateUtils.dayStart(from)
@@ -367,7 +414,7 @@ final class SystemCalendarManager {
             updated: updated,
             unchanged: unchanged,
             skippedEdited: skippedEdited,
-            skippedInvalid: skippedInvalid,
+            skippedInvalidTime: skippedInvalid,
             alarmFallback: alarmFallback,
             errors: errors
         )
@@ -375,11 +422,11 @@ final class SystemCalendarManager {
 
     // MARK: - 删除已管理事件 (← Android deleteManagedForTable: 指纹不一致 = 用户改过 → 保留)
 
-    /// 返回 (deleted, edited, missing)
-    func deleteManagedForTable(tableId: Int64, calendarId: String? = nil) -> (deleted: Int, edited: Int, missing: Int) {
+    /// 返回 (deleted, skippedEdited, missing) — 与 Android CalendarDeleteResult 同构
+    func deleteManagedForTable(tableId: Int64, calendarId: String? = nil) -> (deleted: Int, skippedEdited: Int, missing: Int) {
         guard hasCalendarPermissions() else { return (0, 0, 0) }
         let db = AppDatabase.getShared()
-        var deleted = 0, edited = 0, missing = 0
+        var deleted = 0, skippedEdited = 0, missing = 0
         for record in (try? db.calendarImportRecordDao.forTable(tableId)) ?? [] {
             if let cid = calendarId, record.calendarId != cid { continue }
             guard let event = readEvent(eventId: record.eventId) else {
@@ -389,7 +436,7 @@ final class SystemCalendarManager {
             }
             let reminders = readReminder(eventId: event.calendarItemExternalIdentifier) ?? []
             guard fingerprint(event, reminders) == record.fingerprint else {
-                edited += 1  // 用户改过 → 事件与记录都保留
+                skippedEdited += 1  // 用户改过 → 事件与记录都保留
                 continue
             }
             // 16.4: save/remove 的 label 顺序 span: 先于 commit:, 且可能 throw → try?
@@ -398,11 +445,42 @@ final class SystemCalendarManager {
                 deleted += 1
             }
         }
-        return (deleted, edited, missing)
+        return (deleted, skippedEdited, missing)
     }
 
     func deleteAllForTable(tableId: Int64) throws {
         try AppDatabase.getShared().calendarImportRecordDao.deleteForTable(tableId)
+    }
+
+    // MARK: - 静态接口 (UI 直接调用 SystemCalendarManager.import / buildPreview / deleteManagedForTable)
+
+    /// ← Android import: 计算区间 → 导入 → 返回结果
+    @discardableResult
+    static func `import`(
+        table: TimeTableEntity,
+        courses: [CourseEntity],
+        options: CalendarImportOptions,
+        batchId: String
+    ) async -> CalendarImportResult {
+        let today = Date()
+        let (from, until) = selectedDateRange(table: table, range: options.range, today: today)
+        do {
+            return try shared.importCourses(table: table, courses: courses, options: options, from: from, until: until)
+        } catch {
+            // permissionDenied / noWritableCalendar → 返回零值结果
+            return CalendarImportResult(
+                inserted: 0, updated: 0, unchanged: 0,
+                skippedEdited: 0, skippedInvalidTime: 0,
+                alarmFallback: 0, errors: 0
+            )
+        }
+    }
+
+    /// ← Android deleteManagedForTable (异步包装)
+    static func deleteManagedForTable(tableId: Int64) async -> (deleted: Int, skippedEdited: Int, missing: Int) {
+        await withCheckedContinuation { cont in
+            cont.resume(returning: shared.deleteManagedForTable(tableId: tableId))
+        }
     }
 
     // MARK: - 事件读写 (记录 eventId = EKCalendarItem.externalIdentifier, String)

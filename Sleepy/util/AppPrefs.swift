@@ -26,13 +26,6 @@ final class AppPrefs {
     static let DEFAULT_TOMORROW_REMINDER_ENABLED = false
     static let DEFAULT_TOMORROW_REMINDER_TIME = "22:00"
     static let KEY_CLASS_DND_ENABLED = "class_dnd_enabled"                     // bool default false — 上课自动勿扰
-    // ← v1.0.60 系统日历导入
-    static let KEY_CALENDAR_TARGET_ID = "calendar_import_target_id"
-    static let KEY_CALENDAR_IMPORT_RANGE = "calendar_import_range"
-    static let KEY_CALENDAR_APPLY_TRANSFERS = "calendar_import_apply_transfers"
-    static let KEY_CALENDAR_REMINDER_MINUTES = "calendar_import_reminder_minutes"
-    static let KEY_CALENDAR_FIRST_ALARM = "calendar_import_first_alarm"
-    static let KEY_CALENDAR_FIRST_ALARM_MINUTES = "calendar_import_first_alarm_minutes"
     static let KEY_BEFORE_CLASS_FLUID_PRIMARY = "before_class_fluid_primary" // name/time/room
     static let KEY_THEME = "theme_key"
     static let KEY_LANG = "language"
@@ -199,44 +192,7 @@ final class AppPrefs {
     }
     func setClassDndEnabled(_ v: Bool) { sp().set(v, forKey: Self.KEY_CLASS_DND_ENABLED) }
 
-    // MARK: - v1.0.60 系统日历导入
-
-    func getCalendarTargetId() -> String {
-        sp().string(forKey: Self.KEY_CALENDAR_TARGET_ID) ?? ""
-    }
-    func setCalendarTargetId(_ id: String) { sp().set(id, forKey: Self.KEY_CALENDAR_TARGET_ID) }
-
-    func getCalendarImportRange() -> String {
-        sp().string(forKey: Self.KEY_CALENDAR_IMPORT_RANGE) ?? "NEXT_WEEK"
-    }
-    func setCalendarImportRange(_ v: String) { sp().set(v, forKey: Self.KEY_CALENDAR_IMPORT_RANGE) }
-
-    func isCalendarApplyTransfers() -> Bool {
-        sp().bool(forKey: Self.KEY_CALENDAR_APPLY_TRANSFERS)
-    }
-    func setCalendarApplyTransfers(_ v: Bool) { sp().set(v, forKey: Self.KEY_CALENDAR_APPLY_TRANSFERS) }
-
-    func getCalendarReminderMinutes() -> Int? {
-        guard sp().object(forKey: Self.KEY_CALENDAR_REMINDER_MINUTES) != nil else { return nil }
-        return sp().integer(forKey: Self.KEY_CALENDAR_REMINDER_MINUTES)
-    }
-    func setCalendarReminderMinutes(_ v: Int?) {
-        guard let v = v else {
-            sp().removeObject(forKey: Self.KEY_CALENDAR_REMINDER_MINUTES)
-            return
-        }
-        sp().set(v, forKey: Self.KEY_CALENDAR_REMINDER_MINUTES)
-    }
-
-    func isCalendarFirstAlarmEnabled() -> Bool {
-        sp().bool(forKey: Self.KEY_CALENDAR_FIRST_ALARM)
-    }
-    func setCalendarFirstAlarmEnabled(_ v: Bool) { sp().set(v, forKey: Self.KEY_CALENDAR_FIRST_ALARM) }
-
-    func getCalendarFirstAlarmMinutes() -> Int {
-        sp().object(forKey: Self.KEY_CALENDAR_FIRST_ALARM_MINUTES) as? Int ?? 60
-    }
-    func setCalendarFirstAlarmMinutes(_ v: Int) { sp().set(v, forKey: Self.KEY_CALENDAR_FIRST_ALARM_MINUTES) }
+    // MARK: - v1.0.61 系统日历导入 (对齐)
 
     func isBeforeClassBannerEnabled() -> Bool {
         sp().object(forKey: Self.KEY_BEFORE_CLASS_BANNER) as? Bool ?? true
