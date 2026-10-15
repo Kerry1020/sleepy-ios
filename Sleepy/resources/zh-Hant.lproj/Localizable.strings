@@ -1026,3 +1026,10 @@
 "widget_week_list_wide_label" = "週列表 · 中";
 "widget_week_view_description" = "按週檢視顯示課程安排";
 "widget_week_view_small_description" = "以緊湊週檢視顯示課程";
+
+"timeslot_longpress_to_reorder" = "長按整行可上下拖拽排序";
+"timeslot_row_blank_hint" = "空白行可拖到任意位置";
+"timeslot_drop_invalid" = "目標位置不合法，時間順序不正確";
+"timeslot_drop_success" = "已重排第 %1$d 節到第 %2$d 位";
+"timeslot_reorder_in_progress" = "排序中";
+"timeslot_row_drop_target" = "插入位置";

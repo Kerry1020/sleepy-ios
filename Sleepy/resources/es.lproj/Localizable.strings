@@ -1026,3 +1026,10 @@
 "widget_week_list_wide_label" = "Lista semanal · Mediano";
 "widget_week_view_description" = "Clases de esta semana en vista semanal";
 "widget_week_view_small_description" = "Clases de esta semana en vista semanal compacta";
+
+"timeslot_longpress_to_reorder" = "Mantén pulsada una fila para arrastrar y reorganizar";
+"timeslot_row_blank_hint" = "Las filas en blanco se pueden arrastrar a cualquier posición";
+"timeslot_drop_invalid" = "Posición de colocación no válida: el orden de tiempo sería incorrecto";
+"timeslot_drop_success" = "Reordenado período %1$d a posición %2$d";
+"timeslot_reorder_in_progress" = "Reordenando";
+"timeslot_row_drop_target" = "Soltar aquí";

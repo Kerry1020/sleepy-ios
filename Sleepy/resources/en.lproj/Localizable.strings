@@ -1026,3 +1026,10 @@
 "widget_week_list_wide_label" = "Week List · Medium";
 "widget_week_view_description" = "This week\\'s classes in a week view";
 "widget_week_view_small_description" = "This week\\'s classes in a compact week view";
+
+"timeslot_longpress_to_reorder" = "Long press a row to drag and reorder";
+"timeslot_row_blank_hint" = "Blank rows can be dragged to any position";
+"timeslot_drop_invalid" = "Invalid drop position: time order would be incorrect";
+"timeslot_drop_success" = "Reordered period %1$d to position %2$d";
+"timeslot_reorder_in_progress" = "Reordering";
+"timeslot_row_drop_target" = "Drop here";

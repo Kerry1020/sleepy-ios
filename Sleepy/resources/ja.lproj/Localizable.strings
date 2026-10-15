@@ -1026,3 +1026,10 @@
 "widget_week_list_wide_label" = "週リスト · 中";
 "widget_week_view_description" = "今週の授業を週ビューで表示";
 "widget_week_view_small_description" = "今週の授業をコンパクトな週ビューで表示";
+
+"timeslot_longpress_to_reorder" = "長押しで行を上下にドラッグして並び替え";
+"timeslot_row_blank_hint" = "空白行は任意の位置にドラッグできます";
+"timeslot_drop_invalid" = "ドロップ位置が無効です: 時間順序が壊れます";
+"timeslot_drop_success" = "第 %1$d 節を位置 %2$d に並び替えました";
+"timeslot_reorder_in_progress" = "並び替え中";
+"timeslot_row_drop_target" = "ここにドロップ";
