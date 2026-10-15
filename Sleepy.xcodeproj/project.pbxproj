@@ -373,6 +373,63 @@
 		FEF949C926B1F01CC544F917 /* SchoolCityLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EC9DB82F5933D70A97ED0DE /* SchoolCityLocator.swift */; };
 		FF205A3D7603AFACA16E78F0 /* EditTableScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 370A630F8E293663E9B52AE2 /* EditTableScreen.swift */; };
 		FF3ACDAACDF1DB2AF359B01A /* JwParseDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEFFFB7B27071D52A6BF4CD8 /* JwParseDiagnostics.swift */; };
+		1C4F0A2CDA94614DC5838AF7 /* AppearanceNavigationRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DDB1BA71DFC4278FB66DFF0 /* AppearanceNavigationRow.swift */; };
+		7D8AEA749086DE60E89CEEDB /* BatterySettingsLauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B694C4D7C5A5DDF4EADCD07 /* BatterySettingsLauncher.swift */; };
+		999EF895AAEF9E32F4EF8A61 /* CalendarImportDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AAB5F114CDC267C5315E47B /* CalendarImportDialog.swift */; };
+		681F8A20DFDDFF91C6D531BB /* ClassDndScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AB7DF2D1F63AC3C6DFB1B3E /* ClassDndScheduler.swift */; };
+		6F6DB1517A749E0826804649 /* ClassDndScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AB7DF2D1F63AC3C6DFB1B3E /* ClassDndScheduler.swift */; };
+		3546B923B8DB8A0C2F3E33DB /* ColorPickerDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 203ECDD08BF1A0623C0A8E3D /* ColorPickerDialog.swift */; };
+		8FDB0442571F10CA6F92AD59 /* CourseListScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48E9720698C5CA7C7BCFDB7C /* CourseListScreen.swift */; };
+		0D8A5550D7416442BB095F1B /* DialogActionButtons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BAC6A3C86DA31FBA41F9FFF /* DialogActionButtons.swift */; };
+		0491F7478FA64C33DF9135CA /* GlobalWidgetCompatibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ADD17E108623295B46A2331 /* GlobalWidgetCompatibility.swift */; };
+		5A2C9E7C2459CE0A21703BBF /* GlobalWidgetCompatibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ADD17E108623295B46A2331 /* GlobalWidgetCompatibility.swift */; };
+		653D634E993B934D0041DC5B /* HolidayTransferHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EFFA3E0E6D88822A1ED6733 /* HolidayTransferHelper.swift */; };
+		0CD2EB7F4CEBC95CF3AFFAC2 /* HolidayTransferHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EFFA3E0E6D88822A1ED6733 /* HolidayTransferHelper.swift */; };
+		1AF05FB0426FF4B05D48D55F /* ImportDraftRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 551A010B500903639AF3EAD7 /* ImportDraftRepository.swift */; };
+		5B78981CC2F566995E2A7EC9 /* ImportDraftSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39FA3DA3CD870EAAD0277520 /* ImportDraftSheet.swift */; };
+		31DE4EC4B8A41DC95A46BDC0 /* JwImportDiagnosticsFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 177076F010C659565C15386D /* JwImportDiagnosticsFlow.swift */; };
+		1A5E0CC3DADCFE9A785D79F3 /* JwImportDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9661EE2C69DC8A38A98D9967 /* JwImportDraft.swift */; };
+		8EEE9E469A8E022FF03F3A0F /* JwNeuParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D4123CFB6E87DE28CE62F44 /* JwNeuParser.swift */; };
+		9FC2E38B20823C626FA9EE67 /* JwImportDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9661EE2C69DC8A38A98D9967 /* JwImportDraft.swift */; };
+		3F5FD7648C28C65B8EB440A8 /* JwNeuParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D4123CFB6E87DE28CE62F44 /* JwNeuParser.swift */; };
+		6D8DCB07431ECBFACF3B54AA /* JwWebViewConfigBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 376A7A3351C3AA93510A553C /* JwWebViewConfigBuilder.swift */; };
+		985893551FD06288170B3208 /* JwZfNewFetchJs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 453AE60ED5453D0CDF59B96E /* JwZfNewFetchJs.swift */; };
+		823DDC4261928ABE7DF1F9E2 /* PendingPolicyBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C88BA8F7FC1F2E22D55EE5D /* PendingPolicyBanner.swift */; };
+		00BB8EA8DC3C6F87400A4658 /* PeriodHeaderCellContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70FDB3E17A591024025AE5B1 /* PeriodHeaderCellContent.swift */; };
+		00161C1FCCAC68D711049EB6 /* PeriodHeaderLayoutModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37A007C5331E4B972FBF068C /* PeriodHeaderLayoutModel.swift */; };
+		4DF5F5E6D9E91860CD7B877D /* PeriodHeaderSettingsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 224A8147EAD24B842FE329DF /* PeriodHeaderSettingsScreen.swift */; };
+		877244EDD9510A923F1B4AF5 /* PeriodTableEditScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6254E9EF0409C1DBA61B029E /* PeriodTableEditScreen.swift */; };
+		73EE88DD4BB998BB28DFBF78 /* PeriodTableShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06C2A191924B9A87D83EE77B /* PeriodTableShareSheet.swift */; };
+		59780ECA92F7786784E1B0EA /* PeriodTablesScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 923EBD76FB3157AC91FFA04F /* PeriodTablesScreen.swift */; };
+		762A3E56DAF5B6666F94BEBF /* PlatformParityNotes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2F1EB4FD8C9C11C714D9B1 /* PlatformParityNotes.swift */; };
+		51555B4A21A1086B69C79201 /* ReminderCapabilityFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04E22475519E6A14E9E0066E /* ReminderCapabilityFlow.swift */; };
+		23764191DEC98292612A4EDC /* ReminderRescheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C127692533E1FDB4612E872 /* ReminderRescheduler.swift */; };
+		3A2B569A468D74DDB3471B75 /* ReminderRescheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C127692533E1FDB4612E872 /* ReminderRescheduler.swift */; };
+		491B3005D8D7A1291E1FFC3E /* ScheduleConflictBottomSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A97AFA8652BCFBD2D38E297 /* ScheduleConflictBottomSheet.swift */; };
+		2B5DC9F4AC30256216F275B0 /* ScheduleDisplayScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B4E300403461398F7401D8F /* ScheduleDisplayScreen.swift */; };
+		9C1BBDD4E3625978E1C0EA28 /* ScheduleEditPolicyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68410559CA44DEA142A49FC8 /* ScheduleEditPolicyState.swift */; };
+		6BD7F55F8D57DDCE2C97583F /* SchoolLocationLookup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EFAED005C9A5EF11132D09 /* SchoolLocationLookup.swift */; };
+		962A16E5D8814A7A764C253B /* SchoolLocationLookup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EFAED005C9A5EF11132D09 /* SchoolLocationLookup.swift */; };
+		25A2662B7CC0EB00D9EA80DF /* TodayDateNavStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 006A3FEBAFA216BAB0EE4391 /* TodayDateNavStore.swift */; };
+		1D0C89D6C60F96A183B5706D /* TodayDateNavStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 006A3FEBAFA216BAB0EE4391 /* TodayDateNavStore.swift */; };
+		2A90FE6714621AFA02936F02 /* UpdateChangelogDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CAEF1BB20B02A62AD308873 /* UpdateChangelogDialog.swift */; };
+		59D65DB89737D1958DC9109A /* WidgetBoundaryScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB8642FD61EEC02694C2C1A /* WidgetBoundaryScheduler.swift */; };
+		367359AABBFD9A7AE48DC298 /* WidgetBoundaryScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB8642FD61EEC02694C2C1A /* WidgetBoundaryScheduler.swift */; };
+		97A945D58742DADE52C8F8DF /* WidgetCompactHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 163C38B616815F62D92970BE /* WidgetCompactHelpers.swift */; };
+		614E698EBB5EF359E895281C /* WidgetCompactHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 163C38B616815F62D92970BE /* WidgetCompactHelpers.swift */; };
+		581E67F414671B0BE0FA99D0 /* WidgetCompactWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B871F30258276428FEA5A1 /* WidgetCompactWindow.swift */; };
+		8854AAEF54B54C60D7245415 /* WidgetCompactWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B871F30258276428FEA5A1 /* WidgetCompactWindow.swift */; };
+		5BBE7B5E602B3E99EAD60E0B /* WidgetEditViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40F7FE09084E55C2E948B090 /* WidgetEditViewModel.swift */; };
+		7554F27914D9E2D37C87AA6A /* WidgetEditViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40F7FE09084E55C2E948B090 /* WidgetEditViewModel.swift */; };
+		4D4A179720F05BCFB90A7CC3 /* WidgetScrollStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 993356AE4B27767C0AC824B7 /* WidgetScrollStore.swift */; };
+		9CBDC5CB5967F9059B70150E /* WidgetScrollStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 993356AE4B27767C0AC824B7 /* WidgetScrollStore.swift */; };
+		8505F997870AB2B94010C2F4 /* WidgetVariantInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4077462AEDEABB8C9850DD /* WidgetVariantInfo.swift */; };
+		72E4C2B68C85BD905D933E46 /* WidgetVariantInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4077462AEDEABB8C9850DD /* WidgetVariantInfo.swift */; };
+		3255D42D185220385C48AFC8 /* WidgetVendorActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142EB229D67E0DAB15500B66 /* WidgetVendorActions.swift */; };
+		1457C864203BA175028658B6 /* WidgetVendorActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142EB229D67E0DAB15500B66 /* WidgetVendorActions.swift */; };
+		0409981275FEE65BAC662E93 /* WidgetWeekSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AA2A71D2BDC9486F207ECD5 /* WidgetWeekSource.swift */; };
+		93D57096567C2F7D651077F5 /* WidgetWeekSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AA2A71D2BDC9486F207ECD5 /* WidgetWeekSource.swift */; };
+	884B0C43C5FD4EECB036A2CC /* VendorCapabilityState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 859A30EF7F6C42329F725AFD /* VendorCapabilityState.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -661,6 +718,47 @@
 		FEFE0F382E2D42F640D9689F /* RowKeyDifferTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowKeyDifferTests.swift; sourceTree = "<group>"; };
 		FF2B16F1E64028F96C4B5AD5 /* AppDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDatabase.swift; sourceTree = "<group>"; };
 		FF4AC1BC137184D4FED2FCF3 /* LicenseScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseScreen.swift; sourceTree = "<group>"; };
+		4DDB1BA71DFC4278FB66DFF0 /* AppearanceNavigationRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceNavigationRow.swift; sourceTree = "<group>"; };
+		3B694C4D7C5A5DDF4EADCD07 /* BatterySettingsLauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatterySettingsLauncher.swift; sourceTree = "<group>"; };
+		8AAB5F114CDC267C5315E47B /* CalendarImportDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarImportDialog.swift; sourceTree = "<group>"; };
+		9AB7DF2D1F63AC3C6DFB1B3E /* ClassDndScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassDndScheduler.swift; sourceTree = "<group>"; };
+		203ECDD08BF1A0623C0A8E3D /* ColorPickerDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorPickerDialog.swift; sourceTree = "<group>"; };
+		48E9720698C5CA7C7BCFDB7C /* CourseListScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseListScreen.swift; sourceTree = "<group>"; };
+		7BAC6A3C86DA31FBA41F9FFF /* DialogActionButtons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DialogActionButtons.swift; sourceTree = "<group>"; };
+		4ADD17E108623295B46A2331 /* GlobalWidgetCompatibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalWidgetCompatibility.swift; sourceTree = "<group>"; };
+		6EFFA3E0E6D88822A1ED6733 /* HolidayTransferHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayTransferHelper.swift; sourceTree = "<group>"; };
+		551A010B500903639AF3EAD7 /* ImportDraftRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportDraftRepository.swift; sourceTree = "<group>"; };
+		39FA3DA3CD870EAAD0277520 /* ImportDraftSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportDraftSheet.swift; sourceTree = "<group>"; };
+		177076F010C659565C15386D /* JwImportDiagnosticsFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwImportDiagnosticsFlow.swift; sourceTree = "<group>"; };
+		9661EE2C69DC8A38A98D9967 /* JwImportDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwImportDraft.swift; sourceTree = "<group>"; };
+		1D4123CFB6E87DE28CE62F44 /* JwNeuParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwNeuParser.swift; sourceTree = "<group>"; };
+		376A7A3351C3AA93510A553C /* JwWebViewConfigBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwWebViewConfigBuilder.swift; sourceTree = "<group>"; };
+		453AE60ED5453D0CDF59B96E /* JwZfNewFetchJs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwZfNewFetchJs.swift; sourceTree = "<group>"; };
+		1C88BA8F7FC1F2E22D55EE5D /* PendingPolicyBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingPolicyBanner.swift; sourceTree = "<group>"; };
+		70FDB3E17A591024025AE5B1 /* PeriodHeaderCellContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeriodHeaderCellContent.swift; sourceTree = "<group>"; };
+		37A007C5331E4B972FBF068C /* PeriodHeaderLayoutModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeriodHeaderLayoutModel.swift; sourceTree = "<group>"; };
+		224A8147EAD24B842FE329DF /* PeriodHeaderSettingsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeriodHeaderSettingsScreen.swift; sourceTree = "<group>"; };
+		6254E9EF0409C1DBA61B029E /* PeriodTableEditScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeriodTableEditScreen.swift; sourceTree = "<group>"; };
+		06C2A191924B9A87D83EE77B /* PeriodTableShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeriodTableShareSheet.swift; sourceTree = "<group>"; };
+		923EBD76FB3157AC91FFA04F /* PeriodTablesScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeriodTablesScreen.swift; sourceTree = "<group>"; };
+		0E2F1EB4FD8C9C11C714D9B1 /* PlatformParityNotes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformParityNotes.swift; sourceTree = "<group>"; };
+		04E22475519E6A14E9E0066E /* ReminderCapabilityFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderCapabilityFlow.swift; sourceTree = "<group>"; };
+		5C127692533E1FDB4612E872 /* ReminderRescheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderRescheduler.swift; sourceTree = "<group>"; };
+		0A97AFA8652BCFBD2D38E297 /* ScheduleConflictBottomSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleConflictBottomSheet.swift; sourceTree = "<group>"; };
+		1B4E300403461398F7401D8F /* ScheduleDisplayScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleDisplayScreen.swift; sourceTree = "<group>"; };
+		68410559CA44DEA142A49FC8 /* ScheduleEditPolicyState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleEditPolicyState.swift; sourceTree = "<group>"; };
+		14EFAED005C9A5EF11132D09 /* SchoolLocationLookup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchoolLocationLookup.swift; sourceTree = "<group>"; };
+		006A3FEBAFA216BAB0EE4391 /* TodayDateNavStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayDateNavStore.swift; sourceTree = "<group>"; };
+		4CAEF1BB20B02A62AD308873 /* UpdateChangelogDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateChangelogDialog.swift; sourceTree = "<group>"; };
+		0FB8642FD61EEC02694C2C1A /* WidgetBoundaryScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetBoundaryScheduler.swift; sourceTree = "<group>"; };
+		163C38B616815F62D92970BE /* WidgetCompactHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetCompactHelpers.swift; sourceTree = "<group>"; };
+		54B871F30258276428FEA5A1 /* WidgetCompactWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetCompactWindow.swift; sourceTree = "<group>"; };
+		40F7FE09084E55C2E948B090 /* WidgetEditViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetEditViewModel.swift; sourceTree = "<group>"; };
+		993356AE4B27767C0AC824B7 /* WidgetScrollStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetScrollStore.swift; sourceTree = "<group>"; };
+		5C4077462AEDEABB8C9850DD /* WidgetVariantInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetVariantInfo.swift; sourceTree = "<group>"; };
+		142EB229D67E0DAB15500B66 /* WidgetVendorActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetVendorActions.swift; sourceTree = "<group>"; };
+		6AA2A71D2BDC9486F207ECD5 /* WidgetWeekSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetWeekSource.swift; sourceTree = "<group>"; };
+	859A30EF7F6C42329F725AFD /* VendorCapabilityState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VendorCapabilityState.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -730,6 +828,7 @@
 				C0892BA3B202EE76234C0CC9 /* VersionUtils.swift */,
 				81949E978A8725C92FCA42C2 /* WeekDisplayResolver.swift */,
 				EB8C75554581BE8C26C81B68 /* WeekRangeOverlap.swift */,
+				0E2F1EB4FD8C9C11C714D9B1 /* PlatformParityNotes.swift */,
 			);
 			path = util;
 			sourceTree = "<group>";
@@ -760,6 +859,7 @@
 			children = (
 				449BD8236BF9A935B646F5F3 /* ScheduleScreen.swift */,
 				B676529801720CE8A47480B3 /* ScheduleViewModel.swift */,
+				68410559CA44DEA142A49FC8 /* ScheduleEditPolicyState.swift */,
 			);
 			path = schedule;
 			sourceTree = "<group>";
@@ -794,6 +894,11 @@
 				73294570746FDF69FA280F6E /* SleepyMotion.swift */,
 				7B3E1AC29BB571E46B9B7476 /* SmartPeriodEditor.swift */,
 				290CA376AA06DF914D39E04B /* TimeSlotEditor.swift */,
+				203ECDD08BF1A0623C0A8E3D /* ColorPickerDialog.swift */,
+				7BAC6A3C86DA31FBA41F9FFF /* DialogActionButtons.swift */,
+				70FDB3E17A591024025AE5B1 /* PeriodHeaderCellContent.swift */,
+				37A007C5331E4B972FBF068C /* PeriodHeaderLayoutModel.swift */,
+				06C2A191924B9A87D83EE77B /* PeriodTableShareSheet.swift */,
 			);
 			path = component;
 			sourceTree = "<group>";
@@ -861,6 +966,10 @@
 				BD9335FB877A756E309CDAB6 /* JwWebViewFrameCapture.swift */,
 				8F7AF4E2551FE143942A3F3F /* JwWebViewLoginScreen.swift */,
 				90B4ADA3F4D0F22AB81E78C4 /* SchoolSelectScreen.swift */,
+				39FA3DA3CD870EAAD0277520 /* ImportDraftSheet.swift */,
+				177076F010C659565C15386D /* JwImportDiagnosticsFlow.swift */,
+				376A7A3351C3AA93510A553C /* JwWebViewConfigBuilder.swift */,
+				453AE60ED5453D0CDF59B96E /* JwZfNewFetchJs.swift */,
 			);
 			path = imports;
 			sourceTree = "<group>";
@@ -891,6 +1000,17 @@
 				B445492F562DDC2A16B5171D /* WidgetDataLoaders.swift */,
 				0C144DF8370196EBA2816A1B /* WidgetTableResolver.swift */,
 				C1362E01134FB72031611514 /* WidgetWindowCore.swift */,
+				4ADD17E108623295B46A2331 /* GlobalWidgetCompatibility.swift */,
+				6EFFA3E0E6D88822A1ED6733 /* HolidayTransferHelper.swift */,
+				006A3FEBAFA216BAB0EE4391 /* TodayDateNavStore.swift */,
+				0FB8642FD61EEC02694C2C1A /* WidgetBoundaryScheduler.swift */,
+				163C38B616815F62D92970BE /* WidgetCompactHelpers.swift */,
+				54B871F30258276428FEA5A1 /* WidgetCompactWindow.swift */,
+				40F7FE09084E55C2E948B090 /* WidgetEditViewModel.swift */,
+				993356AE4B27767C0AC824B7 /* WidgetScrollStore.swift */,
+				5C4077462AEDEABB8C9850DD /* WidgetVariantInfo.swift */,
+				142EB229D67E0DAB15500B66 /* WidgetVendorActions.swift */,
+				6AA2A71D2BDC9486F207ECD5 /* WidgetWeekSource.swift */,
 			);
 			path = widget;
 			sourceTree = "<group>";
@@ -963,6 +1083,9 @@
 				3406352597357F14F585C379 /* SchoolDomainMatch.swift */,
 				3E75995AB2FB7D4568AE0E14 /* SchoolLocationPolicy.swift */,
 				4737C8EBD3C461383C3E9868 /* UcasDetailFetch.swift */,
+				9661EE2C69DC8A38A98D9967 /* JwImportDraft.swift */,
+				1D4123CFB6E87DE28CE62F44 /* JwNeuParser.swift */,
+				14EFAED005C9A5EF11132D09 /* SchoolLocationLookup.swift */,
 			);
 			path = jw;
 			sourceTree = "<group>";
@@ -971,6 +1094,7 @@
 			isa = PBXGroup;
 			children = (
 				F93B2813DC503FB445168386 /* ScheduleRepository.swift */,
+				551A010B500903639AF3EAD7 /* ImportDraftRepository.swift */,
 			);
 			path = repository;
 			sourceTree = "<group>";
@@ -1005,7 +1129,6 @@
 				0F6A3A4DB6AEC3D8277B080A /* school_city_boundaries.bin.gz */,
 				DCA9076C6A9149843AB86B5C /* school_city_boundaries.source.json */,
 			);
-			path = SchoolCity;
 			sourceTree = "<group>";
 		};
 		7A160113E1905C5FA92D04C8 /* entity */ = {
@@ -1070,6 +1193,10 @@
 				F2B212788C9D9EE211D730AB /* BackgroundReliabilitySnapshot.swift */,
 				A490795AC781095315441167 /* BatteryOptimizationIntents.swift */,
 				8B945AD465F81AFC535B658B /* NotificationScheduler.swift */,
+				3B694C4D7C5A5DDF4EADCD07 /* BatterySettingsLauncher.swift */,
+				9AB7DF2D1F63AC3C6DFB1B3E /* ClassDndScheduler.swift */,
+				5C127692533E1FDB4612E872 /* ReminderRescheduler.swift */,
+				859A30EF7F6C42329F725AFD /* VendorCapabilityState.swift */,
 			);
 			path = notification;
 			sourceTree = "<group>";
@@ -1122,6 +1249,17 @@
 				FF4AC1BC137184D4FED2FCF3 /* LicenseScreen.swift */,
 				05A3D362C9894D69BFFCEC3F /* MineScreen.swift */,
 				7D8DF7E3509AC5B4147E75C8 /* ReminderScreen.swift */,
+				4DDB1BA71DFC4278FB66DFF0 /* AppearanceNavigationRow.swift */,
+				8AAB5F114CDC267C5315E47B /* CalendarImportDialog.swift */,
+				48E9720698C5CA7C7BCFDB7C /* CourseListScreen.swift */,
+				1C88BA8F7FC1F2E22D55EE5D /* PendingPolicyBanner.swift */,
+				224A8147EAD24B842FE329DF /* PeriodHeaderSettingsScreen.swift */,
+				6254E9EF0409C1DBA61B029E /* PeriodTableEditScreen.swift */,
+				923EBD76FB3157AC91FFA04F /* PeriodTablesScreen.swift */,
+				04E22475519E6A14E9E0066E /* ReminderCapabilityFlow.swift */,
+				0A97AFA8652BCFBD2D38E297 /* ScheduleConflictBottomSheet.swift */,
+				1B4E300403461398F7401D8F /* ScheduleDisplayScreen.swift */,
+				4CAEF1BB20B02A62AD308873 /* UpdateChangelogDialog.swift */,
 			);
 			path = mine;
 			sourceTree = "<group>";
@@ -1550,6 +1688,47 @@
 				7CE5CBEFDDECCCE4C23E9AC5 /* WidgetManagementScreen.swift in Sources */,
 				08BEFCDFB15D26CC79E26E52 /* WidgetTableResolver.swift in Sources */,
 				0EAEE70F55B2C84145D48A12 /* WidgetWindowCore.swift in Sources */,
+				1C4F0A2CDA94614DC5838AF7 /* AppearanceNavigationRow.swift in Sources */,
+				7D8AEA749086DE60E89CEEDB /* BatterySettingsLauncher.swift in Sources */,
+				999EF895AAEF9E32F4EF8A61 /* CalendarImportDialog.swift in Sources */,
+				681F8A20DFDDFF91C6D531BB /* ClassDndScheduler.swift in Sources */,
+				3546B923B8DB8A0C2F3E33DB /* ColorPickerDialog.swift in Sources */,
+				8FDB0442571F10CA6F92AD59 /* CourseListScreen.swift in Sources */,
+				0D8A5550D7416442BB095F1B /* DialogActionButtons.swift in Sources */,
+				0491F7478FA64C33DF9135CA /* GlobalWidgetCompatibility.swift in Sources */,
+				653D634E993B934D0041DC5B /* HolidayTransferHelper.swift in Sources */,
+				1AF05FB0426FF4B05D48D55F /* ImportDraftRepository.swift in Sources */,
+				5B78981CC2F566995E2A7EC9 /* ImportDraftSheet.swift in Sources */,
+				31DE4EC4B8A41DC95A46BDC0 /* JwImportDiagnosticsFlow.swift in Sources */,
+				1A5E0CC3DADCFE9A785D79F3 /* JwImportDraft.swift in Sources */,
+				8EEE9E469A8E022FF03F3A0F /* JwNeuParser.swift in Sources */,
+				6D8DCB07431ECBFACF3B54AA /* JwWebViewConfigBuilder.swift in Sources */,
+				985893551FD06288170B3208 /* JwZfNewFetchJs.swift in Sources */,
+				823DDC4261928ABE7DF1F9E2 /* PendingPolicyBanner.swift in Sources */,
+				00BB8EA8DC3C6F87400A4658 /* PeriodHeaderCellContent.swift in Sources */,
+				00161C1FCCAC68D711049EB6 /* PeriodHeaderLayoutModel.swift in Sources */,
+				4DF5F5E6D9E91860CD7B877D /* PeriodHeaderSettingsScreen.swift in Sources */,
+				877244EDD9510A923F1B4AF5 /* PeriodTableEditScreen.swift in Sources */,
+				73EE88DD4BB998BB28DFBF78 /* PeriodTableShareSheet.swift in Sources */,
+				59780ECA92F7786784E1B0EA /* PeriodTablesScreen.swift in Sources */,
+				762A3E56DAF5B6666F94BEBF /* PlatformParityNotes.swift in Sources */,
+				51555B4A21A1086B69C79201 /* ReminderCapabilityFlow.swift in Sources */,
+				23764191DEC98292612A4EDC /* ReminderRescheduler.swift in Sources */,
+				491B3005D8D7A1291E1FFC3E /* ScheduleConflictBottomSheet.swift in Sources */,
+				2B5DC9F4AC30256216F275B0 /* ScheduleDisplayScreen.swift in Sources */,
+				9C1BBDD4E3625978E1C0EA28 /* ScheduleEditPolicyState.swift in Sources */,
+				6BD7F55F8D57DDCE2C97583F /* SchoolLocationLookup.swift in Sources */,
+				25A2662B7CC0EB00D9EA80DF /* TodayDateNavStore.swift in Sources */,
+				2A90FE6714621AFA02936F02 /* UpdateChangelogDialog.swift in Sources */,
+				59D65DB89737D1958DC9109A /* WidgetBoundaryScheduler.swift in Sources */,
+				97A945D58742DADE52C8F8DF /* WidgetCompactHelpers.swift in Sources */,
+				581E67F414671B0BE0FA99D0 /* WidgetCompactWindow.swift in Sources */,
+				5BBE7B5E602B3E99EAD60E0B /* WidgetEditViewModel.swift in Sources */,
+				4D4A179720F05BCFB90A7CC3 /* WidgetScrollStore.swift in Sources */,
+				8505F997870AB2B94010C2F4 /* WidgetVariantInfo.swift in Sources */,
+				3255D42D185220385C48AFC8 /* WidgetVendorActions.swift in Sources */,
+				0409981275FEE65BAC662E93 /* WidgetWeekSource.swift in Sources */,
+			884B0C43C5FD4EECB036A2CC /* VendorCapabilityState.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1703,6 +1882,22 @@
 				CF4775FD01AE97CE9C594347 /* WidgetDataLoaders.swift in Sources */,
 				5ECE1550C726A3AF6308A71A /* WidgetTableResolver.swift in Sources */,
 				B7347F2295F9A317A70D30F7 /* WidgetWindowCore.swift in Sources */,
+				6F6DB1517A749E0826804649 /* ClassDndScheduler.swift in Sources */,
+				5A2C9E7C2459CE0A21703BBF /* GlobalWidgetCompatibility.swift in Sources */,
+				0CD2EB7F4CEBC95CF3AFFAC2 /* HolidayTransferHelper.swift in Sources */,
+				3A2B569A468D74DDB3471B75 /* ReminderRescheduler.swift in Sources */,
+				1D0C89D6C60F96A183B5706D /* TodayDateNavStore.swift in Sources */,
+				367359AABBFD9A7AE48DC298 /* WidgetBoundaryScheduler.swift in Sources */,
+				614E698EBB5EF359E895281C /* WidgetCompactHelpers.swift in Sources */,
+				8854AAEF54B54C60D7245415 /* WidgetCompactWindow.swift in Sources */,
+				7554F27914D9E2D37C87AA6A /* WidgetEditViewModel.swift in Sources */,
+				9CBDC5CB5967F9059B70150E /* WidgetScrollStore.swift in Sources */,
+				72E4C2B68C85BD905D933E46 /* WidgetVariantInfo.swift in Sources */,
+				1457C864203BA175028658B6 /* WidgetVendorActions.swift in Sources */,
+				93D57096567C2F7D651077F5 /* WidgetWeekSource.swift in Sources */,
+				962A16E5D8814A7A764C253B /* SchoolLocationLookup.swift in Sources */,
+				9FC2E38B20823C626FA9EE67 /* JwImportDraft.swift in Sources */,
+				3F5FD7648C28C65B8EB440A8 /* JwNeuParser.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
