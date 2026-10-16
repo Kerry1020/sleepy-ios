@@ -152,6 +152,11 @@ enum JwProtocol {
     /// 上游协议形态: CreamPig233/neu_wisedu2wakeup (无 license) extract_schedule.js — 算法自写。
     static let TYPE_NEU = "neu"
 
+    /// 清华大学 zhjwxk.cic.tsinghua.edu.cn (THU 选课系统)。<br>
+    /// 协议：setInitValue('strHTML'+...)、getElementById('a'+big+'_'+day).innerHTML += strHTML。
+    /// 4 仓 POSITIVE 共识 (WakeUp + Starrah + AdoreCN + BistuSchedule)。
+    static let TYPE_THU = "thu"
+
     /// 超星学习通「综合教务管理系统」(Powered by ChaoXing)。
     /// 自建 REST: GET /pkgl/xskb/queryKbGrdb (个人课表, 无参按会话) +
     /// GET /admin/api/getZclistByXnxq (节次时间/学期)。
@@ -207,7 +212,7 @@ enum JwProtocol {
     /// WakeUp 兼容层路由的协议族;与旧 UI 排序分开保存 ← WAKEUP_COMPAT_TYPES
     static let WAKEUP_COMPAT_TYPES: [String] = [
         TYPE_KINGO_NEW, TYPE_JZ, TYPE_SOUTH_SOFT, TYPE_CHAOXING_LEGACY,
-        TYPE_SHUWEI, TYPE_SUDA_POST, TYPE_CUMTB, TYPE_XJU_POST,
+        TYPE_SHUWEI, TYPE_SUDA_POST, TYPE_CUMTB, TYPE_XJU_POST, TYPE_THU,
     ]
 
     /// 协议显示名(用于 UI 提示) ← displayName
@@ -249,6 +254,8 @@ enum JwProtocol {
             return "矿大 EAMS5"
         case TYPE_XJU_POST:
             return "西交/新疆大学教务"
+        case TYPE_THU:
+            return "清华大学 (THU 教务)"
         case TYPE_PKU:
             return "北京大学"
         case TYPE_BNUZ:
@@ -310,7 +317,7 @@ enum JwProtocol {
         case TYPE_URP, TYPE_URP_NEW:
             return "urp"
         case TYPE_KINGO_NEW, TYPE_JZ, TYPE_SOUTH_SOFT, TYPE_CHAOXING_LEGACY,
-             TYPE_SHUWEI, TYPE_SUDA_POST, TYPE_CUMTB, TYPE_XJU_POST:
+             TYPE_SHUWEI, TYPE_SUDA_POST, TYPE_CUMTB, TYPE_XJU_POST, TYPE_THU:
             return "other"
         case TYPE_WISEDU:
             return "wisedu"
