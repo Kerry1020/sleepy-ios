@@ -88,12 +88,14 @@ ported,MainActivity,app/src/main/java/com/lingion/sleepy/MainActivity.kt,Sleepy/
 ported,Migrations,app/src/main/java/com/lingion/sleepy/data/Migrations.kt,Sleepy/data/AppDatabase.swift,,iOS 无独立 Migrations.swift: Room Migrations.kt 逐条内联进 AppDatabase.migrator (v1~v11); data-migrations slice (v11.reminderEnabled)
 ported,SystemCalendarManager,app/src/main/java/com/lingion/sleepy/data/calendar/SystemCalendarManager.kt,Sleepy/data/calendar/SystemCalendarManager.swift,,cal-bg-battery slice (EventKit)
 ported,JwImportDraft,app/src/main/java/com/lingion/sleepy/data/jw/JwImportDraft.kt,Sleepy/data/jw/JwImportDraft.swift,,data-migrations slice
-missing,JwNeuParser,app/src/main/java/com/lingion/sleepy/data/jw/JwNeuParser.kt,,,
+ported,JwNeuParser,app/src/main/java/com/lingion/sleepy/data/jw/JwNeuParser.kt,Sleepy/data/jw/JwNeuParser.swift,,,
+ported,JwThuparser,app/src/main/java/com/lingion/sleepy/data/jw/JwThuparser.kt,Sleepy/data/jw/JwThuparser.swift,,
 ported,OfflineSchoolCityIndex,app/src/main/java/com/lingion/sleepy/data/jw/OfflineSchoolCityIndex.kt,Sleepy/data/jw/OfflineSchoolCityIndex.swift,,auto-sweep
 ported,SchoolCityIndex,app/src/main/java/com/lingion/sleepy/data/jw/SchoolCityIndex.kt,Sleepy/data/jw/SchoolCityIndex.swift,,auto-sweep
 ported,SchoolCityLocator,app/src/main/java/com/lingion/sleepy/data/jw/SchoolCityLocator.kt,Sleepy/data/jw/SchoolCityLocator.swift,,auto-sweep
 missing,SchoolLocationLookup,app/src/main/java/com/lingion/sleepy/data/jw/SchoolLocationLookup.kt,,,
 ported,SchoolLocationPolicy,app/src/main/java/com/lingion/sleepy/data/jw/SchoolLocationPolicy.kt,Sleepy/data/jw/SchoolLocationPolicy.swift,,auto-sweep
+ported,SchoolsData,app/src/main/assets/schools.json,Sleepy/resources/schools.json,,HBSM (湖北商贸学员) 补入 (zf_new) — v1.0.61 diff 唯一新增行
 ported,MigrationBackup,app/src/main/java/com/lingion/sleepy/data/migration/MigrationBackup.kt,Sleepy/data/migration/MigrationBackup.swift,,auto-sweep; data-migrations slice 校对对齐
 ported,MigrationDatabaseCodec,app/src/main/java/com/lingion/sleepy/data/migration/MigrationDatabaseCodec.kt,Sleepy/data/migration/MigrationDatabaseCodec.swift,,auto-sweep; data-migrations slice 校对对齐
 ported,MigrationExecutor,app/src/main/java/com/lingion/sleepy/data/migration/MigrationExecutor.kt,Sleepy/data/migration/MigrationExecutor.swift,,auto-sweep; data-migrations slice 校对对齐

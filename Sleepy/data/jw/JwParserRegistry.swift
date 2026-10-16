@@ -60,6 +60,7 @@ enum JwParserRegistry {
         (JwProtocol.TYPE_SUDA_POST, 13),
         (JwProtocol.TYPE_CUMTB, 14),
         (JwProtocol.TYPE_XJU_POST, 15),
+        (JwProtocol.TYPE_THU, 16),
         (JwProtocol.TYPE_WISEDU, 20),
         (JwProtocol.TYPE_CQU, 25),
         (JwProtocol.TYPE_CHAOXING, 26),
@@ -139,6 +140,7 @@ enum JwParserRegistry {
         case JwProtocol.TYPE_SUDA_POST: return { JwSudaParser($0) }
         case JwProtocol.TYPE_CUMTB: return { JwCumtbParser($0) }
         case JwProtocol.TYPE_XJU_POST: return { JwXjuParser($0) }
+        case JwProtocol.TYPE_THU: return { JwThuparser($0) }
         case JwProtocol.TYPE_KUST: return { JwKustParser($0) }
         case JwProtocol.TYPE_NUIT: return { JwNuitParser($0) }
         case JwProtocol.TYPE_YETHAN: return { JwYethanParser($0) }
