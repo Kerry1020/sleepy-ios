@@ -1457,42 +1457,46 @@ private struct GroupColorSwatch: View {
     }
 }
 
-// ← MultiDayPicker: Form + Toggle 行表 (iOS 设置式多选), 替代自制 4+3 网格
+// ← MultiDayPicker(AddCourseScreen.kt L1981): 4+3 芯片网格, 与 Android 版本对齐
+// 选中=primary 底 + onPrimary 字, 未选=surfaceContainerHighest 底 + onSurface 字; 无勾选符号。
 private struct MultiDayPicker: View {
     @Environment(\.localWakeUpColors) private var colors
     let selectedDays: Set<Int>
     let onToggleDay: (Int) -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            ForEach(1...7, id: \.self) { day in
+        VStack(spacing: 8) {
+            dayRow(1...4)
+            dayRow(5...7)
+        }
+    }
+
+    @ViewBuilder
+    private func dayRow(_ range: ClosedRange<Int>) -> some View {
+        HStack(spacing: 8) {
+            ForEach(range, id: \.self) { day in
                 let selected = selectedDays.contains(day)
                 Button {
                     onToggleDay(day)
                 } label: {
-                    HStack {
-                        Text(DateUtils.localizedDay(day))
-                            .font(.system(size: 15))
-                            .foregroundColor(colors.onSurface)
-                        Spacer()
-                        if selected {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(colors.primary)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 44)
-                    .contentShape(Rectangle())
+                    Text(DateUtils.localizedDay(day))
+                        .font(.system(size: 14, weight: .medium))   // ← labelLarge 14sp (工程惯例)
+                        .foregroundColor(selected ? colors.onPrimary : colors.onSurface)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .background(selected ? colors.primary : colors.surfaceContainerHighest)
+                        .cornerRadius(SleepyShapes.medium)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(SleepyButtonStyle())
-                if day < 7 {
-                    Divider().background(colors.outlineVariant)
+            }
+            // 第二行 3 个时补空位, 保证芯片宽度与第一行一致 (kt: repeat(4 - row.size) Spacer)
+            if range.count < 4 {
+                ForEach(0..<(4 - range.count), id: \.self) { _ in
+                    Color.clear.frame(maxWidth: .infinity).frame(height: 1)
                 }
             }
         }
-        .background(colors.surfaceContainer)
-        .cornerRadius(SleepyShapes.medium)
     }
 }
 
