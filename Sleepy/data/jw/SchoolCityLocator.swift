@@ -344,46 +344,39 @@ private extension Data {
         let deflateEnd = endIndex - 8
         guard deflateStart < deflateEnd else { return nil }
         let deflateData = subdata(in: deflateStart..<deflateEnd)
-        return deflateData.inflateRawDeflate()
+        // gzip 尾 4 字节 = ISIZE (u32 LE, 未压缩大小 mod 2^32) — 直接给出解压容量。
+        let trailerISize = UInt32(self[endIndex - 4])
+            | UInt32(self[endIndex - 3]) << 8
+            | UInt32(self[endIndex - 2]) << 16
+            | UInt32(self[endIndex - 1]) << 24
+        return deflateData.inflateRawDeflate(suggestedCapacity: Int(trailerISize))
     }
 
-    private func inflateRawDeflate() -> Data? {
+    // BUGFIX(2026-10-26): 旧实现用 FINALIZE 流式循环, dst 缓冲(64KB)写满时
+    // compression_stream_process 直接返回 COMPRESSION_STATUS_ERROR(而非 OK),
+    // 任何解压产物 >64KB 的数据必然失败 → 城市边界库(1.3MB)永远解不开
+    // → gunzipped() ?? raw 静默回落压缩字节 → SCB1 魔数解析失败
+    // → 定位推荐恒显示"未匹配到城市"。改为 decode_buffer 一次性解码,
+    // 容量优先用 ISIZE, 不可靠(0/>4G 回绕)时倍增重试兜底。
+    private func inflateRawDeflate(suggestedCapacity: Int) -> Data? {
         var src = [UInt8](self)
-        let srcSize = src.count
-        let bufferSize = 64 * 1024
-        // 指针必须在整个解压期间保持有效 — withUnsafeMutableBufferPointer 持有
-        return src.withUnsafeMutableBufferPointer { srcPtr -> Data? in
-            var dstBuffer = [UInt8](repeating: 0, count: bufferSize)
-            return dstBuffer.withUnsafeMutableBufferPointer { dstPtr -> Data? in
-                var stream = compression_stream(
-                    dst_ptr: dstPtr.baseAddress!,
-                    dst_size: bufferSize,
-                    src_ptr: srcPtr.baseAddress!,
-                    src_size: srcSize,
-                    state: nil
-                )
-                let status = compression_stream_init(&stream, COMPRESSION_STREAM_DECODE, COMPRESSION_ZLIB)
-                guard status == COMPRESSION_STATUS_OK else {
-                    compression_stream_destroy(&stream)
-                    return nil
-                }
-                defer { compression_stream_destroy(&stream) }
-                var output = Data()
-                let flags = Int32(COMPRESSION_STREAM_FINALIZE.rawValue)
-                let base = dstPtr.baseAddress!
-                while true {
-                    let result = compression_stream_process(&stream, flags)
-                    let produced = bufferSize - stream.dst_size
-                    if produced > 0 {
-                        output.append(base, count: produced)
-                    }
-                    if result == COMPRESSION_STATUS_END { return output }
-                    if result == COMPRESSION_STATUS_ERROR { return nil }
-                    // OK (需要更多输出空间) — 重置 dst 继续
-                    stream.dst_ptr = base
-                    stream.dst_size = bufferSize
+        // Data extension 内裸 max 会解析到 Sequence.max() 实例方法 — 显式 Swift.max
+        var capacity = Swift.max(suggestedCapacity, 64 * 1024)
+        let maxCapacity = 512 * 1024 * 1024
+        while capacity <= maxCapacity {
+            var dst = [UInt8](repeating: 0, count: capacity)
+            let n = src.withUnsafeMutableBufferPointer { sp -> Int in
+                dst.withUnsafeMutableBufferPointer { dp in
+                    compression_decode_buffer(
+                        dp.baseAddress!, capacity,
+                        sp.baseAddress!, sp.count,
+                        nil, COMPRESSION_ZLIB)
                 }
             }
+            if n == 0 { return nil } // 真错误(容量未满仍失败)
+            if n < capacity { return Data(bytes: dst, count: n) }
+            capacity *= 2           // 恰好写满 → 扩容重试
         }
+        return nil
     }
 }
