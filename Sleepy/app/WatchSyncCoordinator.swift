@@ -54,17 +54,18 @@ final class WatchSyncCoordinator: NSObject, WCSessionDelegate {
         guard s.isWatchAppInstalled else { return }
         let body = WatchSyncSnapshot.capture(repo: ScheduleRepository(AppDatabase.getShared()))
         var ctx = WatchSyncSnapshot.encodeToApplicationContext(body)
-        // 256KB 上限防御: 超限按课程截断 (保表结构完整, 课程留最前列), 记日志可排查。
-        // 实测全校课表 JSON 几十 KB, 正常不触发。
+        // applicationContext 上限 256KB; 超限按课程截断 (保表结构完整, 课程留最前列),
+        // 记日志可排查。实测全校课表 JSON 几十 KB, 正常不触发。
         if approxSize(ctx) > Self.contextBudget {
             var trimmed = body
             while trimmed.courses.count > 50, approxSize(WatchSyncSnapshot.encodeToApplicationContext(trimmed)) > Self.contextBudget {
                 trimmed.courses.removeLast(trimmed.courses.count / 4)
             }
             ctx = WatchSyncSnapshot.encodeToApplicationContext(trimmed)
-            WidgetArchiveLog.write("watchsync ctx oversize, trimmed courses \(body.courses.count)→\(trimmed.courses.count)")
+            WidgetArchiveLog.append(kind: "watchsync", family: "ctx",
+                                    result: "oversize courses \(body.courses.count)→\(trimmed.courses.count)")
         }
-        s.updateApplicationContext(ctx)
+        try? s.updateApplicationContext(ctx)
     }
 
     private func approxSize(_ ctx: [String: Any]) -> Int {
@@ -94,18 +95,18 @@ final class WatchSyncCoordinator: NSObject, WCSessionDelegate {
         }
     }
 
-    // MARK: - 可达性变化
+    // MARK: - 可达性 / 配对状态变化
 
-    public func watchReachabilityDidChange(_ session: WCSession) {
+    /// 手表可达性变化 (真实回调名, WCSessionDelegate 协议)。
+    public func sessionReachabilityDidChange(_ session: WCSession) {
         if session.isReachable { syncNow() }
     }
 
-    /// 配对状态迁移 (unpaired→paired / paired→watchNotReachable 等) 都补推
-    public func session(_ session: WCSession, pairingStatusDidChange status: WCSessionPairingStatus) {
+    /// iPhone 侧配对/安装等手表状态属性变化的合并回调
+    /// (sessionWatchStateDidChange — WCSession 无更细分的 install/pairing 事件):
+    /// unpaired→paired、手表 App 装/卸都会到这里, 一律补推 (isWatchAppInstalled
+    /// 守卫在 syncNow 内)。
+    public func sessionWatchStateDidChange(_ session: WCSession) {
         syncNow()
-    }
-
-    public func session(_ session: WCSession, watchAppInstallationStatusDidChange status: WCSessionAppInstallationStatus) {
-        if status == .installed { syncNow() }
     }
 }

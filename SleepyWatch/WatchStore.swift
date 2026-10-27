@@ -5,6 +5,7 @@
 
 import Foundation
 import Combine
+import UserNotifications
 import WatchConnectivity
 
 @MainActor
@@ -20,11 +21,18 @@ final class WatchStore: ObservableObject {
     /// 每次现造 — ScheduleRepository 是无状态包装 (同一 dbQueue), 零成本
     var repo: ScheduleRepository { ScheduleRepository(db) }
 
-    /// App 启动接线 — 调度器 repo provider 指向镜像库。
+    /// App 启动接线 — 调度器 repo provider 指向镜像库 + 通知授权首启申请。
     /// 不等 applySnapshot: delegate 到货 (00:05 重同步/课前重校验) 冷启动即可能触发,
     /// 届时需已接好 provider, 否则 resolveCurrentTable 返 nil 撤错通知。
     func prepareScheduler() {
         NotificationScheduler.shared.repositoryProvider = { [weak self] in self?.repo }
+        // ← iPhone 侧唯一申请点 = ReminderScreen master 开关 (该 UI 不在手表),
+        // 手表自有通知链路须本地授权批文才投递。2026-10 watch 伴侣 App:
+        // 首启前台申请一次 (幂等, 批文后不再弹)。alert/sound 无需 Info.plist
+        // usage 文案 (仅 location/calendar 类才需), 故 watch Info.plist 不加键。
+        // 拒批 = 展示链路静默 (scheduleAll 的 UN add 仍入队但不投递), 与 iPhone
+        // denied 后引导系统设置的语义对齐 —— 手表无引导 UI, 后续如需可加提示行。
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
     // MARK: - 数据查询
