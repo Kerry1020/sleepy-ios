@@ -818,6 +818,9 @@ final class SleepyNotificationDelegate: NSObject, UNUserNotificationCenterDelega
             Task {
                 // F128 issue#1: 课前投放闸 AND 上课勿扰抑制闸 — 后者让
                 // ClassDndScheduler.shouldSuppressNotification 真正有调用方。
+                // watchOS: ClassDndScheduler 为 Foundation-only 已随 watch 编入;
+                // isClassDndEnabled 未镜像 (手表 prefs 默认 false) = 抑制闸恒开闸,
+                // Focus 真抑制只在 iPhone 生效。2026-10 watch 伴侣 App。
                 let delivery = await NotificationScheduler.shared.beforeClassDeliveryAllowed(
                     userInfo: notification.request.content.userInfo)
                 // F128 issue#1: `&&` 的 RHS 是 @autoclosure, 不支持嵌入 await —
