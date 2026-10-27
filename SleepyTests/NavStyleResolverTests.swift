@@ -54,6 +54,54 @@ final class NavStyleResolverTests: XCTestCase {
             "forcePill + 悬浮 → 自绘药丸(永不原生)")
     }
 
+    // MARK: - 宽屏 rail(← Android 版本 issue#45 ③ !isCompact→NavigationRail)
+
+    func testWideAlwaysRailRegardlessOfUserChoice() {
+        // 宽屏闸先于用户两项选择(悬浮/贴底/原生可用与否全被覆盖)
+        for floating in [true, false] {
+            for native in [true, false] {
+                XCTAssertEqual(
+                    NavStyleResolver.effectiveMode(floating: floating, supportsNative: native,
+                                                   forcedPill: false, isWide: true),
+                    .rail, "宽屏悬浮/贴底 × 原生可用/不可 → 一律 rail")
+            }
+        }
+    }
+
+    func testForcePillBlocksRail() {
+        // UITest 钉死手机几何: forcePill + 宽屏 → 不降级 rail, 走原 forcePill 分支
+        XCTAssertEqual(
+            NavStyleResolver.effectiveMode(floating: true, supportsNative: true,
+                                           forcedPill: true, isWide: true),
+            .floating, "forcePill 宽屏仍自绘 pill(pill_* 标识链路保持)")
+    }
+
+    func testCompactNeverRail() {
+        // isWide=false → 手机三态原语义(rail 只在宽屏出现)
+        XCTAssertNotEqual(
+            NavStyleResolver.effectiveMode(floating: true, supportsNative: true,
+                                           forcedPill: false, isWide: false),
+            .rail)
+    }
+
+    func testRailIsNotFloatingSemantics() {
+        // rail 水平占位、底部零遮挡 → floating(for:)=false(无直通屏底/滚动余量)
+        XCTAssertFalse(NavStyleResolver.floating(for: .rail))
+        XCTAssertTrue(NavStyleResolver.floating(for: .native))
+        XCTAssertTrue(NavStyleResolver.floating(for: .floating))
+        XCTAssertFalse(NavStyleResolver.floating(for: .docked))
+    }
+
+    func testWideLayoutBreakpoint() {
+        // 断点实测: ≥600pt 宽(含 1024 横屏 iPad / 768 竖屏 iPad)= true;
+        // <600pt(430 iPhone Max 竖屏 / Split View 窄侧)= false; nil = 保守 false
+        let b = NavStyleResolver.railWidthThreshold
+        XCTAssertTrue(NavStyleResolver.isWideLayout(windowWidth: b))
+        XCTAssertTrue(NavStyleResolver.isWideLayout(windowWidth: 1024))
+        XCTAssertFalse(NavStyleResolver.isWideLayout(windowWidth: b - 1))
+        XCTAssertFalse(NavStyleResolver.isWideLayout(windowWidth: 430))
+    }
+
     // MARK: - prefs 层缺省语义(「未设置」= 悬浮回归锚)
 
     func testPrefsDefaultIsFloating() {

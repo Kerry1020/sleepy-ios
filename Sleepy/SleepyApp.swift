@@ -191,11 +191,25 @@ final class AppRootViewModel: ObservableObject {
         if let prefsObserver { NotificationCenter.default.removeObserver(prefsObserver) }
     }
 
-    /// 底栏形态重判单一入口 — prefs 变更(设置页/清盘)与 scenePhase.active
-    /// (冷启兜底)都汇到这里;navMode 与 navFloating 同步,永不各说各话。
+    /// 实时窗口宽度上报(AppRoot background GeometryReader → preference)。
+    /// rail 宽屏判定首选此值: 旋转/Split View/Stage Manager 缩放皆即时覆盖;
+    /// keyWindow 兜底只在冷启早期(回调未达)时保守按手机形态。
+    private(set) var windowWidth: CGFloat? = nil
+
+    func updateWindowWidth(_ width: CGFloat) {
+        // 0 = PreferenceKey 初值/零 frame(极早期布局), 不参与判定(回退 keyWindow 兜底)
+        guard width > 0, windowWidth != width else { return }
+        windowWidth = width
+        refreshNavMode()
+    }
+
+    /// 底栏形态重判单一入口 — prefs 变更(设置页/清盘)、scenePhase.active
+    /// (冷启兜底)与窗口宽度变更都汇到这里;navMode 与 navFloating 同步,永不各说各话。
+    /// floating 语义统一走 NavStyleResolver.floating(for:) — rail 水平占位、
+    /// 底部零遮挡归 false(不能用 mode != .docked, 会把 rail 误判成悬浮)。
     func refreshNavMode() {
-        let mode = NavStyleResolver.effectiveMode()
-        let floating = mode != .docked
+        let mode = NavStyleResolver.effectiveMode(windowWidth: windowWidth)
+        let floating = NavStyleResolver.floating(for: mode)
         if navMode != mode { navMode = mode }
         if navFloating != floating { navFloating = floating }
     }
@@ -327,6 +341,16 @@ struct AppRoot: View {
         // ★ 键盘避让只在 tab 层忽略(旧 fullScreenCover 时代对整个 mainContent 忽略);
         //   浮层走自绘 ZStack 容器, 保留键盘避让 → AddCourse 输入框自动避开键盘。
         mainContent
+        // ★ 实时宽度通道(← Android 版本 Configuration.screenWidthDp 重算语义):
+        //   background GeometryReader 零布局侵入, 变更回灌 VM → rail↔手机形态
+        //   随旋转/分屏/Stage Manager 缩放即切。iPhone 恒竖屏, 回调值不变=空操作。
+        .background(GeometryReader { proxy in
+            Color.clear.preference(key: WindowWidthPreferenceKey.self,
+                                   value: proxy.size.width)
+        })
+        .onPreferenceChange(WindowWidthPreferenceKey.self) { width in
+            root.updateWindowWidth(width)
+        }
         // ← Activity.recreate(): 语言切换 → L10n.didChange → languageReload+1 → 全树重建
         .id(root.languageReload)
         .modifier(SleepyThemeProvider(darkTheme: isDark, themeKey: themeKey,
@@ -502,11 +526,27 @@ struct AppRoot: View {
                 floatingTabs
             case .docked:
                 dockedTabs
+            case .rail:
+                railTabs
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(TabsCanvasBackground().ignoresSafeArea())
         .ignoresSafeArea(.keyboard, edges: .bottom)
+    }
+
+    // ★ rail 模式(iPad/横屏/分屏 ≥600pt): Row{侧栏, 内容} —
+    //   ← Android 版本 SleepyNavHost issue#45 ③ Row{NavigationRail, Box(weight=1f){MainTabs}}
+    //   逐行对齐。导航仍是 root.currentTab 单点真值(切 tab 不换容器, 与 Android 同)。
+    //   宽度通道: background GeometryReader 零布局侵入, .global 系分屏/Stage
+    //   Manager 缩放后的实际窗口宽; 变更即回灌 refreshNavMode 重判。
+    private var railTabs: some View {
+        HStack(spacing: 0) {
+            NavigationRailBar(items: navItems)
+                .ignoresSafeArea(edges: .bottom)
+            tabContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
     }
 
     // ★ native 分支(ios26 起生效 — 部署目标 15.6 下此分支永不触达, iOS15/16
@@ -827,6 +867,15 @@ private struct TabBarTransparentProbe: UIViewRepresentable {
 private extension View {
     func nativeScreen(extraBottom: CGFloat) -> some View {
         modifier(NativeScreenModifier(extraBottom: extraBottom))
+    }
+}
+
+/// 实时窗口宽度上报通道(AppRoot background GeometryReader → root.updateWindowWidth)。
+/// 初值 0 = 未就绪(与 VM windowWidth=nil 区分开: 首个真实回调前不参与判定)。
+private struct WindowWidthPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
 

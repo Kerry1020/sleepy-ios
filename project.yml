@@ -80,8 +80,20 @@ targets:
         NSCalendarsFullAccessUsageDescription: 用于把课程表写入系统日历并管理已导入事件
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
+        # 全族开放方向(2026-10-26 平板/横屏适配 ← Android 版本): Android manifest
+        # 无 screenOrientation 锁 + 无 resizeableActivity=false → 手机横屏(≥600dp)/
+        # 平板/分屏/折叠屏展开皆 !isCompact → NavigationRail 双栏。iOS 对齐此语义:
+        # 横屏/Stage Manager/分屏 实际宽度 ≥600pt → NavStyleResolver 走 rail 侧栏。
+        # iPhone 不含 upsideDown(Apple HIG 惯例); iPad 四方向全开。
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
         # ★ widget 深链(widgetURL sleepy://open)+ 课程/导入深链(sleepy://course|import)
         #   依赖 scheme 注册;缺此键 → simctl openurl 报 -10814,真机 widget 点击无响应
         CFBundleURLTypes:
@@ -108,7 +120,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.lingion.sleepy
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"  # iPhone+iPad(2026-10-26 平板适配; widget 族随主 app)
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         GENERATE_INFOPLIST_FILE: "NO"
       configs:
@@ -157,7 +169,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.lingion.sleepy.widget
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"  # iPhone+iPad(2026-10-26 平板适配; widget 族随主 app)
         GENERATE_INFOPLIST_FILE: "NO"
         # 共源编译条件: Sleepy/widget/** 双 target 均编, extension 进程内禁 app-only 分支
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: WIDGET_EXT
