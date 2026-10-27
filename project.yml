@@ -188,7 +188,34 @@ targets:
     platform: watchOS
     sources:
       - path: SleepyWatch
-    dependencies: []
+      # 共享源直接编进本 target (同 SleepyWidget 手法)。excludes = widget 排除集
+      # (app 入口/屏层/UIApplication-only 工具) + 手表不做的域:
+      #   data/calendar (EventKit 系统日历写入)、data/jw (CoreLocation/SwiftSoup
+      #   教务导入)、data/migration (仅 ui/ 引用, 手表镜像库不做迁移包)。
+      - path: Sleepy
+        excludes: ["resources", "SleepyApp.swift", "Info.plist", "ui", "app",
+                   "Assets.xcassets", "LaunchScreen.storyboard",
+                   "data/calendar", "data/jw", "data/migration",
+                   "data/repository/ImportDraftRepository.swift",
+                   # iOS WidgetKit 渲染层 (systemSmall/Medium/Large 档位与
+                   # WidgetCenter 深链是 iPhone 桌面小组件专有; 手表 UI 原生重做,
+                   # 只取 Foundation 级装载器)
+                   "widget/TodayWidgetView.swift", "widget/TwoDayWidgetView.swift",
+                   "widget/WeekGridWidgetView.swift", "widget/WeekListWidgetView.swift",
+                   "widget/WeekViewWidgetView.swift", "widget/WidgetWindowCore.swift",
+                   "widget/WidgetBackgroundCompat.swift", "widget/WidgetCourseCard.swift",
+                   "widget/WidgetVendorActions.swift", "widget/WidgetEditViewModel.swift",
+                   "widget/WidgetCompactWindow.swift", "widget/WidgetCompactHelpers.swift",
+                   "widget/WidgetTextWrap.swift", "widget/WidgetSizeCore.swift",
+                   "widget/WidgetResizeCore.swift", "widget/WidgetScrollStore.swift",
+                   "widget/WidgetBoundaryScheduler.swift",
+                   "widget/notification/BatterySettingsLauncher.swift",
+                   "widget/notification/BatteryOptimizationIntents.swift",
+                   "util/NavStyleResolver.swift"]
+      - path: Sleepy/resources
+        buildPhase: resources
+    dependencies:
+      - package: GRDB
     info:
       path: SleepyWatch/Info.plist
       properties:
@@ -205,6 +232,8 @@ targets:
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: D9UP75W466
         GENERATE_INFOPLIST_FILE: "NO"
+        # 共源编译条件: 通知调度等共享文件里 watch 不适用分支按此裁剪
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: WATCH_APP
       configs:
         Release:
           CODE_SIGN_STYLE: Manual
