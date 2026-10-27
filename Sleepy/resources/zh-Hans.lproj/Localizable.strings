@@ -1040,3 +1040,15 @@
 "slot_defaults_notice" = "部分时间使用默认作息，请按学校实际时间核对。";
 "slot_missing_notice" = "部分时间待设置，请补全后保存。";
 "slot_pending" = "待设置";
+// MARK: - watch (2026-10 watch 伴侣 App)
+"watch_no_table_hint" = "暂无课表，请先在 iPhone 上创建";
+"watch_mark_now" = "进行中";
+"watch_mark_next" = "下一节";
+"watch_mark_on" = "已开启";
+"watch_mark_off" = "已关闭";
+"watch_last_sync" = "上次同步";
+"watch_never_sync" = "尚未同步";
+"watch_resync_now" = "立即同步";
+"watch_settings_reminders_header" = "提醒";
+"watch_settings_readonly_hint" = "提醒开关请在 iPhone 上管理";
+"watch_detail_day" = "星期";

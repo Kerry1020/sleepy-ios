@@ -1039,3 +1039,15 @@
 "slot_defaults_notice" = "一部の時間はデフォルトの時間割を使用しています。学校の実際の時間割と照らし合わせて確認してください。";
 "slot_missing_notice" = "一部の時間が未設定です。設定してから保存してください。";
 "slot_pending" = "未設定";
+// MARK: - watch (2026-10 watch 伴侣 App)
+"watch_no_table_hint" = "時間割がありません。まず iPhone で作成してください。";
+"watch_mark_now" = "進行中";
+"watch_mark_next" = "次回";
+"watch_mark_on" = "オン";
+"watch_mark_off" = "オフ";
+"watch_last_sync" = "最終同期";
+"watch_never_sync" = "未同期";
+"watch_resync_now" = "今すぐ同期";
+"watch_settings_reminders_header" = "リマインダー";
+"watch_settings_readonly_hint" = "リマインダーは iPhone で管理します。";
+"watch_detail_day" = "曜日";
