@@ -58,34 +58,12 @@ enum TodayWidgetLoader {
     }
 }
 
-// MARK: - WeekList / WeekView ← WeekListWidget.loadDataSync (两者完全一致)
-
-enum WeekListWidgetLoader {
-    static func loadDataSync(kind: String? = nil) -> WeekData {
-        let today = Date()
-        let prefs = AppPrefs.shared
-        let isDark = prefs.isDarkMode()
-        let themeKey = prefs.getThemeKey()
-        let themeMode = prefs.getThemeMode()
-        do {
-            guard let repo = WidgetLoader.makeRepo(),
-                  let table = WidgetLoader.tableFor(kind: kind, repo: repo) else {
-                return WeekData(days: [], hasTable: false, isDark: isDark, themeKey: themeKey, themeMode: themeMode)
-            }
-            let week = DateUtils.currentWeek(startDate: table.startDate, today: today)
-            let status = DateUtils.semesterStatus(startDate: table.startDate, maxWeek: table.maxWeek, today: today)
-            let days = try (1...7).map { dayOfWeek -> DayData in
-                let date = DateUtils.dateOfWeekDay(ref: today, dayOfWeek: dayOfWeek)
-                let all = try repo.getCoursesByDay(table.id, day: dayOfWeek)
-                let visible = all.filter { $0.inWeek(week) }.sorted { $0.startNode < $1.startNode }
-                return DayData(date: date, dayOfWeek: dayOfWeek, courses: visible, timeJson: table.timeJson)
-            }
-            return WeekData(days: days, hasTable: true, isDark: isDark, themeKey: themeKey, themeMode: themeMode, semesterStatus: status)
-        } catch {
-            return WeekData(days: [], hasTable: false, isDark: isDark, themeKey: themeKey, themeMode: themeMode)
-        }
-    }
-}
+// WeekList / WeekView 装载器不在本文件: v1.0.61 对齐后由 WeekListWidgetView.swift 的
+// WeekListWidgetDataLoader.loadData (async) 逐行承担 (两者共用 — Android 注释
+// 「WeekViewWidget.loadDataSync 与 WeekListWidget 完全一致」) —— 旧同步枚举
+// (无 resolve 展示周 / 无 AFTER_END 清空 / 无调休映射 / isGrey 恒 false /
+// 无 compactWindow / 无 weekDisplayStatus) 已无任何调用方, 作为错位漂移源删除
+// (同 TwoDayWidgetLoader 先例)。
 
 // TwoDay 装载器不在本文件: v1.0.61 对齐后由 TwoDayWidgetView.swift 的
 // TwoDayWidgetDataLoader.loadData (async) 逐行承担 —— 旧同步枚举 (写死 today/+86400、
