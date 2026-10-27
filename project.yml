@@ -6,6 +6,8 @@ options:
   # 6s Plus 真机 = iOS 15.8.8;16.0 装不上(2026-09 真机调试定版)
   deploymentTarget:
     iOS: "15.6"
+    # watchOS 10 = Series 4/SE 一代以上全覆盖 (2026-10 watch 伴侣 App 定版)
+    watchOS: "10.0"
   createIntermediateGroups: true
   groupSortPosition: top
 
@@ -65,6 +67,7 @@ targets:
       - package: SwiftSoup
       - package: ZIPFoundation
       - target: SleepyWidget       # 内嵌 widget extension → PlugIns/SleepyWidget.appex
+      - target: SleepyWatch        # 内嵌 watchOS 伴侣 App → Watch/SleepyWatch.app
     info:
       path: Sleepy/Info.plist
       properties:
@@ -180,6 +183,35 @@ targets:
           CODE_SIGN_IDENTITY: "Apple Distribution"
           PROVISIONING_PROFILE_SPECIFIER: "Sleepy Widget AppStore"
 
+  SleepyWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - path: SleepyWatch
+    dependencies: []
+    info:
+      path: SleepyWatch/Info.plist
+      properties:
+        CFBundleDisplayName: Sleepy
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: com.lingion.sleepy
+        # 独立启动语义 (通知/Complication 刷新不要求 iPhone App 在前台)
+        WKRunsIndependentlyOfCompanionApp: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.lingion.sleepy.watch
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: D9UP75W466
+        GENERATE_INFOPLIST_FILE: "NO"
+      configs:
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "Apple Distribution"
+          # 开发者门户待建: Sleepy Watch AppStore profile (步骤 6 前补, 未建则 Release 构建失败)
+          PROVISIONING_PROFILE_SPECIFIER: "Sleepy Watch AppStore"
+
   SleepyTests:
     type: bundle.unit-test
     platform: iOS
@@ -244,3 +276,8 @@ schemes:
       targets:
         - SleepyTests
         - SleepyUITests
+  # watchOS 伴侣 App 独立运行入口 (手表模拟器调试; CI 仍只跑 -scheme Sleepy)
+  Sleepy Watch:
+    build:
+      targets:
+        SleepyWatch: all
