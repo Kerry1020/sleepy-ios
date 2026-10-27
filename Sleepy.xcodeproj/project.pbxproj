@@ -330,6 +330,7 @@
 		83A4F8E096E900A4A5C045D2 /* GlobalWidgetCompatibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31B00E403E87446234A08FCF /* GlobalWidgetCompatibility.swift */; };
 		85CDA2ACCCF749A4D3DC7619 /* WeekGridWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76EC0EF9B72C669E4A56B91E /* WeekGridWidgetView.swift */; };
 		861AB6B5478DB2423D1323C2 /* NativeColorPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9103FA65945B83156A93E926 /* NativeColorPicker.swift */; };
+		861F76FBEF8F54A2A7F2F55D /* WatchSyncSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9B8E632B798EE88123F87B /* WatchSyncSnapshotTests.swift */; };
 		862CC2DE902FFABC92F04206 /* SleepyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34F065FDCFDCA2A4AED9B5B8 /* SleepyApp.swift */; };
 		8671CB01D75A76AD4B3C81DD /* ImportReceiverActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BB9A3170E31D64A578F3B56 /* ImportReceiverActivity.swift */; };
 		869D1AA60751414B1311B556 /* NotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B945AD465F81AFC535B658B /* NotificationScheduler.swift */; };
@@ -1029,6 +1030,7 @@
 		FAD2BE655E5EFE5F39CF6283 /* UpdateChangelogDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateChangelogDialog.swift; sourceTree = "<group>"; };
 		FB0DABC28BEA6BE6A4C2179D /* CalendarImportRecordEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarImportRecordEntity.swift; sourceTree = "<group>"; };
 		FBB8D57D18781E227F5F568A /* GridSeparatorGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GridSeparatorGeometry.swift; sourceTree = "<group>"; };
+		FE9B8E632B798EE88123F87B /* WatchSyncSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSyncSnapshotTests.swift; sourceTree = "<group>"; };
 		FEFE0F382E2D42F640D9689F /* RowKeyDifferTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowKeyDifferTests.swift; sourceTree = "<group>"; };
 		FF2B16F1E64028F96C4B5AD5 /* AppDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDatabase.swift; sourceTree = "<group>"; };
 		FF4AC1BC137184D4FED2FCF3 /* LicenseScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseScreen.swift; sourceTree = "<group>"; };
@@ -1550,6 +1552,7 @@
 				42639D7BC617D1327A8DEF13 /* UpdateInfoMirrorTests.swift */,
 				B2C04CC4D3149C5CC6FF39C3 /* UpdateManagerDownloadFallbackTests.swift */,
 				C69CDDE3F7F1E2BEA3DA3C03 /* VersionAndUpdateTests.swift */,
+				FE9B8E632B798EE88123F87B /* WatchSyncSnapshotTests.swift */,
 				EAA351FA5E1B5313277092F1 /* WebViewNavigationPolicyTests.swift */,
 				883A8F99C25404524386B89E /* WidgetLogicTests.swift */,
 				8196FB929621E7BD5615C068 /* WidgetResizeCoreTests.swift */,
@@ -2458,6 +2461,7 @@
 				CB05064383A2D8FBF6C45F57 /* UpdateInfoMirrorTests.swift in Sources */,
 				AF1CD43C2574AE4CAA8423EB /* UpdateManagerDownloadFallbackTests.swift in Sources */,
 				4D12094DB99D2877F409F0FD /* VersionAndUpdateTests.swift in Sources */,
+				861F76FBEF8F54A2A7F2F55D /* WatchSyncSnapshotTests.swift in Sources */,
 				71CF8D75E142FF4C91354E7B /* WebViewNavigationPolicyTests.swift in Sources */,
 				EC2F5B2FFEEF908131D0D88E /* WidgetLogicTests.swift in Sources */,
 				BADD33ED21D3D2BAB384DBE1 /* WidgetResizeCoreTests.swift in Sources */,
