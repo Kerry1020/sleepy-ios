@@ -15,6 +15,7 @@
 		017808802F6DC375BEA329F0 /* ExportImportRoundTripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C66E6D2ABAEEAC25D75D8C3 /* ExportImportRoundTripTests.swift */; };
 		0333BECAA6548B30792CDBBD /* AboutScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DBE6E120D6B08E49C30A4C3 /* AboutScreen.swift */; };
 		033EDF4F2502529CF63BC7B1 /* JwWakeUpCompatParsers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 862D1D03A00150D15C37BF03 /* JwWakeUpCompatParsers.swift */; };
+		03723E8A499DC4BD07BAC447 /* SleepyWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 05BA412B6F60CF5B04BE6998 /* SleepyWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		03C4615F85A3182AB96D8BD3 /* WidgetEditViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4619533148AC3370B5605611 /* WidgetEditViewModel.swift */; };
 		043206EB7CA2A1BBAAD5CC5B /* JwPekingParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6264A390C22B85F9DD9F0CAC /* JwPekingParser.swift */; };
 		0450E3D51AE191142AC05452 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 2D70617B7C10543B70C07BD2 /* ZIPFoundation */; };
@@ -255,6 +256,7 @@
 		78F17A670A6F6C7204CB379B /* WeekDisplayResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81949E978A8725C92FCA42C2 /* WeekDisplayResolver.swift */; };
 		78F8EFCEC7BFB8B1C167F0BA /* ConflictDetailWeekScopeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23A86C9A205FB6D008F11A52 /* ConflictDetailWeekScopeTests.swift */; };
 		793384D8A98170D9837B9858 /* ReminderPermissionUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D8DFDCCD1C8491943A7FD52 /* ReminderPermissionUITests.swift */; };
+		793FA69622AF8460F92F88AB /* SleepyWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 808431739643CC9DF6D6126D /* SleepyWatchApp.swift */; };
 		7B39EA18C8D7D03359DD1605 /* SleepyWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 64CFB5B5DD63AC209144EEDD /* SleepyWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		7C2825E5A15B8A83D00172E2 /* MigrationPackageCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12FA6912FC331672120BD449 /* MigrationPackageCodec.swift */; };
 		7C6FAB02E18707E0143035CA /* Issue55CsvHtmlTextOwnTimeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C60FAC5447AB59ECB3F3CCF /* Issue55CsvHtmlTextOwnTimeTests.swift */; };
@@ -512,6 +514,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		2E983651BAC9C924211021F7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 91C202EC74046D089FFA0F14 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F93BC5A4F6E4B1B063F7BB81;
+			remoteInfo = SleepyWatch;
+		};
 		5454E6B4A695F8DB1AD47D5B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 91C202EC74046D089FFA0F14 /* Project object */;
@@ -536,6 +545,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		36F389AFFCD9E7F1A8D4ED84 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				03723E8A499DC4BD07BAC447 /* SleepyWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C06A3431966930D5AF3E16A1 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -556,6 +576,7 @@
 		0425392AD82917108D3BB908 /* PlatformParityNotes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformParityNotes.swift; sourceTree = "<group>"; };
 		0509FB949FB47C89D3DF4D3F /* OfflineSchoolCityIndexTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineSchoolCityIndexTests.swift; sourceTree = "<group>"; };
 		05A3D362C9894D69BFFCEC3F /* MineScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MineScreen.swift; sourceTree = "<group>"; };
+		05BA412B6F60CF5B04BE6998 /* SleepyWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SleepyWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		05EC5FA0F37BCA99BF0D8ABE /* ExitDraftStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExitDraftStateTests.swift; sourceTree = "<group>"; };
 		0718B20F0D0233CEBDC569F8 /* ImportAuditUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportAuditUITests.swift; sourceTree = "<group>"; };
 		091CF54ADE6711A4CA322D6D /* JwParity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwParity.swift; sourceTree = "<group>"; };
@@ -738,6 +759,7 @@
 		7D8DF7E3509AC5B4147E75C8 /* ReminderScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderScreen.swift; sourceTree = "<group>"; };
 		7F8FE3D103CAC0B91A9CE015 /* HolidayManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayManagerTests.swift; sourceTree = "<group>"; };
 		804FD9B63BCC3C1726B9CAFF /* WeekViewWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekViewWidgetView.swift; sourceTree = "<group>"; };
+		808431739643CC9DF6D6126D /* SleepyWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepyWatchApp.swift; sourceTree = "<group>"; };
 		81949E978A8725C92FCA42C2 /* WeekDisplayResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekDisplayResolver.swift; sourceTree = "<group>"; };
 		8196FB929621E7BD5615C068 /* WidgetResizeCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetResizeCoreTests.swift; sourceTree = "<group>"; };
 		831838316873C50C42AC649A /* SleepyNativeFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepyNativeFormat.swift; sourceTree = "<group>"; };
@@ -787,6 +809,7 @@
 		A3F73FAB76399721B954DF20 /* AppGroupResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupResolver.swift; sourceTree = "<group>"; };
 		A41DA105DC235C6C99C97A0B /* ConflictLayoutEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConflictLayoutEngineTests.swift; sourceTree = "<group>"; };
 		A490795AC781095315441167 /* BatteryOptimizationIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryOptimizationIntents.swift; sourceTree = "<group>"; };
+		A4B3A6DFBA521C77BE6A29E3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		A4DE50D458660EA5AFF52F87 /* DeepLinkUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkUITests.swift; sourceTree = "<group>"; };
 		A636CB3A1BF94C7389163283 /* AddCourseScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddCourseScreen.swift; sourceTree = "<group>"; };
 		A7A77AF7764775265B10AE2B /* PeriodHeaderFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeriodHeaderFormatter.swift; sourceTree = "<group>"; };
@@ -1069,6 +1092,7 @@
 				C4AD798EE56D6A6A6BD66287 /* Sleepy.app */,
 				3CE7034F859FC0E80A0569C9 /* SleepyTests.xctest */,
 				56B94B595CC8F831AE5AE3BC /* SleepyUITests.xctest */,
+				05BA412B6F60CF5B04BE6998 /* SleepyWatch.app */,
 				64CFB5B5DD63AC209144EEDD /* SleepyWidget.appex */,
 			);
 			name = Products;
@@ -1275,6 +1299,7 @@
 				C2BDE01138A338D45CA57003 /* Sleepy */,
 				8AAD3F1069D6DE68878E0732 /* SleepyTests */,
 				D329B1DFD15D4AF37A70CB50 /* SleepyUITests */,
+				A71225B2A579199C7C02CB41 /* SleepyWatch */,
 				5A3245F82EB9D2E262383DB0 /* SleepyWidget */,
 				36402A5055750C390995F1BC /* Products */,
 			);
@@ -1418,6 +1443,15 @@
 				B88DDC15915916194A673803 /* VendorCapabilityState.swift */,
 			);
 			path = notification;
+			sourceTree = "<group>";
+		};
+		A71225B2A579199C7C02CB41 /* SleepyWatch */ = {
+			isa = PBXGroup;
+			children = (
+				A4B3A6DFBA521C77BE6A29E3 /* Info.plist */,
+				808431739643CC9DF6D6126D /* SleepyWatchApp.swift */,
+			);
+			path = SleepyWatch;
 			sourceTree = "<group>";
 		};
 		BCC6879B81B5E6269AAFE44A /* today */ = {
@@ -1589,11 +1623,13 @@
 				946E89EE7634C10E5C59211E /* Resources */,
 				348BDEA72E7E2879036C7159 /* Frameworks */,
 				C06A3431966930D5AF3E16A1 /* Embed Foundation Extensions */,
+				36F389AFFCD9E7F1A8D4ED84 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				2C57C48D741E1CDB6904CAD3 /* PBXTargetDependency */,
+				5C2B12BB5B8319032AB5578E /* PBXTargetDependency */,
 			);
 			name = Sleepy;
 			packageProductDependencies = (
@@ -1645,6 +1681,23 @@
 			productReference = 64CFB5B5DD63AC209144EEDD /* SleepyWidget.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		F93BC5A4F6E4B1B063F7BB81 /* SleepyWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 604861F757CB0C7BC79D1E65 /* Build configuration list for PBXNativeTarget "SleepyWatch" */;
+			buildPhases = (
+				FEB4C9AA0A0C0DE534679D4D /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SleepyWatch;
+			packageProductDependencies = (
+			);
+			productName = SleepyWatch;
+			productReference = 05BA412B6F60CF5B04BE6998 /* SleepyWatch.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -1665,6 +1718,9 @@
 						TestTargetID = 5292F54B11655E3F1B8096ED;
 					};
 					DC378BF644C25C9AE77602E9 = {
+						DevelopmentTeam = D9UP75W466;
+					};
+					F93BC5A4F6E4B1B063F7BB81 = {
 						DevelopmentTeam = D9UP75W466;
 					};
 				};
@@ -1694,6 +1750,7 @@
 			targets = (
 				5292F54B11655E3F1B8096ED /* Sleepy */,
 				DC378BF644C25C9AE77602E9 /* SleepyWidget */,
+				F93BC5A4F6E4B1B063F7BB81 /* SleepyWatch */,
 				4E81C3F3A4B5518E77D9A340 /* SleepyTests */,
 				8E90546735878A73D0A5A238 /* SleepyUITests */,
 			);
@@ -2248,6 +2305,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		FEB4C9AA0A0C0DE534679D4D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				793FA69622AF8460F92F88AB /* SleepyWatchApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -2260,6 +2325,11 @@
 			isa = PBXTargetDependency;
 			target = DC378BF644C25C9AE77602E9 /* SleepyWidget */;
 			targetProxy = D6F04DD7DA0BAC9D589566B1 /* PBXContainerItemProxy */;
+		};
+		5C2B12BB5B8319032AB5578E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F93BC5A4F6E4B1B063F7BB81 /* SleepyWatch */;
+			targetProxy = 2E983651BAC9C924211021F7 /* PBXContainerItemProxy */;
 		};
 		E94E00D718A49F085F436234 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -2309,6 +2379,21 @@
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = Sleepy;
+			};
+			name = Debug;
+		};
+		33D1ABF6A4B0916CD26B3CF4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = D9UP75W466;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SleepyWatch/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lingion.sleepy.watch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
 			};
 			name = Debug;
 		};
@@ -2368,10 +2453,10 @@
 				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(PRODUCT_BUNDLE_IDENTIFIER)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.8;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
 			};
 			name = Release;
 		};
@@ -2409,6 +2494,23 @@
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Sleepy.app/Sleepy";
+			};
+			name = Release;
+		};
+		6367ACD9211A33B0DBEAD271 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				CODE_SIGN_STYLE = Manual;
+				DEVELOPMENT_TEAM = D9UP75W466;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SleepyWatch/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lingion.sleepy.watch;
+				PROVISIONING_PROFILE_SPECIFIER = "Sleepy Watch AppStore";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
 			};
 			name = Release;
 		};
@@ -2531,10 +2633,10 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(PRODUCT_BUNDLE_IDENTIFIER)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.8;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
 			};
 			name = Debug;
 		};
@@ -2584,6 +2686,15 @@
 			buildConfigurations = (
 				00DAE3EB1CB1976A595E8441 /* Debug */,
 				5032E51E1E763A0BBF7FB97B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		604861F757CB0C7BC79D1E65 /* Build configuration list for PBXNativeTarget "SleepyWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				33D1ABF6A4B0916CD26B3CF4 /* Debug */,
+				6367ACD9211A33B0DBEAD271 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
