@@ -189,7 +189,7 @@ struct TwoDayWidgetEntryView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(s.bg)
+        .sleepyWidgetBackground { s.bg }
         .widgetURL(URL(string: "sleepy://open"))
     }
 
@@ -289,5 +289,7 @@ struct TwoDayWidget: Widget {
         }
         .configurationDisplayName(L10n.format("widget_twoday_label"))
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        // iOS 17+ 系统边距关闭, 维持既有自管 padding 布局 (iOS 16 及以下 no-op)
+        .contentMarginsDisabled()
     }
 }
