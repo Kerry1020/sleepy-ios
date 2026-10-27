@@ -196,7 +196,7 @@ struct WeekGridWidgetEntryView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(s.surfaceContainer)  // bgContainer
+        .sleepyWidgetBackground { s.surfaceContainer }  // bgContainer
         .cornerRadius(18)
         .widgetURL(URL(string: "sleepy://open"))
     }
@@ -611,5 +611,7 @@ struct WeekGridWidget: Widget {
         // 三档全开: Android 13 变体是「放置预设」(S/M/L),且全部 minResize 40dp + 自由拖拽,
         // 任何 widget 都能被拖成任意档 → iOS 三 family 全支持,档位由 WidgetLayoutTier 换算
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        // iOS 17+ 系统边距关闭, 维持既有自管 padding 布局 (iOS 16 及以下 no-op)
+        .contentMarginsDisabled()
     }
 }
