@@ -232,6 +232,8 @@ targets:
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: D9UP75W466
         GENERATE_INFOPLIST_FILE: "NO"
+        # 上架校验硬门槛: watch App 必须有单尺寸 1024 icon (复用主 App 胶囊 mark)
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # 共源编译条件: 通知调度等共享文件里 watch 不适用分支按此裁剪
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: WATCH_APP
       configs:
