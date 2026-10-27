@@ -490,6 +490,7 @@
 		F5B6512BFE9EB65E52C1FAD5 /* DateTimePickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = B26C1FC7457815C7A78F9026 /* DateTimePickers.swift */; };
 		F641EDE75578F5F85B651651 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1205376525F575AF970B7CD4 /* Localizable.strings */; };
 		F65B4753901D75DE1D367046 /* ParserAuditTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BCB8B72B49233D52340AB7A /* ParserAuditTests.swift */; };
+		F88DECDC5844B50BB54A2770 /* NavigationRailBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D5BFC656D3F3C24D3651480 /* NavigationRailBar.swift */; };
 		F909579116E3DAFE633B692D /* ImportReceiverActivityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DDC90F60E5366C55756996B /* ImportReceiverActivityTests.swift */; };
 		F90AF82583153D795EF0668B /* TwoDayWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D52AFD49A9FA76836199F06A /* TwoDayWidgetView.swift */; };
 		F91FD1BE5DB449D2BEE5E54E /* JwParserRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26CF08C9ED257788E53D0309 /* JwParserRegistry.swift */; };
@@ -607,6 +608,7 @@
 		290CA376AA06DF914D39E04B /* TimeSlotEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeSlotEditor.swift; sourceTree = "<group>"; };
 		2A1DB6476DB4970E3D39BFC5 /* MealBreakDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealBreakDetector.swift; sourceTree = "<group>"; };
 		2AD1DB72537D5FB202ADBE25 /* TimetableViewportPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimetableViewportPolicy.swift; sourceTree = "<group>"; };
+		2D5BFC656D3F3C24D3651480 /* NavigationRailBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationRailBar.swift; sourceTree = "<group>"; };
 		2D91020B7AECA19BEC7D1A96 /* JwCfNewFetchJs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwCfNewFetchJs.swift; sourceTree = "<group>"; };
 		2DDC1DB2898102E2021052B3 /* SleepyNativeExporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepyNativeExporterTests.swift; sourceTree = "<group>"; };
 		2F1563123EEBE8166F29623F /* TimeTableUtilsAlignmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeTableUtilsAlignmentTests.swift; sourceTree = "<group>"; };
@@ -1031,6 +1033,7 @@
 				B26C1FC7457815C7A78F9026 /* DateTimePickers.swift */,
 				15B8ACC849EE7144AB42B848 /* DialogActionButtons.swift */,
 				9103FA65945B83156A93E926 /* NativeColorPicker.swift */,
+				2D5BFC656D3F3C24D3651480 /* NavigationRailBar.swift */,
 				2140942FC998369FA6029236 /* PeriodHeaderCellContent.swift */,
 				8EE9A72ECBA6F6B95C0697A5 /* PeriodHeaderLayoutModel.swift */,
 				D2A030E63E72EF0BC18A2CE2 /* PeriodTableShareSheet.swift */,
@@ -1857,6 +1860,7 @@
 				486E763FDB230519E148D20E /* MineScreen.swift in Sources */,
 				861AB6B5478DB2423D1323C2 /* NativeColorPicker.swift in Sources */,
 				DE47CE18A06D7D5C6E17F2AE /* NavStyleResolver.swift in Sources */,
+				F88DECDC5844B50BB54A2770 /* NavigationRailBar.swift in Sources */,
 				9F9DD303AA9003E7D4137EE3 /* NoRippleClickable.swift in Sources */,
 				869D1AA60751414B1311B556 /* NotificationScheduler.swift in Sources */,
 				D311473A9A7123F30A470D13 /* OfflineSchoolCityIndex.swift in Sources */,
@@ -2428,7 +2432,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.lingion.sleepy.widget;
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = WIDGET_EXT;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -2449,7 +2453,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "Sleepy Widget AppStore";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = WIDGET_EXT;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -2536,7 +2540,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.lingion.sleepy;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -2556,7 +2560,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.lingion.sleepy;
 				PROVISIONING_PROFILE_SPECIFIER = "Sleepy AppStore";
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
