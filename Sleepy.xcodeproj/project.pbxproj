@@ -48,6 +48,7 @@
 		1019C91B3D4BD3F7F3756DA8 /* BackgroundReliabilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BA3B7F525825D51CDEC9739 /* BackgroundReliabilityTests.swift */; };
 		103E9CD3CC61F913CC87C4CE /* UndoManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D5816F5C0F382110A910D43 /* UndoManager.swift */; };
 		105848ADD6E684DE219C4F90 /* SleepyNativeExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF2317D8ADB299B07E322439 /* SleepyNativeExporter.swift */; };
+		1090E91F815A223E47CFD718 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 517FEA6516EE11E941115E90 /* PrivacyInfo.xcprivacy */; };
 		10D9CFAD96128961F82A2FCE /* WidgetCompactHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 945AE1E7D6D417CE3FBD4C89 /* WidgetCompactHelpers.swift */; };
 		118C9D479FCCF165698AFD84 /* HolidayReminderPolicyAdapterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7C64B8C9F20602B582D6F22 /* HolidayReminderPolicyAdapterTests.swift */; };
 		119BD2A197427B16582217AD /* school_cities.json in Resources */ = {isa = PBXBuildFile; fileRef = 6033BE02095EB53FC165FEAC /* school_cities.json */; };
@@ -124,8 +125,10 @@
 		2E5FB106800B0C324DBDB8AB /* WeekRangeOverlap.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB8C75554581BE8C26C81B68 /* WeekRangeOverlap.swift */; };
 		2EB4CF9ED460D4C07268DB91 /* SheetDetentsCompat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F69E175915A92D0DDA63EC6 /* SheetDetentsCompat.swift */; };
 		2F2DDD9BFBF2170D7B68A4CF /* JwChaoxingParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88A0C2BDE5E35B78392B4C54 /* JwChaoxingParser.swift */; };
+		315F0BC0D635175505B7E287 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 517FEA6516EE11E941115E90 /* PrivacyInfo.xcprivacy */; };
 		31BA8990DDABCAF60E5EEFC2 /* ReminderCapabilityFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3997ACEE9626F6C1DD522A5 /* ReminderCapabilityFlow.swift */; };
 		32C7A0EB4224644590EA4AB5 /* JwQzCrazyParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3D445F86E00820411E38285 /* JwQzCrazyParser.swift */; };
+		3340A3402AFBA1CD5E3DDB2B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 394C4BBD210D24415328FC75 /* Assets.xcassets */; };
 		334E4375A4D51E4A269A969C /* ThemeAndPinyinTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCC4B67228CB7512A7890C3D /* ThemeAndPinyinTests.swift */; };
 		34C421D4351930ECCD846982 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C19106B8995541FFB0F73DB6 /* LaunchScreen.storyboard */; };
 		34F819944913032B36BBD878 /* school_city_boundaries.source.json in Resources */ = {isa = PBXBuildFile; fileRef = DCA9076C6A9149843AB86B5C /* school_city_boundaries.source.json */; };
@@ -388,6 +391,7 @@
 		9F213C78CE2B63AF40F9FAB1 /* BackgroundReliabilityProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8A2B9F752990795A5BDC657 /* BackgroundReliabilityProbe.swift */; };
 		9F446B5313A2E7ACA7BA7BF5 /* SleepyNativeExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF2317D8ADB299B07E322439 /* SleepyNativeExporter.swift */; };
 		9F5B46589CCE6B5952BECCBB /* ButtonHitAreaUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12B67FFE926875C9BA1433BE /* ButtonHitAreaUITests.swift */; };
+		9F8B55D0FDF040A05A668BED /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 517FEA6516EE11E941115E90 /* PrivacyInfo.xcprivacy */; };
 		9F9DD303AA9003E7D4137EE3 /* NoRippleClickable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DB8F6871F3F92D04E6106C9 /* NoRippleClickable.swift */; };
 		A011BEFBDCF953A547BB3E2F /* ImportDraftEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 427290E97C9EEF4990D614F5 /* ImportDraftEntity.swift */; };
 		A10FFEDDC8426FB7CF1F7C74 /* WidgetSemanticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88100984FA669434490F2B3B /* WidgetSemanticsTests.swift */; };
@@ -745,6 +749,7 @@
 		370A630F8E293663E9B52AE2 /* EditTableScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditTableScreen.swift; sourceTree = "<group>"; };
 		3809683F11A502026D9F44C5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		38ACCC7671C8A0AA3121947D /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/Localizable.strings"; sourceTree = "<group>"; };
+		394C4BBD210D24415328FC75 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		397DC86E9AB0B03EE79461D2 /* SleepyNativeFormatTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepyNativeFormatTests.swift; sourceTree = "<group>"; };
 		39EE2EC9F37C40DBBE526D31 /* JwCourse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwCourse.swift; sourceTree = "<group>"; };
 		3A0E8FA435173DC2DF447D33 /* JwWakeUpCompatParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwWakeUpCompatParserTests.swift; sourceTree = "<group>"; };
@@ -786,6 +791,7 @@
 		4E82A553EBD1D0C8456D3011 /* SleepyPlaceholderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepyPlaceholderTests.swift; sourceTree = "<group>"; };
 		4EB7621E877F11EF914F4435 /* NavStyleResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavStyleResolver.swift; sourceTree = "<group>"; };
 		4F69E175915A92D0DDA63EC6 /* SheetDetentsCompat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SheetDetentsCompat.swift; sourceTree = "<group>"; };
+		517FEA6516EE11E941115E90 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		51A86F82646BCD36EE693111 /* JwEams5Parser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwEams5Parser.swift; sourceTree = "<group>"; };
 		522A76986ED4843C6F93EF90 /* WatchSyncReceiver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSyncReceiver.swift; sourceTree = "<group>"; };
 		52A6E74309BB326A8378BC9A /* MarkdownBlocks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownBlocks.swift; sourceTree = "<group>"; };
@@ -1582,6 +1588,7 @@
 			isa = PBXGroup;
 			children = (
 				1A47704C4FBC4DA5F3CAEB10 /* Views */,
+				394C4BBD210D24415328FC75 /* Assets.xcassets */,
 				A4B3A6DFBA521C77BE6A29E3 /* Info.plist */,
 				808431739643CC9DF6D6126D /* SleepyWatchApp.swift */,
 				A7520D91A2F46FD230A9D9E7 /* WatchStore.swift */,
@@ -1620,6 +1627,7 @@
 				8D929FCEF4A32DF472275A70 /* Assets.xcassets */,
 				AF8D64162D7772B54812CCBA /* Info.plist */,
 				C19106B8995541FFB0F73DB6 /* LaunchScreen.storyboard */,
+				517FEA6516EE11E941115E90 /* PrivacyInfo.xcprivacy */,
 				D19C06FD8160EB36D513F677 /* Sleepy.entitlements */,
 				34F065FDCFDCA2A4AED9B5B8 /* SleepyApp.swift */,
 			);
@@ -1915,6 +1923,7 @@
 				34C421D4351930ECCD846982 /* LaunchScreen.storyboard in Resources */,
 				F641EDE75578F5F85B651651 /* Localizable.strings in Resources */,
 				52350D79416EE136012CF1CD /* Localizable.stringsdict in Resources */,
+				315F0BC0D635175505B7E287 /* PrivacyInfo.xcprivacy in Resources */,
 				8A6E8CBA5BD35AD27269BBE8 /* school_cities.json in Resources */,
 				61639588D86095F728021619 /* school_city_boundaries.bin.gz in Resources */,
 				E5174344C8BFB27DBD5ECE6C /* school_city_boundaries.source.json in Resources */,
@@ -1926,8 +1935,10 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3340A3402AFBA1CD5E3DDB2B /* Assets.xcassets in Resources */,
 				9A1D51364D41BEC42AF36C0D /* Localizable.strings in Resources */,
 				4B6BD5049F8AACA8B6600F67 /* Localizable.stringsdict in Resources */,
+				9F8B55D0FDF040A05A668BED /* PrivacyInfo.xcprivacy in Resources */,
 				D5B4C0BD6A29B9D845CD420D /* school_cities.json in Resources */,
 				DDF8C5C7D7054B29592F3C57 /* school_city_boundaries.bin.gz in Resources */,
 				DEB28ABFCB1213F7044C69A2 /* school_city_boundaries.source.json in Resources */,
@@ -1943,6 +1954,7 @@
 				EFA7E01FD14A1381CC266E23 /* LaunchScreen.storyboard in Resources */,
 				D6770DDC7A4CB4206244FDD1 /* Localizable.strings in Resources */,
 				52DFF0E7291B635399231833 /* Localizable.stringsdict in Resources */,
+				1090E91F815A223E47CFD718 /* PrivacyInfo.xcprivacy in Resources */,
 				119BD2A197427B16582217AD /* school_cities.json in Resources */,
 				D2FA696AE5282A46EB50ACBD /* school_city_boundaries.bin.gz in Resources */,
 				34F819944913032B36BBD878 /* school_city_boundaries.source.json in Resources */,
