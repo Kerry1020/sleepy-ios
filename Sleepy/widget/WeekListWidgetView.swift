@@ -1,7 +1,7 @@
 // WeekListWidgetView.swift — ← WeekListWidget.kt + WidgetBitmapRenderers.renderWeekList
 // 本周课表(列表) widget — 7 列日列(列数随 visibleDays)。
 // 列卡片: primaryContainer(今天) / surfaceContainer(其他), 14dp 圆角。
-// 课程: 彩色胶囊背景 + BOLD 课名。
+// 课程: 彩色胶囊背景 + 常规字重课名 (安卓 L899 Typeface.DEFAULT; bold 的是 chip 文字)。
 //
 // 对齐 Android 定稿语义 (2c937b11 / 895fe72f / ede839af):
 //  1. SMALL 档 = 最近 3 天「列脸」(renderWeekListCompact → 换列后走同一常规排版),
@@ -42,7 +42,8 @@ struct WeekListWidgetEntry: TimelineEntry {
 /// (L188) → 调休映射 effectiveDayOfWeek 取课 (L187) → isGrey (L195) →
 /// compactWindow 三天真实日期窗口 (L199-205) → weekDisplayStatus (L206)。
 /// Android runBlocking → iOS async (TimelineProvider completion 允许异步回调),
-/// 与 TwoDayWidgetDataLoader 同模式; WidgetDataLoaders.swift 通用版保留给 WeekView。
+/// 与 TwoDayWidgetDataLoader 同模式; WeekView 共用本装载器
+/// (← WeekViewWidget.kt L186 注释「与 WeekListWidget.loadDataSync 完全一致」)。
 enum WeekListWidgetDataLoader {
 
     static func loadData(kind: String) async -> WeekData {
@@ -132,17 +133,19 @@ struct WeekListWidgetEntryView: View {
         // issue#26: widget 全局一档别名开关
         let useAlias = AppPrefs.shared.isWidgetUseAlias()
         let todayDow = DateUtils.todayDayOfWeek(today: Date())
-        // ← renderWeekList: SMALL 变体走 compact(compactShownDays 单一口径 —
-        // compactWindow 优先三天真实日期窗口, 空才回退今天邻域 ≤3 列; §9.1)
-        let isCompact = widgetFamily == .systemSmall
-        let days = isCompact ? WidgetCompactHelpers.compactShownDays(data, AppPrefs.shared.getVisibleDays(), todayDow)
-                             : shownDays(data)
         let tier = WidgetLayoutTier(family: widgetFamily)
         // 状态行占位 16dp ← Android push() L60-61:
         // semesterStatus != IN_RANGE || weekDisplayStatus != NORMAL (自动跳最近有课日时同样抬列顶)
         let statusH: CGFloat = (data.semesterStatus != .inRange || data.weekDisplayStatus != .normal) ? 16 : 0
 
         return GeometryReader { proxy in
+            // ← renderWeekList L786: SMALL 变体 + 容器 <150dp 才走 compact 脸,
+            // 容器被拖大 ≥150dp → 内部升档回全量排版 (iPad/大屏手机 systemSmall 实测
+            // ≥150pt 时与安卓平板同口径显示全周列)。
+            let isCompact = widgetFamily == .systemSmall && proxy.size.width < 150
+            let days = isCompact
+                ? WidgetCompactHelpers.compactShownDays(data, AppPrefs.shared.getVisibleDays(), todayDow)
+                : shownDays(data)
             // ← push() L62-64 闸门: hasTable && 列非空 && 任一天有课 (数据层 days 全量口径,
             // 非过滤后 shownDays — 安卓 any 读 data.days)。学期外不在此设闸:
             // BEFORE_START 钳周=1 预习照常叠窗口截断; AFTER_END 课程清空 → any=false 自然不成窗
@@ -227,13 +230,15 @@ private struct WeekListDayColumn: View {
                 .padding(.bottom, 11) // chip 顶 colTop+26
 
             if !day.courses.isEmpty {
-                // 课程数量 chip
-                Text("\(day.courses.count) 门")
-                    .font(.system(size: 9))
+                // 课程数量 chip — 安卓 chip 文字继承标题 BOLD (L873 设 bold 后直到 L899
+                // 才重置, chip 在 L889 落在这段里); 宽 = 文本长度*6+12dp、高 14dp 固定公式
+                // (L884-885), 非自然字宽 — 逐字符 6dp 槽位。
+                let chipText = "\(day.courses.count) 门"
+                Text(chipText)
+                    .font(.system(size: 9, weight: .bold))
                     .foregroundColor(s.onSurfaceVariant)
                     .opacity(greyAlpha)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
+                    .frame(width: CGFloat(chipText.count) * 6 + 12, height: 14)
                     .background(s.surfaceVariant.opacity(greyAlpha))
                     .cornerRadius(50)
                     .padding(.bottom, 6)
@@ -251,7 +256,9 @@ private struct WeekListDayColumn: View {
                             // color: nil = 删除线随正文主色 —— 与修复前行为逐字相同;
                             // 挂在 View 链上只会命中 iOS16 pattern 重载(extension 不可用)。
                             .strikethrough(strikethrough, color: nil)
-                            .font(.system(size: 9, weight: .bold))
+                            // 安卓课名走 Typeface.DEFAULT 常规字重 (L899 在课程循环前重置),
+                            // 与 drawCourse 的 BOLD 卡面不同 — 本渲染器是内联循环, 不继承 bold。
+                            .font(.system(size: 9))
                             .foregroundColor(CourseColorUtil.textColorOn(bg: bgColor, isDark: s.isDark,
                                                                          onSurface: s.onSurface))
                             .opacity(greyAlpha) // 安卓 applyAlpha(文字色, 153/255) (L917-920)
