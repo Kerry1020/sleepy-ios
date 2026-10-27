@@ -11,15 +11,16 @@
 //  3. 学期外顶部全宽状态行占位 16dp,同时从列可用高里扣掉。
 //
 // v1.0.61 对齐 (F125, ← WeekListWidget.kt L183-206 + Receiver 闸门 L60-64):
-//  4. 装载器走 WidgetWeekDataLoader.resolve(kind) — 展示周 = display.targetWeek,
-//     日期 = source.dateFor (钳制周=1 预习 / NEAREST_BUSY_DAY 跳周都随 display 走);
-//  5. AFTER_END 列内课程清空, 只画状态行 (Android L188);
-//  6. 取课星期 = HolidayTransferHelper.effectiveDayOfWeek 调休映射 (Android L187);
-//  7. isGrey = HolidayManager.shouldGrey(date, tableId) 灰显 0.6 alpha +
+//  4. 装载器走 WidgetWeekDataLoader.resolve(kind) — 日期 = source.dateFor (钳制周=1
+//     预习 / NEAREST_BUSY_DAY 跳周都随 display 走);
+//  5. 取课走 source.coursesOn(调休按日期反向查, 审计 [A]-1 修复): AFTER_END 清空仅当
+//     非补班日, 任一列有课 → 状态改写 IN_RANGE (Android L205);
+//     旧 effectiveDayOfWeek 正向映射为错位口径, 已弃用;
+//  6. isGrey = HolidayManager.shouldGrey(date, tableId) 灰显 0.6 alpha +
 //     「strikethrough」样式 (Android renderWeekListRegular L871-920);
-//  8. compactWindow = WidgetCompactWindow.build(...) 三天真实日期窗口 (2026-09-15 用户令,
+//  7. compactWindow = WidgetCompactWindow.build(...) 三天真实日期窗口 (2026-09-15 用户令,
 //     Android L199-205), SMALL 档日列 = compactShownDays 单一口径 (§9.1);
-//  9. statusH 闸门 = semesterStatus != IN_RANGE || weekDisplayStatus != NORMAL
+//  8. statusH 闸门 = semesterStatus != IN_RANGE || weekDisplayStatus != NORMAL
 //     (Android L60-61); 今天列高亮 = isDateToday(day.date) (Android L828, 展示周≠自然周
 //     时按星期判会错列)。
 // forceScroll 条带 (WidgetScrollStore/ScrollStripService) = Android 专有宿主,
@@ -57,18 +58,21 @@ enum WeekListWidgetDataLoader {
         guard let source = await WidgetWeekDataLoader.resolve(kind),
               let repo = WidgetLoader.makeRepo() else { return fallback }
         let table = source.table
-        let week = source.display.targetWeek
         let status = source.display.semesterStatus
-        // 学期前: 钳制周=1, 第 1 周课照常显示(预习); 学期后: 课程清空, renderer 画状态行
+        // ← Android L183-197: 日期=source.dateFor(周1预习/跳周随 display), 取课=source.coursesOn
+        // (调休按日期反向查 — 补班日=source 星期的课并按 source 日反解周次, 放假日=无课;
+        // AFTER_END 清空且保留补班日列, 任一列有课 → 状态改写 IN_RANGE 不画状态行)。
+        // 旧版 effectiveDayOfWeek 正向映射为错位口径 (审计发现 [A]-1): 放假日列被填上
+        // "挪走那天该上的课", 补班日列显示自己星期的课, 周次也不随 source 日反解。
         var days: [DayData] = []
         for dayOfWeek in 1...7 {
             let date = source.dateFor(dayOfWeek: dayOfWeek)
-            let effectiveDay = HolidayTransferHelper.effectiveDayOfWeek(table.id, date)
-            let visible = status == .afterEnd ? [] : source.coursesFor(dayOfWeek: effectiveDay, week: week)
+            let visible = source.coursesOn(date, previewBeforeStart: true)
             days.append(DayData(date: date, dayOfWeek: dayOfWeek, courses: visible,
                                 timeJson: table.timeJson,
                                 isGrey: await HolidayManager.shouldGrey(date, tableId: table.id)))
         }
+        let effStatus = days.contains(where: { !$0.courses.isEmpty }) && status == .afterEnd ? .inRange : status
         // 最小档三天窗口 (2026-09-15 用户令): 真实日期, 上下周打通 (Android L199-205)
         let compactWindow = await WidgetCompactWindow.build(
             repo: repo, tableId: table.id, timeJson: table.timeJson,
@@ -77,7 +81,7 @@ enum WeekListWidgetDataLoader {
             displayDate: source.display.status == .nearestBusyDay ? source.display.targetDate : nil
         )
         return WeekData(days: days, hasTable: true, isDark: isDark, themeKey: themeKey,
-                        themeMode: themeMode, semesterStatus: status,
+                        themeMode: themeMode, semesterStatus: effStatus,
                         compactWindow: compactWindow, weekDisplayStatus: source.display.status)
     }
 }
