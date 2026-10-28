@@ -1,8 +1,9 @@
 // CourseRowView.swift — 课程行卡 (2026-10 watch 伴侣 App)
-// ← WidgetCourseCard 显示语义的 watch 重排: 左色条 + 时段/课名/地点。
-// 色: CourseColorUtil issue#22 三态取色同源 (组行传入本天可见课集;
+// ← WidgetCourseCard 显示语义的 watch 重排: 左色条 + 时段/课名/教师·地点。
+// 色: CourseColorUtil issue#22 三态取色同源 (组行传入同 groupId 行集;
 //     无色模式镜像 course_colorless → 隐色条)。时段: slotLabel 镜像 display_mode。
 // 名: 别名口径镜像 week_use_alias (列表档), 恒「别名即显」是 v1 bug, v2 已修。
+// meta「教师 · 地点」← TodayCourseCard 同拼接 (空段自动跳过)。
 
 import SwiftUI
 
@@ -21,6 +22,11 @@ struct CourseRowView: View {
             isDark: scheme.isDark, neutralColor: scheme.secondaryContainer)
     }
 
+    /// 「教师 · 地点」← TodayCourseCard 同拼接: 空段跳过, 两段之间中点分隔
+    private func metaText(_ c: CourseEntity) -> String {
+        [c.teacher, c.room].filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: 6) {
             if !store.neutralColor {
@@ -37,8 +43,9 @@ struct CourseRowView: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(scheme.onSurface)
                     .lineLimit(2)
-                if !course.room.isEmpty {
-                    Text(course.room)
+                let meta = metaText(course)
+                if !meta.isEmpty {
+                    Text(meta)
                         .font(.system(size: 11))
                         .foregroundColor(scheme.onSurfaceVariant)
                         .lineLimit(1)

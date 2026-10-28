@@ -1,6 +1,8 @@
 // TodayView.swift — 手表今日课表 (2026-10 watch 伴侣 App)
-// ← TodayScreen 语义的手表重设计: 学期状态行 + 「进行中/下一节」角标 + 全天列表。
-// 数据口径与 TodayWidgetLoader 同源 (调休 effectiveDayOfWeek + 当前周过滤 + 节次排序)。
+// ← TodayScreen 语义的手表重设计: 头卡 (日期 + 周次/节数两枚 Stat) +
+// 「进行中/下一节」角标 + 冲突分栏行 (ConflictLayoutEngine.weekLaneRows 同源)。
+// 数据口径与 TodayWidgetLoader 同源 (调休 effectiveDayOfWeek + 当前周过滤 + 节次排序);
+// ownTime 课渲染前 normalizeNode (← TodayScreen 用户报障 2026-09-10 同口径)。
 
 import SwiftUI
 
@@ -23,38 +25,104 @@ struct TodayView: View {
     private func content(_ table: TimeTableEntity, scheme: WidgetScheme) -> some View {
         let today = Date()
         let status = DateUtils.semesterStatus(startDate: table.startDate, maxWeek: table.maxWeek, today: today)
+        // ownTime 课按时间域归一化节点 (← TodayScreen: 落库占位节点不得影响分组/排序)
         let courses = store.todayCourses(table: table)
+            .map { $0.normalizeNode(timeJson: table.timeJson) }
+            .sorted { $0.startNode < $1.startNode }
         let marks = status == .inRange ? classState(courses: courses, table: table, now: today) : [:]
+        // 冲突分栏 — 与 iOS 今日页/周视图同一引擎同一分组; 手表窄屏多栏并排
+        let laneRows = ConflictLayoutEngine.weekLaneRows(courses, timeJson: table.timeJson)
         List {
-            statusRow(status, table: table, scheme: scheme)
+            headerRow(status: status, table: table, count: courses.count, scheme: scheme)
             if courses.isEmpty {
                 Text(status == .inRange ? L10n.t("schedule_no_course_today") : L10n.t("today_semester_out_hint"))
                     .font(.footnote).foregroundColor(scheme.onSurfaceVariant)
             } else {
-                ForEach(Array(courses.enumerated()), id: \.offset) { idx, c in
-                    NavigationLink {
-                        CourseDetailView(course: c, table: table, groupRows: courses)
-                    } label: {
-                        CourseRowView(course: c, table: table, scheme: scheme, mark: marks[idx])
+                ForEach(Array(laneRows.enumerated()), id: \.offset) { _, row in
+                    if row.laneCount == 1, let only = row.courses.first {
+                        courseLink(only, courses: courses, table: table, scheme: scheme,
+                                   mark: markOf(only, in: courses, marks: marks))
+                    } else {
+                        // 多栏行: 横向均分, 栏间 0.5pt hairline 竖线 (← TodayLaneRow 同款)
+                        HStack(alignment: .top, spacing: 4) {
+                            ForEach(0..<row.laneCount, id: \.self) { li in
+                                if li > 0 {
+                                    Rectangle()
+                                        .fill(scheme.onSurface.opacity(SleepyTheme.Alpha.hairline))
+                                        .frame(width: 0.5)
+                                }
+                                VStack(alignment: .leading, spacing: 4) {
+                                    ForEach(row.courses.filter { row.laneOf[$0.id] == li }) { c in
+                                        courseLink(c, courses: courses, table: table, scheme: scheme,
+                                                   mark: markOf(c, in: courses, marks: marks))
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
                     }
                 }
             }
         }
     }
 
-    /// 学期状态行 — 学期内「第 N 周」, 外显状态文案 (键与 iOS 同源)
+    /// 单课链接 — groupRows 传同 groupId 行集 (issue#22 取色按组判定, 全量传会歪)
+    private func courseLink(_ course: CourseEntity, courses: [CourseEntity],
+                            table: TimeTableEntity, scheme: WidgetScheme,
+                            mark: CourseMark?) -> some View {
+        NavigationLink {
+            CourseDetailView(course: course, table: table,
+                             groupRows: courses.filter { $0.groupId == course.groupId })
+        } label: {
+            CourseRowView(course: course, table: table, scheme: scheme, mark: mark,
+                          groupRows: courses.filter { $0.groupId == course.groupId })
+        }
+    }
+
+    private func markOf(_ course: CourseEntity, in courses: [CourseEntity],
+                        marks: [Int: CourseMark]) -> CourseMark? {
+        courses.firstIndex(where: { $0.id == course.id }).flatMap { marks[$0] }
+    }
+
+    /// 头卡 — ← TodayHeader 降维: 日期行 + 「第 N 周 / N 节」两枚 Stat
     @ViewBuilder
-    private func statusRow(_ status: DateUtils.SemesterStatus, table: TimeTableEntity, scheme: WidgetScheme) -> some View {
+    private func headerRow(status: DateUtils.SemesterStatus, table: TimeTableEntity,
+                           count: Int, scheme: WidgetScheme) -> some View {
+        let comps = DateUtils.isoCalendar.dateComponents([.month, .day, .weekday], from: Date())
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(alignment: .bottom, spacing: 4) {
+                Text(L10n.format("date_long_format", comps.month ?? 1, comps.day ?? 1))
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundColor(scheme.onSurface)
+                Text(DateUtils.localizedDay(((comps.weekday ?? 2) + 5) % 7 + 1))
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(scheme.onSurfaceVariant)
+            }
+            HStack(spacing: 4) {
+                stat(weekOrStatusText(status, table: table),
+                     bg: scheme.primaryContainer, fg: scheme.onPrimaryContainer, scheme: scheme)
+                stat(count == 0 ? L10n.t("no_course") : L10n.format("n_periods", count),
+                     bg: scheme.surfaceVariant, fg: scheme.onSurfaceVariant, scheme: scheme)
+            }
+        }
+    }
+
+    private func weekOrStatusText(_ status: DateUtils.SemesterStatus, table: TimeTableEntity) -> String {
         switch status {
         case .inRange:
-            let week = DateUtils.currentWeek(startDate: table.startDate, today: Date())
-            Text(L10n.format("schedule_current_week", week))
-                .font(.caption).foregroundColor(scheme.onSurfaceVariant)
-        case .beforeStart:
-            Text(L10n.t("semester_not_started")).font(.caption).foregroundColor(scheme.onSurfaceVariant)
-        case .afterEnd:
-            Text(L10n.t("semester_ended")).font(.caption).foregroundColor(scheme.onSurfaceVariant)
+            return L10n.format("schedule_current_week",
+                               DateUtils.currentWeek(startDate: table.startDate, today: Date()))
+        case .beforeStart: return L10n.t("semester_not_started")
+        case .afterEnd: return L10n.t("semester_ended")
         }
+    }
+
+    private func stat(_ label: String, bg: Color, fg: Color, scheme: WidgetScheme) -> some View {
+        Text(label)
+            .font(.system(size: 9, weight: .medium))
+            .foregroundColor(fg)
+            .padding(.horizontal, 6).padding(.vertical, 2)
+            .background(Capsule().fill(bg))
     }
 
     private func emptyState(scheme: WidgetScheme) -> some View {
