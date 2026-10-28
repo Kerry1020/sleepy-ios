@@ -40,6 +40,25 @@ final class JwImportDraftCodecTests: XCTestCase {
         XCTAssertEqual(snapshot.smartConfigJson, back.smartConfigJson)
     }
 
+    func testUsedDefaultTimesRoundTripsWhenTrue() throws {
+        // 默认作息补齐标志随快照往返, 恢复草稿后提示不丢。
+        var snapshot = validSnapshot()
+        snapshot.usedDefaultTimes = true
+        let json = JwImportDraftCodec.toJson(snapshot)
+        XCTAssertTrue(json.contains("\"usedDefaultTimes\":true"))
+        let back = try XCTUnwrap(JwImportDraftCodec.fromJson(json))
+        XCTAssertTrue(back.usedDefaultTimes)
+        XCTAssertEqual(snapshot, back)
+    }
+
+    func testUsedDefaultTimesAbsentInLegacyPayloadDecodesFalse() throws {
+        // 旧 v1 快照无该键 = false, 且不整包拒绝。
+        let json = JwImportDraftCodec.toJson(validSnapshot())
+        XCTAssertFalse(json.contains("usedDefaultTimes"))
+        let back = try XCTUnwrap(JwImportDraftCodec.fromJson(json))
+        XCTAssertFalse(back.usedDefaultTimes)
+    }
+
     func testOptionalSchoolRoundTrip() throws {
         // 对齐 Android `optional school values remain distinguishable when absent`:
         // 最小学校走 toJson→fromJson 往返 (非仅裸 JSON 解析)。

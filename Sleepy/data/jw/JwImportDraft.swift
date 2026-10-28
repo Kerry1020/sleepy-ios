@@ -14,6 +14,9 @@ struct JwImportDraftSnapshot: Equatable {
     var tableName: String = ""
     /// 序列化 SmartPeriodConfig; 对 UI/实体类保持不透明, 避免契约耦合。
     var smartConfigJson: String = ""
+    /// 节次行是否被默认作息补齐过 — 恢复草稿后仍需提示用户核对。
+    /// 可选字段: 旧快照缺失 = false (schemaVersion 保持 1, 未知键双向忽略)。
+    var usedDefaultTimes: Bool = false
     var phase: JwImportDraftPhase = .configureConfirm
 
     init(school: JwSchoolInfo,
@@ -22,6 +25,7 @@ struct JwImportDraftSnapshot: Equatable {
          termStartDate: String = "",
          tableName: String = "",
          smartConfigJson: String = "",
+         usedDefaultTimes: Bool = false,
          phase: JwImportDraftPhase = .configureConfirm) {
         self.school = school
         self.courses = courses
@@ -29,6 +33,7 @@ struct JwImportDraftSnapshot: Equatable {
         self.termStartDate = termStartDate
         self.tableName = tableName
         self.smartConfigJson = smartConfigJson
+        self.usedDefaultTimes = usedDefaultTimes
         self.phase = phase
     }
 }
@@ -69,6 +74,8 @@ enum JwImportDraftCodec {
             "tableName": snapshot.tableName,
             "smartConfigJson": snapshot.smartConfigJson,
         ]
+        // 仅 true 时写出(旧 payload 缺键 = false, 与 optString 默认语义一致)
+        if snapshot.usedDefaultTimes { root["usedDefaultTimes"] = true }
         root["courses"] = snapshot.courses.map(courseToJson)
         root["periods"] = snapshot.periods.map(periodToJson)
         guard let data = try? JSONSerialization.data(withJSONObject: root),
@@ -118,6 +125,8 @@ enum JwImportDraftCodec {
             termStartDate: (root["termStartDate"] as? String) ?? "",
             tableName: (root["tableName"] as? String) ?? "",
             smartConfigJson: (root["smartConfigJson"] as? String) ?? "",
+            // 旧快照缺键 = false; 非布尔脏值同样按 false 兜底(optString 语义)
+            usedDefaultTimes: (root["usedDefaultTimes"] as? Bool) ?? false,
             phase: phase
         )
     }

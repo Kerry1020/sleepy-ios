@@ -292,6 +292,70 @@ enum TimeTableUtils {
         }
     }
 
+    /// Editing-only decoding: missing fields remain missing until safe defaults
+    /// are applied. Do not change the storage parser used elsewhere in the app.
+    static func initialManualRows(timeJson: String, requiredCount: Int = 12) -> (rows: [TimeSlotRow], usedDefaults: Bool) {
+        let objects = timeJson.data(using: .utf8).flatMap {
+            (try? JSONSerialization.jsonObject(with: $0)) as? [[String: Any]]
+        }
+        let rows: [TimeSlotRow]
+        if let objects = objects, !objects.isEmpty {
+            rows = objects.enumerated().map { index, object in
+                TimeSlotRow(node: (object["node"] as? NSNumber)?.intValue ?? index + 1,
+                            start: (object["start"] as? String) ?? "",
+                            end: (object["end"] as? String) ?? "",
+                            edgeClass: (object["edge"] as? String).flatMap(parseEdgeClass))
+            }
+        } else {
+            rows = (0..<max(1, requiredCount)).map { TimeSlotRow(node: $0 + 1, start: "", end: "") }
+        }
+        return initialManualRows(rows)
+    }
+
+    /// Only call when creating an editing session, never after user edits.
+    /// Keep imported values; fill missing standard times only when the entire
+    /// candidate interval fits between known earlier/later intervals.
+    static func initialManualRows(_ source: [TimeSlotRow]) -> (rows: [TimeSlotRow], usedDefaults: Bool) {
+        let defaults = parseTimeSlotRows(DEFAULT_TIME_JSON)
+        func blank(_ value: String) -> Bool {
+            value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        func minutes(_ value: String) -> Int? {
+            let parts = value.split(separator: ":", omittingEmptySubsequences: false)
+            guard parts.count == 2, let h = Int(parts[0]), let m = Int(parts[1]),
+                  (0...23).contains(h), (0...59).contains(m) else { return nil }
+            return h * 60 + m
+        }
+        var result = source
+        var usedDefaults = false
+        // Node order makes the result independent of the JSON row order.
+        for index in source.indices.sorted(by: { source[$0].node < source[$1].node }) {
+            let original = source[index]
+            guard original.edgeClass == nil,
+                  blank(original.start) || blank(original.end),
+                  let preset = defaults.first(where: { $0.node == original.node }) else { continue }
+            var candidate = original
+            if blank(candidate.start) { candidate.start = preset.start }
+            if blank(candidate.end) { candidate.end = preset.end }
+            guard let start = minutes(candidate.start), let end = minutes(candidate.end), start < end else { continue }
+            let conflicts = result.contains { other in
+                guard other.edgeClass == nil, other.node != original.node else { return false }
+                if other.node < original.node {
+                    if !blank(other.end) { return minutes(other.end).map { $0 > start } ?? true }
+                    if !blank(other.start) { return minutes(other.start).map { $0 >= start } ?? true }
+                } else {
+                    if !blank(other.start) { return minutes(other.start).map { $0 < end } ?? true }
+                    if !blank(other.end) { return minutes(other.end).map { $0 <= end } ?? true }
+                }
+                return false
+            }
+            guard !conflicts else { continue }
+            result[index] = candidate
+            usedDefaults = true
+        }
+        return (result, usedDefaults)
+    }
+
     /// rows -> timeJson (edge 元数据只在边缘节点时写出 "edge" 键)
     /// 手写序列化 — 键序固定 node,start,end,edge(= Android JSONObject.put 插入序),
     /// 输出与 org.json JSONArray.toString 逐字节一致(紧凑、无空格、字符串转义同规则),

@@ -140,16 +140,20 @@ struct TimePickerField: View {
     let label: String
     // ← Android weight(1f)/fillMaxWidth 调用方传 true, 字段吃满可用宽
     var fillsWidth: Bool = false
+    // 「待设置」副行仅限手动作息编辑(需求侧空态提示); 其余调用方(加课/自动节次/
+    // 提醒时间)保持 Android 原形态: 空值 = label 单独占位。
+    var showsPendingHint: Bool = false
 
-    @State private var showPicker = false
-    @State private var pickerTime = Date()
+    // One presentation owns one draft. Do not share the wheel's state with the
+    // presenting row: the sheet can outlive a render of that row.
+    @State private var selection: TimePickerSession?
 
     var body: some View {
         Button {
-            let comps = parseHHMM(value) ?? (8, 0)
-            var cal = DateUtils.isoCalendar
-            pickerTime = cal.date(bySettingHour: comps.0, minute: comps.1, second: 0, of: Date()) ?? Date()
-            showPicker = true
+            // The name/date field may still be first responder when this is tapped.
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
+                                            to: nil, from: nil, for: nil)
+            selection = TimePickerSession(value: value)
         } label: {
             // ← Android readOnly TextField 形态: 空值 = label 占位; 有值 = label 浮到值上方
             VStack(alignment: .leading, spacing: 2) {
@@ -157,6 +161,11 @@ struct TimePickerField: View {
                     Text(label)
                         .font(.system(size: 16))
                         .foregroundColor(colors.onSurfaceVariant)
+                    if showsPendingHint {
+                        Text(L10n.format("slot_pending"))
+                            .font(.system(size: 12))
+                            .foregroundColor(colors.onSurfaceVariant)
+                    }
                 } else {
                     Text(label)
                         .font(.system(size: 12))
@@ -174,47 +183,73 @@ struct TimePickerField: View {
         }
         .buttonStyle(SleepyButtonStyle())
         .frame(maxWidth: fillsWidth ? .infinity : nil, alignment: .leading)
-        .sheet(isPresented: $showPicker) {
-            // ← Android text = Column(verticalArrangement = spacedBy(8.dp)) { TimePicker;
-            //   Spacer(12.dp); DialogActionButtons } — 8/12 pt 间距镜像
-            VStack(spacing: 8) {
-                Text(L10n.format("select_time"))
-                    // ← Android AlertDialog title = headlineSmall 24sp Normal
-                    .font(.system(size: 24))
-                    .foregroundColor(colors.onSurface)
-                    .padding(.horizontal)
-                    .padding(.top, 20)
-                    .padding(.bottom, 4)
-                // 24h 转盘(← M3 TimePicker is24Hour=true;en_GB 强制 24h,不随系统 12h 设置)
-                DatePicker("", selection: $pickerTime, displayedComponents: .hourAndMinute)
-                    .datePickerStyle(.wheel)
-                    .labelsHidden()
-                    .environment(\.locale, Locale(identifier: "en_GB"))
-                Spacer().frame(height: 12)
-                // ← Android DialogActionButtons 色块按钮行 (2026-09-16 用户: 裸 TextButton
-                //   无边界无色块 — 统一色块按钮行)
-                DialogActionButtons(
-                    confirmText: L10n.format("ok"),
-                    onConfirm: {
-                        let f = DateFormatter()
-                        f.dateFormat = "HH:mm"
-                        // ← Android padStart 恒拉丁数字 24h; POSIX locale 防非拉丁数字系统 locale
-                        f.locale = Locale(identifier: "en_US_POSIX")
-                        onValueChange(f.string(from: pickerTime))
-                        showPicker = false
-                    },
-                    dismissText: L10n.format("cancel"),
-                    onDismiss: { showPicker = false }
-                )
-                .padding(.horizontal)
+        .sheet(item: $selection) { session in
+            TimePickerDialog(initialTime: session.time) { newValue in
+                onValueChange(newValue)
             }
-            .sheetDetents([.height(400)])
+            .id(session.id)
         }
     }
+}
 
-    private func parseHHMM(_ s: String) -> (Int, Int)? {
-        let parts = s.split(separator: ":")
-        guard parts.count == 2, let h = Int(parts[0]), let m = Int(parts[1]) else { return nil }
-        return (h, m)
+private struct TimePickerSession: Identifiable {
+    let id = UUID()
+    let time: Date
+
+    init(value: String) {
+        let parts = value.split(separator: ":")
+        let hour = parts.count == 2 ? Int(parts[0]) : nil
+        let minute = parts.count == 2 ? Int(parts[1]) : nil
+        let valid = hour.map { (0...23).contains($0) } == true
+            && minute.map { (0...59).contains($0) } == true
+        time = Calendar.current.date(bySettingHour: valid ? hour! : 8,
+                                     minute: valid ? minute! : 0, second: 0,
+                                     of: Date()) ?? Date()
+    }
+}
+
+// The wheel and Confirm read the same sheet-local state. Cancel/swipe dismiss
+// discard it; only Confirm publishes a value to the field.
+private struct TimePickerDialog: View {
+    @Environment(\.localWakeUpColors) private var colors
+    @Environment(\.dismiss) private var dismiss
+    @State private var pickerTime: Date
+    let onConfirm: (String) -> Void
+
+    init(initialTime: Date, onConfirm: @escaping (String) -> Void) {
+        _pickerTime = State(initialValue: initialTime)
+        self.onConfirm = onConfirm
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Text(L10n.format("select_time"))
+                .font(.system(size: 24))
+                .foregroundColor(colors.onSurface)
+                .padding(.horizontal)
+                .padding(.top, 20)
+                .padding(.bottom, 4)
+            DatePicker("", selection: $pickerTime, displayedComponents: .hourAndMinute)
+                .datePickerStyle(.wheel)
+                .labelsHidden()
+                .environment(\.locale, Locale(identifier: "en_GB"))
+                .environment(\.calendar, Calendar.current)
+                .environment(\.timeZone, TimeZone.current)
+            Spacer().frame(height: 12)
+            DialogActionButtons(
+                confirmText: L10n.format("ok"),
+                onConfirm: {
+                    let components = Calendar.current.dateComponents([.hour, .minute], from: pickerTime)
+                    onConfirm(String(format: "%02d:%02d", components.hour ?? 0, components.minute ?? 0))
+                    dismiss()
+                },
+                dismissText: L10n.format("cancel"),
+                onDismiss: { dismiss() },
+                confirmIdentifier: "time_picker_confirm",
+                dismissIdentifier: "time_picker_cancel"
+            )
+            .padding(.horizontal)
+        }
+        .sheetDetents([.height(400)])
     }
 }

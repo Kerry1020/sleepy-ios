@@ -1035,3 +1035,7 @@
 "timeslot_drop_success" = "已重排第 %1$d 節到第 %2$d 位";
 "timeslot_reorder_in_progress" = "排序中";
 "timeslot_row_drop_target" = "插入位置";
+
+"slot_defaults_notice" = "部分時間使用預設作息，請按學校實際時間核對。";
+"slot_missing_notice" = "部分時間待設定，請補全後儲存。";
+"slot_pending" = "待設定";

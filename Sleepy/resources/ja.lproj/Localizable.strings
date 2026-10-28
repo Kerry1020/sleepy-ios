@@ -1035,3 +1035,7 @@
 "timeslot_drop_success" = "第 %1$d 節を位置 %2$d に並び替えました";
 "timeslot_reorder_in_progress" = "並び替え中";
 "timeslot_row_drop_target" = "ここにドロップ";
+
+"slot_defaults_notice" = "一部の時間はデフォルトの時間割を使用しています。学校の実際の時間割と照らし合わせて確認してください。";
+"slot_missing_notice" = "一部の時間が未設定です。設定してから保存してください。";
+"slot_pending" = "未設定";

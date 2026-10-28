@@ -189,7 +189,7 @@ struct EditTableScreen: View {
                             // v1.0.56 T6: 第三 Tab「作息表」= 原独立换绑卡收编于此(卡已拆,
                             // 未绑定/选中语义零变化, pendingBind 保存链原样)
                             TimeSlotEditor(
-                                rows: slotRows,
+                                rows: $slotRows,
                                 onRowsChange: { newRows in
                                     slotRows = newRows
                                     // 甲案 §2.1: 节次编辑即草稿变化 — 同步进会话状态;

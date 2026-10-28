@@ -48,6 +48,7 @@ struct PeriodTableEditScreen: View {
     // v1.0.56 T11: 分享底部弹窗(原生格式/JSON 二选一)
     @State private var showShareSheet = false
 
+    @State private var usedDefaultTimes = false
     @State private var slotRows: [TimeTableUtils.TimeSlotRow] = []
     @State private var smartConfig = SmartPeriodConfig()
 
@@ -143,9 +144,12 @@ struct PeriodTableEditScreen: View {
                         }
                         .buttonStyle(SleepyButtonStyle())
 
-                        if timeSlotsExpanded {
-                            TimeSlotEditor(rows: slotRows,
+                        if timeSlotsExpanded && seededTableId != periodTable.id {
+                            ProgressView()
+                        } else if timeSlotsExpanded {
+                            TimeSlotEditor(rows: $slotRows,
                                            onRowsChange: { slotRows = $0 },
+                                           usedDefaultTimes: usedDefaultTimes,
                                            smartConfig: smartConfig,
                                            onSmartConfigChange: { smartConfig = $0 })
                                 // 作息表编辑页只允许编辑本表内容; 活绑定仅由课程表→作息表入口提供。
@@ -294,7 +298,14 @@ struct PeriodTableEditScreen: View {
             seededTableId = periodTable.id
             seededRowsKey = rowsKey
             if tableSwitched { name = periodTable.name }   // ← remember(periodTable.id)
-            slotRows = TimeTableUtils.parseTimeSlotRows(periodTable.timeJson)
+            let parsed = TimeTableUtils.parseTimeSlotRows(periodTable.timeJson)
+            if tableSwitched {
+                let initialized = TimeTableUtils.initialManualRows(timeJson: periodTable.timeJson, requiredCount: periodTable.nodesPerDay)
+                slotRows = initialized.rows
+                usedDefaultTimes = initialized.usedDefaults
+            } else {
+                slotRows = parsed
+            }
         }
         if tableSwitched || seededSmartKey != smartKey {
             seededSmartKey = smartKey

@@ -980,6 +980,7 @@ private struct ImportConfirmDialog: View {
 
     @State private var rows: [TimeTableUtils.TimeSlotRow] = []
     @State private var rowsLoaded = false
+    @State private var usedDefaultTimes = false
     @State private var localError: String? = nil
     // issue#28 P2: 自动模式状态必须真实持有并回传 — 旧代码没传 smartConfig/
     // onSmartConfigChange, 落到默认 no-op, "添加课间"点了没有任何反应。
@@ -1023,22 +1024,29 @@ private struct ImportConfirmDialog: View {
                         .foregroundColor(colors.error)
                 }
 
-                TimeSlotEditor(rows: rows, onRowsChange: { newRows in
-                    rows = newRows
-                    onTimeJsonChange(TimeTableUtils.buildTimeJsonFromRows(newRows))
-                }, smartConfig: smartConfig, onSmartConfigChange: { smartConfig = $0 },
-                   // v1.0.56 T6: 第三 Tab「作息表」
-                   periodTableOptions: periodTableOptions,
-                   selectedPeriodTableId: selectedPeriodTableId,
-                   onSelectPeriodTable: onSelectPeriodTable)
+                if rowsLoaded {
+                    TimeSlotEditor(rows: $rows, onRowsChange: { newRows in
+                        rows = newRows
+                        onTimeJsonChange(TimeTableUtils.buildTimeJsonFromRows(newRows))
+                    }, usedDefaultTimes: usedDefaultTimes, smartConfig: smartConfig, onSmartConfigChange: { smartConfig = $0 },
+                       // v1.0.56 T6: 第三 Tab「作息表」
+                       periodTableOptions: periodTableOptions,
+                       selectedPeriodTableId: selectedPeriodTableId,
+                       onSelectPeriodTable: onSelectPeriodTable)
+                } else {
+                    ProgressView()
+                }
             }
             .padding(20)
         }
         .background(colors.surface)
         .onAppear {
             guard !rowsLoaded else { return }
-            rowsLoaded = true
-            rows = TimeTableUtils.parseTimeSlotRows(timeJson)
+            let initialized = TimeTableUtils.initialManualRows(timeJson: timeJson)
+            rows = initialized.rows
+            usedDefaultTimes = initialized.usedDefaults || timeJson.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            timeJson = TimeTableUtils.buildTimeJsonFromRows(rows)
+            onTimeJsonChange(timeJson)
             // issue#28 P2 + issue#23 T5 播种: 与 Android remember { resolveAutoPeriodConfig
             // (rows, null) ?: SmartPeriodConfig(totalPeriods=max(1,rows), startTime=首行或"08:00") } 同规
             smartConfig = resolveAutoPeriodConfig(rows: rows, stored: nil)
@@ -1048,6 +1056,7 @@ private struct ImportConfirmDialog: View {
                         return s.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "08:00" : s
                     }(),
                     totalPeriods: max(rows.count, 1))
+            rowsLoaded = true
         }
         .safeAreaInset(edge: .bottom) {
             // 2026-09-16 用户: 裸 TextButton 无边界无色块 — 统一色块按钮行

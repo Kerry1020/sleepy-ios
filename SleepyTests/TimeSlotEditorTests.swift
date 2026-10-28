@@ -18,6 +18,54 @@ final class TimeSlotEditorTests: XCTestCase {
         rows.map { "\($0.node)|\($0.start)|\($0.end)" }
     }
 
+    func testInitialManualRowsFillTemplateAndKeepExtraPeriodsEmpty() {
+        let result = TimeTableUtils.initialManualRows((1...14).map { row($0, "", "") })
+        XCTAssertTrue(result.usedDefaults)
+        XCTAssertEqual(result.rows[0].start, "08:00")
+        XCTAssertEqual(result.rows[1].start, "08:55")
+        XCTAssertEqual(result.rows[4].start, "14:00")
+        XCTAssertEqual(result.rows[12].start, "")
+        XCTAssertEqual(result.rows.count, 14)
+    }
+
+    func testInitialManualRowsPreserveRealTimesAndSkipConflicts() {
+        let source = [row(1, "08:30", "09:15"), row(2, "", ""), row(3, "10:00", "10:45")]
+        let result = TimeTableUtils.initialManualRows(source)
+        XCTAssertEqual(result.rows, source)
+        XCTAssertFalse(result.usedDefaults)
+    }
+
+    func testInitialManualRowsFillSafePartialTimeOnly() {
+        let result = TimeTableUtils.initialManualRows([row(1, "08:10", ""), row(2, "", "09:50")])
+        XCTAssertEqual(result.rows[0], row(1, "08:10", "08:45"))
+        XCTAssertEqual(result.rows[1], row(2, "08:55", "09:50"))
+        XCTAssertTrue(result.usedDefaults)
+    }
+
+    func testInitialManualRowsDoNotChangeInvalidOrEdgeTimes() {
+        let source = [row(1, "09:00", ""), row(2, "", "", edge: .after)]
+        XCTAssertEqual(TimeTableUtils.initialManualRows(source).rows, source)
+    }
+
+    func testInitialManualRowsCheckLaterKnownTimesAndIgnoreInputOrder() {
+        let source = [row(2, "08:30", "09:00"), row(1, "", "")]
+        XCTAssertEqual(TimeTableUtils.initialManualRows(source).rows, source)
+    }
+
+    func testInitialManualRowsDecodeMissingFieldsWithoutLegacyDefaults() {
+        let result = TimeTableUtils.initialManualRows(timeJson: "[{\"node\":1},{\"node\":2,\"start\":\"\",\"end\":\"\"}]")
+        XCTAssertEqual(result.rows, [row(1, "08:00", "08:45"), row(2, "08:55", "09:40")])
+        XCTAssertEqual(TimeTableUtils.initialManualRows(timeJson: "", requiredCount: 3).rows.count, 3)
+    }
+
+    func testInitialManualRowsPreserveManualEditsOnRepeatedInitialization() {
+        var rows = TimeTableUtils.initialManualRows([row(1, "", ""), row(2, "", "")]).rows
+        rows[0].start = "07:40"
+        let result = TimeTableUtils.initialManualRows(rows)
+        XCTAssertEqual(result.rows, rows)
+        XCTAssertFalse(result.usedDefaults)
+    }
+
     // 1) 手动 45/30 行 → 进自动后派生配置 primary=45, 30 组落在第 3 节, derive 回原行
     func testManualRowsBecomePrimaryWithShortGroupAtNode3() {
         let rows = [row(1, "08:00", "08:45"), row(2, "08:55", "09:40"), row(3, "10:10", "10:40")]

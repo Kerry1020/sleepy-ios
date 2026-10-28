@@ -1035,3 +1035,7 @@
 "timeslot_drop_success" = "Reordered period %1$d to position %2$d";
 "timeslot_reorder_in_progress" = "Reordering";
 "timeslot_row_drop_target" = "Drop here";
+
+"slot_defaults_notice" = "Some times use the default bell schedule. Please check them against your school’s schedule.";
+"slot_missing_notice" = "Some times are not set. Set them before saving.";
+"slot_pending" = "Not set";
