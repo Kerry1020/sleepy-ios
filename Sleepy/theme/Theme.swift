@@ -51,6 +51,33 @@ struct WakeUpColorScheme {
     let onError: Color
     let errorContainer: Color
     let onErrorContainer: Color
+
+    /// 表面族/主色替换副本 — widget 侧把动态语义色烘焙成 trait 解析不透明色用
+    /// (← WidgetContent.opaqueWidgetSystemScheme)
+    func replacing(primary: Color? = nil, onSurface: Color? = nil,
+                   onSurfaceVariant: Color? = nil,
+                   surface: Color? = nil, surfaceVariant: Color? = nil) -> WakeUpColorScheme {
+        WakeUpColorScheme(
+            primary: primary ?? self.primary, onPrimary: onPrimary,
+            primaryContainer: primaryContainer, onPrimaryContainer: onPrimaryContainer,
+            secondary: secondary, onSecondary: onSecondary,
+            secondaryContainer: secondaryContainer, onSecondaryContainer: onSecondaryContainer,
+            tertiary: tertiary, onTertiary: onTertiary,
+            tertiaryContainer: tertiaryContainer, onTertiaryContainer: onTertiaryContainer,
+            background: background, onBackground: onBackground,
+            surface: surface ?? self.surface, onSurface: onSurface ?? self.onSurface,
+            surfaceVariant: surfaceVariant ?? self.surfaceVariant,
+            onSurfaceVariant: onSurfaceVariant ?? self.onSurfaceVariant,
+            surfaceContainerLowest: surfaceContainerLowest,
+            surfaceContainerLow: surfaceContainerLow,
+            surfaceContainer: surfaceContainer,
+            surfaceContainerHigh: surfaceContainerHigh,
+            surfaceContainerHighest: surfaceContainerHighest,
+            outline: outline, outlineVariant: outlineVariant, scrim: scrim,
+            error: error, onError: onError,
+            errorContainer: errorContainer, onErrorContainer: onErrorContainer
+        )
+    }
 }
 
 // MARK: - 默认淡紫 ← LightScheme / DarkScheme
