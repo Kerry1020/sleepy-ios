@@ -28,3 +28,8 @@ docs/sop/release-sop.md
 
 # IDE user state (XcodeGen 再生成时随机漂移, 不入库)
 xcuserdata/
+# 独立于工程的 DerivedData 位置 — 工程内 Sleepy/Build/ 会让 Xcode 把 Swift 包
+# (GRDB.swift 等) 误认为嵌套工程并反复弹「Ignore」提示, 构建产物一律写到工程外。
+Sleepy/Build/
+Build/
+DerivedData/
