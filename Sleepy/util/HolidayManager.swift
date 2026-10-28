@@ -127,6 +127,35 @@ enum HolidayManager {
         prefs.set(true, forKey: loadedKey(year))
     }
 
+    // MARK: - watch 同步 (WatchSyncSnapshot 专用, 键名收敛在本类不外泄)
+
+    /// 手机侧: 收指定年份集合的磁盘缓存原串 (仅 loaded=true 的年; 无值不出现在结果)。
+    static func collectDiskYears(_ years: Set<Int>) -> [Int: String] {
+        var out: [Int: String] = [:]
+        for y in years where prefs.bool(forKey: loadedKey(y)) {
+            if let s = prefs.string(forKey: cacheKey(y)) { out[y] = s }
+        }
+        return out
+    }
+
+    /// 手表侧: 全量替换磁盘缓存 — 载荷是唯一真源, 先清所有 holiday_entries_ 前缀
+    /// 键 (含 loaded 标记), 再逐年落新值。内存 entriesCache 不预填: getYearEntries
+    /// 首查 miss → diskCache 现读即命中镜像年。
+    static func replaceDiskYears(_ years: [Int: String]) {
+        let store = prefs
+        for key in store.dictionaryRepresentation().keys where key.hasPrefix(CACHE_KEY_PREFIX) {
+            store.removeObject(forKey: key)
+        }
+        for (year, raw) in years {
+            store.set(raw, forKey: cacheKey(year))
+            store.set(true, forKey: loadedKey(year))
+        }
+    }
+
+    /// 某年磁盘缓存条目 (纯读, 无网络) — watch 镜像查询用 (手表视图同步取节假日名)。
+    /// 未缓存年返 nil (区别于空数组: 调用方可知「无该年数据」)。
+    static func diskEntries(_ year: Int) -> [HolidayEntry]? { diskCache(year) }
+
     /// 判断某日期是否为周末 ← isWeekend (Kotlin dayOfWeek 6=Sat 7=Sun)
     static func isWeekend(_ date: Date) -> Bool {
         let wd = Calendar.gregorianCST.component(.weekday, from: date) // 1=Sun ... 7=Sat

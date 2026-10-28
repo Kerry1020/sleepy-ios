@@ -84,6 +84,7 @@ final class AppPrefs {
     static let DEFAULT_GRID_SHOW_SEPARATORS = false
     static let KEY_GRID_LONG_BREAK_SPACING = "grid_long_break_spacing" // bool default false — 长课间额外留白
     static let DEFAULT_GRID_LONG_BREAK_SPACING = false
+    static let KEY_WATCH_ACK_SENT_AT = "watch_ack_sent_at" // Int64 epoch ms default 0 — 手表回执「已同步」时刻 (Coordinator 落, capture 读回镜像下发)
     static let KEY_SHOW_VIEW_SWITCHER = "show_view_switcher"     // bool default true — 首页周/网格视图切换栏显隐(GeneralSettingsScreen.LabPrefs 正式归属地)
     // ★ widget v1.0.60 对齐键 (← AppPrefs.kt)
     static let KEY_NEAREST_BUSY_DAY = "nearest_busy_day" // bool default false — 今天没课时自动显示最近一个有课的日子
@@ -726,6 +727,11 @@ final class AppPrefs {
         sp().string(forKey: Self.KEY_GRID_EVENING_START) ?? "18:00"
     }
     func setGridEveningStart(_ v: String) { sp().set(v, forKey: Self.KEY_GRID_EVENING_START) }
+
+    /// 手表回执「已同步」时刻 (epoch ms, 0=从未) — WatchSyncCoordinator 收
+    /// context[watchAck] 落此键; capture 读回镜像下发手表 (显示单源)。
+    func getWatchAckSentAt() -> Int64 { sp().object(forKey: Self.KEY_WATCH_ACK_SENT_AT) as? Int64 ?? 0 }
+    func setWatchAckSentAt(_ ms: Int64) { sp().set(ms, forKey: Self.KEY_WATCH_ACK_SENT_AT) }
 
     /// 双指行高缩放确认值 — default 1.0 ← getGridRowScale(Android 读侧不钳制, iOS 一致)
     func getGridRowScale() -> Double {
