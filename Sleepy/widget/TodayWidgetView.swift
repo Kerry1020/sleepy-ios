@@ -71,9 +71,19 @@ struct TodayWidgetEntryView: View {
     let entry: TodayWidgetEntry
 
     var body: some View {
+        // iOS 26 主屏「透明/着色」样式探测 (← WidgetBackgroundCompat): glass 态配色
+        // 整体换白 alpha 层级, 否则系统把不透明主题色整组染白 → 文字/图标不可辨
+        WidgetGlassModeContent { isGlass in
+            content(isGlass: isGlass)
+        }
+        .widgetURL(URL(string: "sleepy://open"))
+    }
+
+    @ViewBuilder
+    private func content(isGlass: Bool) -> some View {
         let data = entry.data
         let isDark = effectiveWidgetIsDark(themeMode: data.themeMode, snapshotIsDark: data.isDark, envScheme: widgetColorScheme)
-        let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: isDark)
+        let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: isDark, isGlass: isGlass)
         let prefs = AppPrefs.shared
         let colorless = prefs.isWidgetColorless()
         let displayMode = prefs.getDisplayMode()   // ★ 用户显示设置 (决策 D5-12)
@@ -136,8 +146,8 @@ struct TodayWidgetEntryView: View {
         // 唯一背景 = containerBackground (iOS 17+ 剥离场景生效; iOS ≤16 回退 .background)。
         // 旧 GeometryReader 内容上的 .background(s.bg) 是前景不透明层, 会使
         // StandBy/锁屏剥离失效 — 与 sleepyWidgetBackground 的采用目的冲突, 已删。
+        // glass 态 s.bg = .clear → 容器底交给系统玻璃材质, 半透前景保持 alpha。
         .sleepyWidgetBackground { s.bg }
-        .widgetURL(URL(string: "sleepy://open"))
     }
 
     /// 固定窗口: 只有「有课表 + 学期内 + 有课」才有行轴,其余状态无窗口语义

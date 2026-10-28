@@ -57,9 +57,18 @@ struct WeekViewWidgetEntryView: View {
     let entry: WeekViewWidgetEntry
 
     var body: some View {
+        // iOS 26 「透明/着色」样式探测 (← WidgetBackgroundCompat): glass 态配色换白 alpha
+        WidgetGlassModeContent { isGlass in
+            content(isGlass: isGlass)
+        }
+        .widgetURL(URL(string: "sleepy://open"))
+    }
+
+    @ViewBuilder
+    private func content(isGlass: Bool) -> some View {
         let data = entry.data
         let isDark = effectiveWidgetIsDark(themeMode: data.themeMode, snapshotIsDark: data.isDark, envScheme: widgetColorScheme)
-        let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: isDark)
+        let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: isDark, isGlass: isGlass)
         let showSeparator = AppPrefs.shared.isWidgetSeparator()
         let todayDow = DateUtils.todayDayOfWeek(today: Date())
         // issue#26: widget 全局一档别名开关
@@ -123,7 +132,6 @@ struct WeekViewWidgetEntryView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .sleepyWidgetBackground { s.bg }
-        .widgetURL(URL(string: "sleepy://open"))
     }
 }
 

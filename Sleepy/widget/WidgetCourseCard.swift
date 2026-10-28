@@ -86,12 +86,17 @@ struct WidgetCourseCard: View {
     var body: some View {
         // 统一取色入口 (决策 D3) — colorless 灰底传 secondaryContainer
         // issue#22: 改走 *WithGroupRows 三态入口
-        let bgColor = CourseColorUtil.pickCourseColorSwiftUIWithGroupRows(course,
+        // iOS 26 「透明/着色」样式 (scheme.isGlass): 课程色卡系统整组染白失层级 →
+        // 改画白 alpha 卡底 (secondaryContainer=玻璃档 30%), 文字走 onSurface 阶梯 (← WidgetBackgroundCompat)
+        let glass = scheme.isGlass
+        let bgColor = glass ? scheme.secondaryContainer
+            : CourseColorUtil.pickCourseColorSwiftUIWithGroupRows(course,
             groupRows: groupRows.isEmpty ? [course] : groupRows,
             isDark: scheme.isDark, neutralColor: scheme.secondaryContainer, colorless: colorless)
         // 文字色亮度自适应 (决策 D5-13) — 深色自定义课色上切白字, 浅色底仍 onSurface
-        let textColor = CourseColorUtil.textColorOn(bg: bgColor, isDark: scheme.isDark,
-                                                    onSurface: scheme.onSurface)
+        let textColor = glass ? scheme.onSurface
+            : CourseColorUtil.textColorOn(bg: bgColor, isDark: scheme.isDark,
+                                          onSurface: scheme.onSurface)
         let timeStr = timeString
         // ← WidgetBitmapRenderers.kt courseMetaLines (1060) + drawCourse hasMeta (112):
         // trim 后判空, 任一侧空白只画另一侧 (不再产出 " · A101" 前导分隔符)

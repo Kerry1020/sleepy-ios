@@ -130,9 +130,18 @@ struct WeekListWidgetEntryView: View {
     let entry: WeekListWidgetEntry
 
     var body: some View {
+        // iOS 26 「透明/着色」样式探测 (← WidgetBackgroundCompat): glass 态配色换白 alpha
+        WidgetGlassModeContent { isGlass in
+            content(isGlass: isGlass)
+        }
+        .widgetURL(URL(string: "sleepy://open"))
+    }
+
+    @ViewBuilder
+    private func content(isGlass: Bool) -> some View {
         let data = entry.data
         let isDark = effectiveWidgetIsDark(themeMode: data.themeMode, snapshotIsDark: entry.data.isDark, envScheme: widgetColorScheme)
-        let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: isDark)
+        let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: isDark, isGlass: isGlass)
         let colorless = AppPrefs.shared.isWidgetColorless()
         // issue#26: widget 全局一档别名开关
         let useAlias = AppPrefs.shared.isWidgetUseAlias()
@@ -194,7 +203,6 @@ struct WeekListWidgetEntryView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .sleepyWidgetBackground { s.bg }
-        .widgetURL(URL(string: "sleepy://open"))
     }
 }
 
@@ -252,7 +260,11 @@ private struct WeekListDayColumn: View {
                     ForEach(visible, id: \.id) { course in
                         // ★ 课程颜色背景 (对齐 WeekGrid 风格) — 统一入口 CourseColorUtil (决策 D3)
                         // issue#22: 同名课程多地点 — 用 day.courses 同 groupId 全行, 支持 AUTO/CUSTOM 按行判
-                        let bgColor = CourseColorUtil.pickCourseColorSwiftUIWithGroupRows(
+                        // iOS 26 「透明/着色」样式 (s.isGlass): 课程色被系统整组染白 →
+                        // 直接用白 alpha 底 (secondaryContainer=玻璃档 30%), 文字走 onSurface
+                        let glass = s.isGlass
+                        let bgColor = glass ? s.secondaryContainer
+                            : CourseColorUtil.pickCourseColorSwiftUIWithGroupRows(
                             course, groupRows: day.courses.filter { $0.groupId == course.groupId },
                             isDark: s.isDark, neutralColor: s.secondaryContainer, colorless: colorless)
                         Text(CourseDisplayUtil.displayName(course, useAlias))
@@ -263,8 +275,9 @@ private struct WeekListDayColumn: View {
                             // 安卓课名走 Typeface.DEFAULT 常规字重 (L899 在课程循环前重置),
                             // 与 drawCourse 的 BOLD 卡面不同 — 本渲染器是内联循环, 不继承 bold。
                             .font(.system(size: 9))
-                            .foregroundColor(CourseColorUtil.textColorOn(bg: bgColor, isDark: s.isDark,
-                                                                         onSurface: s.onSurface))
+                            .foregroundColor(glass ? s.onSurface
+                                : CourseColorUtil.textColorOn(bg: bgColor, isDark: s.isDark,
+                                                              onSurface: s.onSurface))
                             .opacity(greyAlpha) // 安卓 applyAlpha(文字色, 153/255) (L917-920)
                             .lineLimit(1)
                             .padding(.horizontal, 2) // 文字距胶囊左/右 2dp (安卓 x+coursePad+2, 截断预算 colW-10)

@@ -143,9 +143,18 @@ struct TwoDayWidgetEntryView: View {
     let entry: TwoDayWidgetEntry
 
     var body: some View {
+        // iOS 26 「透明/着色」样式探测 (← WidgetBackgroundCompat): glass 态配色换白 alpha
+        WidgetGlassModeContent { isGlass in
+            content(isGlass: isGlass)
+        }
+        .widgetURL(URL(string: "sleepy://open"))
+    }
+
+    @ViewBuilder
+    private func content(isGlass: Bool) -> some View {
         let data = entry.data
         let isDark = effectiveWidgetIsDark(themeMode: data.themeMode, snapshotIsDark: data.isDark, envScheme: widgetColorScheme)
-        let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: isDark)
+        let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: isDark, isGlass: isGlass)
         let prefs = AppPrefs.shared
         let colorless = prefs.isWidgetColorless()
         let displayMode = prefs.getDisplayMode()
@@ -196,7 +205,6 @@ struct TwoDayWidgetEntryView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .sleepyWidgetBackground { s.bg }
-        .widgetURL(URL(string: "sleepy://open"))
     }
 
     /// ← TwoDayWidget.computeTwoDayWindows: 每列独立窗口; 无课表/学期外/两天全空 → nil
