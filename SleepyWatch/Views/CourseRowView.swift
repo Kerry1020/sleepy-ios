@@ -1,7 +1,8 @@
 // CourseRowView.swift — 课程行卡 (2026-10 watch 伴侣 App)
-// ← WidgetCourseCard 显示语义的 watch 重排: 左色条 + 时间/课名/地点。
-// 色: CourseColorUtil issue#22 三态取色同源 (组行传入本天可见课集)。
-// 名: 手表空间小, 别名非空即显别名 (等价 widget_use_alias 常开)。
+// ← WidgetCourseCard 显示语义的 watch 重排: 左色条 + 时段/课名/地点。
+// 色: CourseColorUtil issue#22 三态取色同源 (组行传入本天可见课集;
+//     无色模式镜像 course_colorless → 隐色条)。时段: slotLabel 镜像 display_mode。
+// 名: 别名口径镜像 week_use_alias (列表档), 恒「别名即显」是 v1 bug, v2 已修。
 
 import SwiftUI
 
@@ -22,15 +23,17 @@ struct CourseRowView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 6) {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(color)
-                .frame(width: 3)
-                .padding(.vertical, 1)
+            if !store.neutralColor {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(color)
+                    .frame(width: 3)
+                    .padding(.vertical, 1)
+            }
             VStack(alignment: .leading, spacing: 2) {
-                Text(store.timeRange(course, table: table))
+                Text(store.slotLabel(course, table: table))
                     .font(.system(size: 11, weight: .medium).monospacedDigit())
                     .foregroundColor(scheme.onSurfaceVariant)
-                Text(CourseDisplayUtil.displayName(course, !course.alias.isEmpty))
+                Text(CourseDisplayUtil.displayName(course, store.useListAlias && !course.alias.isEmpty))
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(scheme.onSurface)
                     .lineLimit(2)

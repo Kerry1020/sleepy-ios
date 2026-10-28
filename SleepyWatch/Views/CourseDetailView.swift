@@ -15,20 +15,21 @@ struct CourseDetailView: View {
         let scheme = WatchPalette.scheme(envDark: envScheme == .dark)
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
-                Text(store.timeRange(course, table: table))
+                // 节次/时间双模式 = 镜像 display_mode (手表零独有开关)
+                Text(store.slotLabel(course, table: table))
                     .font(.system(size: 13, weight: .medium).monospacedDigit())
                     .foregroundColor(scheme.onSurfaceVariant)
-                Text(CourseDisplayUtil.displayName(course, !course.alias.isEmpty))
+                Text(CourseDisplayUtil.displayName(course, store.useGridAlias && !course.alias.isEmpty))
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(scheme.onSurface)
                 infoRow(L10n.t("course_field_week"), course.nodeString(), scheme)
                 infoRow(L10n.t("watch_detail_day"), DateUtils.localizedDay(course.day), scheme)
                 infoRow(L10n.t("week_range"), "\(course.startWeek)-\(course.endWeek)", scheme)
                 if !course.teacher.isEmpty {
-                    infoRow(L10n.t("notif_channel_fluid_field_teacher"), course.teacher, scheme)
+                    infoRow(L10n.t("course_field_teacher"), course.teacher, scheme)
                 }
                 if !course.room.isEmpty {
-                    infoRow(L10n.t("notif_channel_fluid_field_room"), course.room, scheme)
+                    infoRow(L10n.t("course_field_room"), course.room, scheme)
                 }
                 if !course.note.isEmpty {
                     infoRow(L10n.t("course_field_note"), course.note, scheme)
