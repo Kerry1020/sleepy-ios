@@ -150,13 +150,16 @@ private struct WeekGridBody: View {
                         headerLayout: headerLayout, headerStyle: headerStyle, showX: showX)
                     let timeW = ctx.timeW
                     let headH = layout.headH
-                    let gapW = layout.gapW
                     let dayW = ctx.dayW
 
-                    VStack(spacing: 0) {
+                    // ★ 单一画布 (← Android renderBitmap 一张位图): header 与 body 同
+                    //   原点、同 ctx.colX 几何源。此前两行分属 VStack 两个独立布局盒,
+                    //   header 盒被重新居中 → 列头恒右偏 ~6pt 与课程列错位
+                    //   (用户 2026-10-28「网格视图纵向没对齐」)。
+                    ZStack(alignment: .topLeading) {
                         // ── Header (Day labels) ──
-                        HStack(alignment: .top, spacing: gapW) {
-                            // time column 角落
+                        ZStack(alignment: .topLeading) {
+                            // time column 角落 (x=0 宽 timeW — 与 body 时间列同位)
                             ZStack {
                                 RoundedRectangle(cornerRadius: 14)
                                     .fill(s.surface)
@@ -171,7 +174,7 @@ private struct WeekGridBody: View {
                                 }
                             }
                             .frame(width: timeW, height: headH)
-                            ForEach(sortedDays, id: \.self) { dow in
+                            ForEach(Array(sortedDays.enumerated()), id: \.element) { idx, dow in
                                 let isToday = dow == todayDow
                                 let dayData = data.days.first { $0.dayOfWeek == dow }
                                 let count = dayData?.courses.count ?? 0
@@ -196,11 +199,12 @@ private struct WeekGridBody: View {
                                 .frame(width: dayW, height: headH)
                                 .background(isToday ? s.primaryContainer : s.surface)
                                 .cornerRadius(14)
+                                .offset(x: ctx.colX(idx))
                             }
                         }
-                        .frame(height: headH)
 
                         // ── Body: today 高亮 → 分隔线 → 时间列 → 日列 (画布坐标绝对定位) ──
+                        //   body 层 x 以 0 起, 整体下沉 headH (与 header 同原点同几何源)
                         ZStack(alignment: .topLeading) {
                             // today 背景铺满整列 ← Android drawRect(colX, bodyTop, colX+dayW, +bodyH) α40
                             ForEach(Array(sortedDays.enumerated()), id: \.element) { idx, dow in
@@ -249,8 +253,15 @@ private struct WeekGridBody: View {
                                 }
                             }
                         }
+                        // body 整组下沉 headH — 组内坐标仍「body 顶=0」(rowTop/colX 原语义),
+                        // 画布级只加 y 偏移; header 组无尺寸 frame (子视图绝对 offset),
+                        // 不存在被重新居中的布局盒 → 两层永不横向分叉
+                        .offset(y: headH)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     }
+                    // 画布显式撑满 — offset 不扩父视图布局尺寸, 缺此 frame 时
+                    // ZStack 高=bodyH → padding 后被 GeometryReader 垂直居中 (下坠28pt)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     .padding(layout.outerPad)
                 }
             }
