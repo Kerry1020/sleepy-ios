@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- PrivacyInfo.xcprivacy — Widget Extension Privacy Manifest (2026-10 上架补齐)
+     required-reason 申报口径 (与主 app Sleepy/PrivacyInfo.xcprivacy 同审计结论):
+     - UserDefaults (CA92.1 = app 自身容器数据): widget 经 AppPrefs 读偏好 (主题/别名/
+       灰显/分隔线等), 域为本 App 自有 standard/suiteName, 从不读写他 App UserDefaults。
+     不申报 (核实后确认 extension 未触发):
+     - FileTimestamp: WidgetArchiveLog 仅 attributesOfItem[.size] 读日志文件大小做裁剪,
+       从不读修改时间戳 → 不属 FileTimestamp required-reason API (同主 app 结论)。
+     - SystemBootTime: extension 不含 ui/JwDiagnosticSession (project.yml 排除 ui/),
+       无 ProcessInfo.systemUptime 调用 → 不申报。
+     无追踪 (NSPrivacyTracking=false), 无数据收集 (课表全本地)。 -->
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>
