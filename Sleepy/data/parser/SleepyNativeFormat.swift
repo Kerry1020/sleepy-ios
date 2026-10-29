@@ -297,14 +297,19 @@ enum SleepyNativeFormat {
     /// `H:mm` / `HH:mm` / 全角冒号 → (h, min); 越界/非法 → nil
     /// `\d` 按 Java 默认 ASCII 口径写死 [0-9](Android Regex 未开 UNICODE_CHARACTER_CLASS)。
     /// `$` 保留(非 `\z`): JDK17 实测 Java 非 MULTILINE 的 `$` 也命中「末尾行终止符之前」
-    /// (NEL U+0085/U+2028 尾缀 find=true), ICU `$` 同构 → 两端一致; `\z` 反而制造分叉。
+    /// (NEL U+0085/U+2028 尾缀 find=true)。注意该同构只对 NSRegularExpression 路径
+    /// 成立; String.range(of:.regularExpression) 在 iOS 26 实测对尾随终止符判 false
+    /// (2026-10-29 单测反证) → 必须走 NSRegularExpression, 与 parseDate/parseWeekSpec 同式。
     static func parseClock(_ s: String) -> (h: Int, min: Int)? {
         let t = trimJava(s).replacingOccurrences(of: "：", with: ":")
-        guard let m = t.range(of: "^([0-9]{1,2}):([0-9]{2})$", options: .regularExpression) else { return nil }
-        let parts = t[m].components(separatedBy: ":")
+        let ns = t as NSString
+        guard let m = CLOCK_RE.firstMatch(in: t, range: NSRange(location: 0, length: ns.length)) else { return nil }
+        let parts = ns.substring(with: m.range).components(separatedBy: ":")
         guard let h = Int(parts[0]), let min = Int(parts[1]), (0...23).contains(h), (0...59).contains(min) else { return nil }
         return (h, min)
     }
+
+    private static let CLOCK_RE = try! NSRegularExpression(pattern: "^([0-9]{1,2}):([0-9]{2})$")
 
     private static let DATE_RE = try! NSRegularExpression(pattern: "^([0-9]{4})[-/.]?([0-9]{1,2})[-/.]?([0-9]{1,2})$")
 
