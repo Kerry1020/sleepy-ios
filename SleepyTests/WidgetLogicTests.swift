@@ -66,12 +66,23 @@ final class WidgetLogicTests: XCTestCase {
         XCTAssertTrue(VerticalNameTokenizer.tokenize("  \n ", useVertForms: false).isEmpty)
     }
 
-    // unitHeight: CJK 每字 1.0 / LATIN 每字 0.55 / PUNCT 每字 0.5
+    // unitHeight: CJK 每字 1.0 (直立逐字); LATIN/PUNCT 走真实 measureText
+    // (← Android measureUnitHeight 探针, 拉丁组高 = 实测组宽 / 1pt 探针字号)。
+    // WeekGrid v1.0.61 对齐后弃用旧的固定系数 (latin 0.55 / punct 0.5) — 那些是
+    // SwiftUI 无 measureText 时的近似, 现已有 UIKit NSString 实测口径。
     func testUnitHeight() {
         let cjk = VerticalNameTokenizer.tokenize("高数", useVertForms: false)
         XCTAssertEqual(VerticalNameTokenizer.unitHeight(cjk), 2.0)
+        // 拉丁组 "AB" 旋转后占高 = 实测宽度比值; 1pt 探针下 "AB" 宽 ≈ 1.4pt → 单位高 ≈ 1.4
+        // (非旧固定 1.1)。锁「实测 > 0 且落在合理区间」而非具体系数, 避免字体度量漂移脆断。
         let latin = [NameToken(type: .latin, text: "AB")]
-        XCTAssertEqual(VerticalNameTokenizer.unitHeight(latin), 1.1, accuracy: 0.001)
+        let lh = VerticalNameTokenizer.unitHeight(latin)
+        XCTAssertGreaterThan(lh, 0)
+        XCTAssertGreaterThan(lh, 1.1, "拉丁组高应为真实测量值, 大于旧固定系数 1.1")
+        XCTAssertLessThan(lh, 3.0, "拉丁组高不应异常膨胀")
+        // 标点同走实测
+        let punct = [NameToken(type: .punct, text: "·")]
+        XCTAssertGreaterThan(VerticalNameTokenizer.unitHeight(punct), 0)
     }
 
     // greedyDraw: 高度充足 → 全部保留

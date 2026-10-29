@@ -149,7 +149,12 @@ targets:
       - path: Sleepy
         excludes: ["resources", "SleepyApp.swift", "Info.plist", "ui", "app",
                    "widget/notification/BatterySettingsLauncher.swift",
-                   "util/NavStyleResolver.swift"]
+                   "util/NavStyleResolver.swift",
+                   # 主 app 的隐私清单只归 Sleepy target; widget 用自己的
+                   # SleepyWidget/PrivacyInfo.xcprivacy (下方 path: SleepyWidget 已含)。
+                   # 不排除 → archive 时 widget target 同时拷两份 PrivacyInfo.xcprivacy
+                   # → "Multiple commands produce" (CI macos-15 archive 实测复现)。
+                   "PrivacyInfo.xcprivacy"]
       - path: Sleepy/resources
         buildPhase: resources
     dependencies:

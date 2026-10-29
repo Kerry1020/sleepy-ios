@@ -488,9 +488,21 @@ final class CustomThemeResolutionTests: XCTestCase {
         let ocean = resolveWidgetScheme(themeKey: "ocean", isDark: false)
         XCTAssertEqual(rgbComponents(preset.light.primary), rgbComponents(ocean.primary))
 
-        let system = resolveWidgetScheme(themeKey: ThemePresets.KEY_SYSTEM, isDark: true)
-        let dynamic = SleepyThemeProvider.dynamicSystemScheme(dark: true)
-        XCTAssertEqual(rgbComponents(dynamic.surface), rgbComponents(system.surface))
+        // system 分支新契约 (PR#20, 修桌面/StandBy 白字浅底 + 半透明胶囊溶解):
+        // 不再等于 dynamicSystemScheme 的动态 UIColor (那些由视图 trait 解析, widget
+        // 扩展进程下可能与 entry isDark 劈叉, 且 tertiarySystemFill 带 alpha)。
+        // 改为 opaqueWidgetSystemScheme — 按入参 isDark 显式烘焙成不透明静态色。
+        // 锁两条不变量: ① 同 isDark 下 surface/onSurface 等与烘焙源一致; ② 配色不透明。
+        let systemDark = resolveWidgetScheme(themeKey: ThemePresets.KEY_SYSTEM, isDark: true)
+        let bakedDark = opaqueWidgetSystemScheme(dark: true)
+        XCTAssertEqual(rgbComponents(bakedDark.surface), rgbComponents(systemDark.surface))
+        XCTAssertEqual(rgbComponents(bakedDark.onSurface), rgbComponents(systemDark.onSurface))
+
+        let systemLight = resolveWidgetScheme(themeKey: ThemePresets.KEY_SYSTEM, isDark: false)
+        let bakedLight = opaqueWidgetSystemScheme(dark: false)
+        XCTAssertEqual(rgbComponents(bakedLight.surface), rgbComponents(systemLight.surface))
+        // 浅/深烘焙结果必须不同 (证明 isDark 真的驱动了 trait 解析, 而非恒返回一套)
+        XCTAssertNotEqual(rgbComponents(systemDark.surface), rgbComponents(systemLight.surface))
     }
 }
 
