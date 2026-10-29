@@ -1052,6 +1052,8 @@
 "watch_settings_readonly_hint" = "提醒開關請在 iPhone 上管理";
 "watch_detail_day" = "星期";
 "watch_synced_ack" = "手錶已同步";
+"watch_complication_display_name" = "下一節課";
+"watch_complication_description" = "在錶盤顯示下一節課與倒數";
 "watch_not_synced" = "手錶尚未同步";
 "watch_settings_sync_header" = "同步";
 "watch_open_on_phone" = "請在 iPhone 上管理";

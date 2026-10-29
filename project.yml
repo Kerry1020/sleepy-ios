@@ -216,6 +216,13 @@ targets:
         buildPhase: resources
     dependencies:
       - package: GRDB
+      # 嵌入表盘复杂功能 + Control Center extension (PR#16 阶段四)
+      - target: SleepyWatchWidgets
+        embed: true
+    entitlements:
+      path: SleepyWatch/SleepyWatch.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.lingion.sleepy]
     info:
       path: SleepyWatch/Info.plist
       properties:
@@ -242,6 +249,64 @@ targets:
           CODE_SIGN_IDENTITY: "Apple Distribution"
           # 开发者门户待建: Sleepy Watch AppStore profile (步骤 6 前补, 未建则 Release 构建失败)
           PROVISIONING_PROFILE_SPECIFIER: "Sleepy Watch AppStore"
+
+  # 表盘复杂功能 + Control Center (PR#16 阶段四)。watchOS App Extension,
+  # bundle = com.lingion.sleepy.watch.widget, 嵌入主 watch App。
+  # 共享源同 SleepyWatch 手法编入 (data/util/theme/widget 装载器); 排除集 =
+  # watch target 排除集 + watch-only 层 (SleepyWatch/ 入口/视图/Store — extension
+  # 进程独立, 用纯函数装载器 WatchComplicationData 直读 GRDB, 不依赖 @StateObject)。
+  # ControlWidget 需 watchOS 11+, 源码内 @available(watchOSApplicationExtension 11.0)
+  # 守卫, 部署目标保持 10.0 不缩减 Series 4/SE 一代覆盖面。
+  SleepyWatchWidgets:
+    type: app-extension
+    platform: watchOS
+    sources:
+      - path: SleepyWatchWidgets
+      - path: Sleepy
+        excludes: ["resources", "SleepyApp.swift", "Info.plist", "ui", "app",
+                   "Assets.xcassets", "LaunchScreen.storyboard",
+                   "data/calendar", "data/jw", "data/migration",
+                   "data/repository/ImportDraftRepository.swift",
+                   "widget/TodayWidgetView.swift", "widget/TwoDayWidgetView.swift",
+                   "widget/WeekGridWidgetView.swift", "widget/WeekListWidgetView.swift",
+                   "widget/WeekViewWidgetView.swift", "widget/WidgetWindowCore.swift",
+                   "widget/WidgetBackgroundCompat.swift", "widget/WidgetCourseCard.swift",
+                   "widget/WidgetVendorActions.swift", "widget/WidgetEditViewModel.swift",
+                   "widget/WidgetCompactWindow.swift", "widget/WidgetCompactHelpers.swift",
+                   "widget/WidgetTextWrap.swift", "widget/WidgetSizeCore.swift",
+                   "widget/WidgetResizeCore.swift", "widget/WidgetScrollStore.swift",
+                   "widget/WidgetBoundaryScheduler.swift",
+                   "widget/notification/BatterySettingsLauncher.swift",
+                   "widget/notification/BatteryOptimizationIntents.swift",
+                   "util/NavStyleResolver.swift"]
+      - path: Sleepy/resources
+        buildPhase: resources
+    dependencies:
+      - package: GRDB
+    info:
+      path: SleepyWatchWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Sleepy Watch Widgets
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: SleepyWatchWidgets/SleepyWatchWidgets.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.lingion.sleepy]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.lingion.sleepy.watch.widget
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: D9UP75W466
+        GENERATE_INFOPLIST_FILE: "NO"
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: WATCH_APP
+      configs:
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "Apple Distribution"
+          PROVISIONING_PROFILE_SPECIFIER: "Sleepy Watch Widgets AppStore"
 
   SleepyTests:
     type: bundle.unit-test

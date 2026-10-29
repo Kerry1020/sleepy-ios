@@ -1052,6 +1052,8 @@
 "watch_settings_readonly_hint" = "リマインダーは iPhone で管理します。";
 "watch_detail_day" = "曜日";
 "watch_synced_ack" = "Watch 同期済み";
+"watch_complication_display_name" = "次の授業";
+"watch_complication_description" = "文字盤に次の授業とカウントダウンを表示";
 "watch_not_synced" = "Watch 未同期";
 "watch_settings_sync_header" = "同期";
 "watch_open_on_phone" = "iPhone で管理";

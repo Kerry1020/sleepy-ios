@@ -7,6 +7,7 @@ import Foundation
 import Combine
 import UserNotifications
 import WatchConnectivity
+import WidgetKit
 
 @MainActor
 final class WatchStore: ObservableObject {
@@ -220,6 +221,9 @@ final class WatchStore: ObservableObject {
         // prefs 落盘后立即重排手表本地通知 (BGTask 分支已被 WATCH_APP 守卫裁掉)。
         // master 关时 scheduleAll=撤净, 语义自洽。⚠ 前提=通知授权已批 (prepareScheduler)。
         NotificationScheduler.shared.scheduleAll()
+        // 表盘复杂功能刷新 (PR#16): 镜像数据变 → 重算「下一节」timeline。
+        // extension 进程独立读同 App Group 容器 GRDB, reload 触发其 getTimeline 重跑。
+        WidgetCenter.shared.reloadAllTimelines()
         // 回执经 context[watchAck] 送 iPhone (Coordinator 消费存 AppPrefs → capture
         // 镜像回手表; 手机不在线时 context 由系统代存, 上线自动消费 — 「最近意图」语义)。
         sendAck(body.sentAt)

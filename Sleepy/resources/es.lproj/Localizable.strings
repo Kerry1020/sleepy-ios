@@ -1052,6 +1052,8 @@
 "watch_settings_readonly_hint" = "Los recordatorios se gestionan en el iPhone.";
 "watch_detail_day" = "Día";
 "watch_synced_ack" = "Watch sincronizado";
+"watch_complication_display_name" = "Próxima clase";
+"watch_complication_description" = "Muestra la próxima clase y la cuenta atrás en la esfera";
 "watch_not_synced" = "Watch no sincronizado";
 "watch_settings_sync_header" = "Sincronización";
 "watch_open_on_phone" = "Gestionar en iPhone";
