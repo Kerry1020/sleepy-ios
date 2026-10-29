@@ -484,6 +484,7 @@
 		C8B2D015F3FAFE55BA27BBE9 /* WeekGridWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76EC0EF9B72C669E4A56B91E /* WeekGridWidgetView.swift */; };
 		C91D7040EA5DA8E7E2E61CC2 /* PeriodTableDao.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DC15F72A71D1DC1C3370D6F /* PeriodTableDao.swift */; };
 		CA1CE6B8588EBA1973F7C38A /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FE23E8A9E4FEBC54F0F90DF /* Theme.swift */; };
+		CACE2B7AA015DD75E921130A /* CourseListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 807D2193B6730A4A295A42AC /* CourseListView.swift */; };
 		CB05064383A2D8FBF6C45F57 /* UpdateInfoMirrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42639D7BC617D1327A8DEF13 /* UpdateInfoMirrorTests.swift */; };
 		CCF2D5C5DAE7849F3A8D0C94 /* PillNavigationBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 670EC898DF9415793C5762E3 /* PillNavigationBar.swift */; };
 		CD11FBD5ABFA3953CE6E30A0 /* JwProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3480ED82E92E5E453EA66874 /* JwProtocol.swift */; };
@@ -863,6 +864,7 @@
 		7D8DF7E3509AC5B4147E75C8 /* ReminderScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderScreen.swift; sourceTree = "<group>"; };
 		7F8FE3D103CAC0B91A9CE015 /* HolidayManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayManagerTests.swift; sourceTree = "<group>"; };
 		804FD9B63BCC3C1726B9CAFF /* WeekViewWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekViewWidgetView.swift; sourceTree = "<group>"; };
+		807D2193B6730A4A295A42AC /* CourseListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseListView.swift; sourceTree = "<group>"; };
 		808431739643CC9DF6D6126D /* SleepyWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepyWatchApp.swift; sourceTree = "<group>"; };
 		81949E978A8725C92FCA42C2 /* WeekDisplayResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekDisplayResolver.swift; sourceTree = "<group>"; };
 		8196FB929621E7BD5615C068 /* WidgetResizeCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetResizeCoreTests.swift; sourceTree = "<group>"; };
@@ -1175,6 +1177,7 @@
 			isa = PBXGroup;
 			children = (
 				71FC5D5AEF8AC95542F912DF /* CourseDetailView.swift */,
+				807D2193B6730A4A295A42AC /* CourseListView.swift */,
 				294E4802305814CD4DB358BA /* CourseRowView.swift */,
 				15DCA636E9FBBAFF5CEB6B16 /* SettingsView.swift */,
 				03179FCBB27BEDBD1F5EF152 /* TodayView.swift */,
@@ -2505,6 +2508,7 @@
 				D88057BB6141BE7FE151401A /* CourseDetailView.swift in Sources */,
 				5965128D6179D9E02C635F0B /* CourseDisplayUtil.swift in Sources */,
 				4D2D981072A830B0C1F81F28 /* CourseEntity.swift in Sources */,
+				CACE2B7AA015DD75E921130A /* CourseListView.swift in Sources */,
 				493CAC2EAAFAC9013C62D538 /* CourseRowView.swift in Sources */,
 				7D4E808CFE7DA03C186C197D /* CustomSchemeDeriver.swift in Sources */,
 				012784C39C250845AF6D59CF /* CustomThemeStore.swift in Sources */,

@@ -101,8 +101,14 @@ struct TodayView: View {
             HStack(spacing: 4) {
                 stat(weekOrStatusText(status, table: table),
                      bg: scheme.primaryContainer, fg: scheme.onPrimaryContainer, scheme: scheme)
-                stat(count == 0 ? L10n.t("no_course") : L10n.format("n_periods", count),
-                     bg: scheme.surfaceVariant, fg: scheme.onSurfaceVariant, scheme: scheme)
+                // 节数 chip = 课程清单 push 入口 (手表今日页唯一入口位; 语义
+                // ← iOS「我的页课程数卡 → CourseListScreen」同路径降维)。
+                // 键 = n_course_periods ← TodayHeader:190 实况 (非 n_periods)。
+                NavigationLink { CourseListView(table: table) } label: {
+                    stat(count == 0 ? L10n.t("no_course") : L10n.format("n_course_periods", count),
+                         bg: scheme.surfaceVariant, fg: scheme.onSurfaceVariant, scheme: scheme)
+                }
+                .buttonStyle(.plain)
             }
         }
     }

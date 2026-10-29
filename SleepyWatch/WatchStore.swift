@@ -45,6 +45,12 @@ final class WatchStore: ObservableObject {
         courses(on: Date(), table: table)
     }
 
+    /// 当前表全部课 — 课程清单分组用 (← CourseListScreen 数据源
+    /// viewModel.state.courses)。不按日/周过滤, 取整表。
+    func allCourses(table: TimeTableEntity) -> [CourseEntity] {
+        (try? repo.getCourses(table.id)) ?? []
+    }
+
     /// 某天课 — ← WidgetWeekDataLoader.coursesOn 全语义:
     /// 学期前「第 1 周课」预习照常显示 (previewBeforeStart)、学期后仅调休
     /// 补班日 (该日在 transfer 映射 sourceDate 集内) 显示映射到的周课, 否则空。
