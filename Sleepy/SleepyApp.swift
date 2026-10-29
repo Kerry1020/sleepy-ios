@@ -59,7 +59,11 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             guard let self = self else { return }
             WidgetCenter.shared.reloadAllTimelines()
             self.notificationScheduler.scheduleAll()
+            // ← 2026-10 watch 伴侣 App: 同一条 refresh 总线挂手表全量快照推送
+            // (scheduleSync 只持 Coordinator 单例, [weak self] 模式与本 hook 其余行一致)
+            WatchSyncCoordinator.shared.scheduleSync()
         }
+        WatchSyncCoordinator.shared.start()
         // ← Android SleepyApp.onCreate: classDndScheduler 注入 (F128 issue#2)
         ClassDndScheduler.shared.configure(repositoryProvider: { [weak self] in self?.repository })
         // ← Android ReminderRescheduler.init 块 (SleepyApp.kt:44-52) — 同时修复 init_ 从未被调用、
@@ -79,6 +83,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             guard self != nil else { return }
             // Android 侧此处还有 reconcileActiveFluidCloud — vendor platform-only, iOS 无等价
             ClassDndScheduler.shared.syncFromPrefs()
+            // watch 伴侣 App: 回前台兜底重推 (离线期间 onDataChanged 攒的改动追平)
+            WatchSyncCoordinator.shared.syncNow()
         }
     }
 

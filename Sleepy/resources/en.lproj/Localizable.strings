@@ -1039,3 +1039,21 @@
 "slot_defaults_notice" = "Some times use the default bell schedule. Please check them against your school’s schedule.";
 "slot_missing_notice" = "Some times are not set. Set them before saving.";
 "slot_pending" = "Not set";
+// MARK: - watch (2026-10 watch 伴侣 App)
+"watch_no_table_hint" = "No schedule yet — create one on your iPhone first.";
+"watch_mark_now" = "Now";
+"watch_mark_next" = "Next";
+"watch_mark_on" = "On";
+"watch_mark_off" = "Off";
+"watch_last_sync" = "Last sync";
+"watch_never_sync" = "Never";
+"watch_resync_now" = "Sync now";
+"watch_settings_reminders_header" = "Reminders";
+"watch_settings_readonly_hint" = "Reminders are managed on your iPhone.";
+"watch_detail_day" = "Day";
+"watch_synced_ack" = "Watch synced";
+"watch_complication_display_name" = "Next class";
+"watch_complication_description" = "Show next class and countdown on the watch face";
+"watch_not_synced" = "Watch not synced";
+"watch_settings_sync_header" = "Sync";
+"watch_open_on_phone" = "Manage on iPhone";
