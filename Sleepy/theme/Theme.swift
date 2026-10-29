@@ -51,6 +51,33 @@ struct WakeUpColorScheme {
     let onError: Color
     let errorContainer: Color
     let onErrorContainer: Color
+
+    /// 表面族/主色替换副本 — widget 侧把动态语义色烘焙成 trait 解析不透明色用
+    /// (← WidgetContent.opaqueWidgetSystemScheme)
+    func replacing(primary: Color? = nil, onSurface: Color? = nil,
+                   onSurfaceVariant: Color? = nil,
+                   surface: Color? = nil, surfaceVariant: Color? = nil) -> WakeUpColorScheme {
+        WakeUpColorScheme(
+            primary: primary ?? self.primary, onPrimary: onPrimary,
+            primaryContainer: primaryContainer, onPrimaryContainer: onPrimaryContainer,
+            secondary: secondary, onSecondary: onSecondary,
+            secondaryContainer: secondaryContainer, onSecondaryContainer: onSecondaryContainer,
+            tertiary: tertiary, onTertiary: onTertiary,
+            tertiaryContainer: tertiaryContainer, onTertiaryContainer: onTertiaryContainer,
+            background: background, onBackground: onBackground,
+            surface: surface ?? self.surface, onSurface: onSurface ?? self.onSurface,
+            surfaceVariant: surfaceVariant ?? self.surfaceVariant,
+            onSurfaceVariant: onSurfaceVariant ?? self.onSurfaceVariant,
+            surfaceContainerLowest: surfaceContainerLowest,
+            surfaceContainerLow: surfaceContainerLow,
+            surfaceContainer: surfaceContainer,
+            surfaceContainerHigh: surfaceContainerHigh,
+            surfaceContainerHighest: surfaceContainerHighest,
+            outline: outline, outlineVariant: outlineVariant, scrim: scrim,
+            error: error, onError: onError,
+            errorContainer: errorContainer, onErrorContainer: onErrorContainer
+        )
+    }
 }
 
 // MARK: - 默认淡紫 ← LightScheme / DarkScheme
@@ -319,6 +346,13 @@ struct SleepyThemeProvider: ViewModifier {
 
     /// Android dynamicColorScheme(context) 的 iOS 等价:系统语义色映射到 M3 槽位
     static func dynamicSystemScheme(dark: Bool) -> WakeUpColorScheme {
+        #if os(watchOS)
+        // watchOS SDK 无 iOS 语义色族(systemPurple/systemBackground/label 等
+        // unavailable) — "system" 主题键在手表回落 M3 默认预设 (默认套主色
+        // #6750A4 即本映射 systemPurple 的视觉基准, 两端观感同源)。2026-10 watch 伴侣 App。
+        let preset = ThemePresets.byKey(ThemePresets.KEY_DEFAULT)
+        return dark ? preset.dark : preset.light
+        #else
         WakeUpColorScheme(
             primary: Color(uiColor: .systemPurple),
             onPrimary: dark ? Color(0xFF2D165C) : .white,
@@ -351,6 +385,7 @@ struct SleepyThemeProvider: ViewModifier {
             errorContainer: dark ? Color(0xFF93000A) : Color(0xFFF9DEDC),
             onErrorContainer: dark ? Color(0xFFFFDAD6) : Color(0xFF410E0B)
         )
+        #endif
     }
 }
 

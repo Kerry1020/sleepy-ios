@@ -25,32 +25,41 @@ struct TodayWidgetEntry: TimelineEntry {
 struct TodayWidgetProvider: TimelineProvider {
     func placeholder(in context: Context) -> TodayWidgetEntry {
         WidgetArchiveLog.append(kind: "TodayWidgetRV", family: context.family.description, result: "success")
-        return TodayWidgetEntry(date: Date(), data: TodayWidgetLoader.loadDataSync(kind: "TodayWidgetRV"))
+        // 占位脸不读 DB (async 装载不能同步等, 与 TwoDay/WeekList placeholder 同规)。
+        return TodayWidgetEntry(date: Date(), data: WidgetData(date: Date(), courses: [],
+                                                               timeJson: TimeTableUtils.DEFAULT_TIME_JSON,
+                                                               hasTable: false))
     }
 
     func getSnapshot(in context: Context, completion: @escaping (TodayWidgetEntry) -> Void) {
         WidgetArchiveLog.append(kind: "TodayWidgetRV", family: context.family.description, result: "success")
-        completion(TodayWidgetEntry(date: Date(), data: TodayWidgetLoader.loadDataSync(kind: "TodayWidgetRV")))
+        Task {
+            let now = Date()
+            let data = await TodayWidgetLoader.loadData(kind: "TodayWidgetRV")
+            completion(TodayWidgetEntry(date: now, data: data, nowMin: WidgetWindows.nowMinutes(now)))
+        }
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<TodayWidgetEntry>) -> Void) {
-        let data = TodayWidgetLoader.loadDataSync(kind: "TodayWidgetRV")
-        let now = Date()
-        var entries = [TodayWidgetEntry(date: now, data: data, nowMin: WidgetWindows.nowMinutes(now))]
-        // ← WidgetBoundaryScheduler: 每节课下课的下一分钟 (end+1) 一颗边界,窗口跟着前移。
-        // Android 用 AlarmManager 重推,iOS 等价 = 把边界做成 timeline entry,到点自动换页。
-        if data.hasTable && data.semesterStatus == .inRange {
-            for at in WidgetWindows.boundaryDates(courses: data.courses, timeJson: data.timeJson, from: now) {
-                entries.append(TodayWidgetEntry(date: at, data: data, nowMin: WidgetWindows.nowMinutes(at)))
+        Task {
+            let data = await TodayWidgetLoader.loadData(kind: "TodayWidgetRV")
+            let now = Date()
+            var entries = [TodayWidgetEntry(date: now, data: data, nowMin: WidgetWindows.nowMinutes(now))]
+            // ← WidgetBoundaryScheduler: 每节课下课的下一分钟 (end+1) 一颗边界,窗口跟着前移。
+            // Android 用 AlarmManager 重推,iOS 等价 = 把边界做成 timeline entry,到点自动换页。
+            if data.hasTable && data.semesterStatus == .inRange {
+                for at in WidgetWindows.boundaryDates(courses: data.courses, timeJson: data.timeJson, from: now) {
+                    entries.append(TodayWidgetEntry(date: at, data: data, nowMin: WidgetWindows.nowMinutes(at)))
+                }
             }
+            // 次日 00:05 换日 (数据变化仍由 App 端 WidgetCenter.reloadAllTimelines 触发)
+            var cal = DateUtils.isoCalendar
+            cal.timeZone = .current
+            let tomorrow = cal.date(byAdding: .day, value: 1, to: now) ?? now.addingTimeInterval(3600)
+            let refresh = cal.date(bySettingHour: 0, minute: 5, second: 0, of: tomorrow) ?? tomorrow
+            WidgetArchiveLog.append(kind: "TodayWidgetRV", family: context.family.description, result: "success")
+            completion(Timeline(entries: entries, policy: .after(refresh)))
         }
-        // 次日 00:05 换日 (数据变化仍由 App 端 WidgetCenter.reloadAllTimelines 触发)
-        var cal = DateUtils.isoCalendar
-        cal.timeZone = .current
-        let tomorrow = cal.date(byAdding: .day, value: 1, to: now) ?? now.addingTimeInterval(3600)
-        let refresh = cal.date(bySettingHour: 0, minute: 5, second: 0, of: tomorrow) ?? tomorrow
-        WidgetArchiveLog.append(kind: "TodayWidgetRV", family: context.family.description, result: "success")
-        completion(Timeline(entries: entries, policy: .after(refresh)))
     }
 }
 
@@ -62,9 +71,19 @@ struct TodayWidgetEntryView: View {
     let entry: TodayWidgetEntry
 
     var body: some View {
+        // iOS 26 主屏「透明/着色」样式探测 (← WidgetBackgroundCompat): glass 态配色
+        // 整体换白 alpha 层级, 否则系统把不透明主题色整组染白 → 文字/图标不可辨
+        WidgetGlassModeContent { isGlass in
+            content(isGlass: isGlass)
+        }
+        .widgetURL(URL(string: "sleepy://open"))
+    }
+
+    @ViewBuilder
+    private func content(isGlass: Bool) -> some View {
         let data = entry.data
         let isDark = effectiveWidgetIsDark(themeMode: data.themeMode, snapshotIsDark: data.isDark, envScheme: widgetColorScheme)
-        let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: isDark)
+        let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: isDark, isGlass: isGlass)
         let prefs = AppPrefs.shared
         let colorless = prefs.isWidgetColorless()
         let displayMode = prefs.getDisplayMode()   // ★ 用户显示设置 (决策 D5-12)
@@ -77,22 +96,37 @@ struct TodayWidgetEntryView: View {
         return GeometryReader { proxy in
             let win = TodayWidgetEntryView.window(data: data, heightDp: proxy.size.height,
                                                   tier: tier, nowMin: nowMin)
+            // 标题行 ← todayHeaderParts (WidgetBitmapRenderers.kt:271-278):
+            // 跳转态「最近有课的一天 · 周X」 > isToday ?「今天 · 周X」:「M/D · 周X」;
+            // 右侧日期仅「今日态 + showDate」画 (iOS 无导航 UI, 回今天 action 恒不画,
+            // 与 Android 静态渲染 showBackToToday=false 同口径, TodayWidget.kt:329)
+            let titleText: String = {
+                let dayLabel: String
+                if data.weekDisplayStatus == .nearestBusyDay {
+                    dayLabel = L10n.format("schedule_nearest_busy_day")
+                } else if data.isToday {
+                    dayLabel = L10n.format("today_today")
+                } else {
+                    dayLabel = data.dateLabel
+                }
+                return "\(dayLabel) · \(data.dayName)"
+            }()
+
             VStack(alignment: .leading, spacing: 0) {
-                // 标题行: 今天 · 周X  +  日期 (★ showDate=false 时隐藏右侧日期)
                 HStack(alignment: .firstTextBaseline) {
-                    Text("\(L10n.format("today_today")) · \(data.dayName)")
+                    Text(titleText)
                         .font(.system(size: 13, weight: .bold))
                         .foregroundColor(s.primary)
                         .lineLimit(1) // 安卓 ellipsize 单行 (min 预算 40dp)
                     Spacer(minLength: 4)
-                    if showDate {
+                    if showDate && data.isToday {
                         Text(data.dateLabel)
                             .font(.system(size: 12))
                             .foregroundColor(s.onSurfaceVariant)
                             .lineLimit(1)
                     }
                 }
-                .padding(.bottom, 7) // 表头前进 20dp: pad10 + 行高≈13 + 7
+                .frame(height: 20, alignment: .top) // 表头固定前进量 20dp ← Android y+=20f
 
                 statusOrCourses(data: data, win: win, scheme: s, colorless: colorless,
                                 displayMode: displayMode, useAlias: useAlias)
@@ -108,10 +142,12 @@ struct TodayWidgetEntryView: View {
             .padding(.horizontal, 10)
             .padding(.top, 10)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(s.bg)
         }
-        .background(s.bg)
-        .widgetURL(URL(string: "sleepy://open"))
+        // 唯一背景 = containerBackground (iOS 17+ 剥离场景生效; iOS ≤16 回退 .background)。
+        // 旧 GeometryReader 内容上的 .background(s.bg) 是前景不透明层, 会使
+        // StandBy/锁屏剥离失效 — 与 sleepyWidgetBackground 的采用目的冲突, 已删。
+        // glass 态 s.bg = .clear → 容器底交给系统玻璃材质, 半透前景保持 alpha。
+        .sleepyWidgetBackground { s.bg }
     }
 
     /// 固定窗口: 只有「有课表 + 学期内 + 有课」才有行轴,其余状态无窗口语义
@@ -132,21 +168,23 @@ struct TodayWidgetEntryView: View {
                 .foregroundColor(s.onSurface)
         } else if data.semesterStatus != .inRange {
             // ★ 学期外: 状态标题 + 提示行,不画课程
+            // ← Android y+=22f 行前进量 (frame 固定高, 旧 padding6+自然行高 使
+            //   第二行比安卓低 ≈2pt)
             Text(data.semesterStatus == .beforeStart
                  ? L10n.format("semester_not_started")
                  : L10n.format("semester_ended"))
                 .font(.system(size: 15, weight: .bold))
                 .foregroundColor(s.onSurface)
-                .padding(.bottom, 6)
+                .frame(height: 22, alignment: .top)
             Text(L10n.format("today_semester_out_hint"))
                 .font(.system(size: 11))
                 .foregroundColor(s.onSurfaceVariant)
         } else if data.courses.isEmpty {
-            // 今日无课 → 大字提示 + 副文案
+            // 今日无课 → 大字提示 + 副文案 (22dp 行前进量同上)
             Text(L10n.format("today_no_course"))
                 .font(.system(size: 16, weight: .bold))
                 .foregroundColor(s.onSurface)
-                .padding(.bottom, 6)
+                .frame(height: 22, alignment: .top)
             Text(L10n.format("today_rest"))
                 .font(.system(size: 12))
                 .foregroundColor(s.onSurfaceVariant)
@@ -159,9 +197,11 @@ struct TodayWidgetEntryView: View {
                 ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                     WidgetCourseRowView(row: row, allCourses: data.courses, timeJson: data.timeJson,
                                         scheme: s, colorless: colorless, displayMode: displayMode,
-                                        useAlias: useAlias)
+                                        useAlias: useAlias, isGrey: data.isGrey)
                 }
             }
+            // ← drawCourse(greyAlpha 0x99): 节假日/周末灰显整列课卡降透明度 (与 TwoDay 同口径)
+            .opacity(data.isGrey ? 153.0 / 255.0 : 1)
         } else {
             // 时间窗锚点之后暂无可显示行 (例如下课后、下一节前的空档)
             EmptyView()
@@ -177,5 +217,7 @@ struct TodayWidget: Widget {
         }
         .configurationDisplayName(L10n.format("widget_today_label"))
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        // iOS 17+ 系统边距关闭, 维持既有自管 padding 布局 (iOS 16 及以下 no-op)
+        .contentMarginsDisabled()
     }
 }
