@@ -1052,3 +1052,7 @@
 "watch_settings_reminders_header" = "提醒";
 "watch_settings_readonly_hint" = "提醒开关请在 iPhone 上管理";
 "watch_detail_day" = "星期";
+"watch_synced_ack" = "手表已同步";
+"watch_not_synced" = "手表尚未同步";
+"watch_settings_sync_header" = "同步";
+"watch_open_on_phone" = "请在 iPhone 上管理";

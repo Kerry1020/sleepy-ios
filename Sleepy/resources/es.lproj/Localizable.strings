@@ -1051,3 +1051,7 @@
 "watch_settings_reminders_header" = "Recordatorios";
 "watch_settings_readonly_hint" = "Los recordatorios se gestionan en el iPhone.";
 "watch_detail_day" = "Día";
+"watch_synced_ack" = "Watch sincronizado";
+"watch_not_synced" = "Watch no sincronizado";
+"watch_settings_sync_header" = "Sincronización";
+"watch_open_on_phone" = "Gestionar en iPhone";
