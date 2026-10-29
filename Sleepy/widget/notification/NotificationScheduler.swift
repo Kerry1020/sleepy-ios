@@ -31,7 +31,13 @@
 
 import Foundation
 import UserNotifications
+// BackgroundTasks 仅 iOS 可用 (watchOS 无此 framework)。下方 BGTask 相关函数体已由
+// `#if WIDGET_EXT || WATCH_APP` / `#if !WIDGET_EXT && !WATCH_APP` 守卫排除 watch 路径,
+// 但 import 本身在 watchOS 编译期即失败 ("no such module 'BackgroundTasks'") → 必须同样守卫。
+// CI macos-15 archive (含 #23 watch target) 实测复现并修复。
+#if os(iOS)
 import BackgroundTasks
+#endif
 
 final class NotificationScheduler {
     static let shared = NotificationScheduler()
