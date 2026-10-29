@@ -28,6 +28,8 @@
 		074693070D57DAB3FFBF5A86 /* JwBjtuParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 715802C2A36A63F13CDA2C0C /* JwBjtuParser.swift */; };
 		07E559CFB768AB2B4D313DCC /* ExportFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B41AA3A6188D5A6651648F24 /* ExportFlowUITests.swift */; };
 		08BEFCDFB15D26CC79E26E52 /* WidgetTableResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C144DF8370196EBA2816A1B /* WidgetTableResolver.swift */; };
+		AEF091CEB6834198B9C5ABE9 /* WidgetTextWrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5059FA12415D4C769874BAC6 /* WidgetTextWrap.swift */; };
+		EE4112BEF0524BBD981AF508 /* WidgetTextWrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5059FA12415D4C769874BAC6 /* WidgetTextWrap.swift */; };
 		0A85C1402956ED7AA81EE29B /* ImportAuditUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0718B20F0D0233CEBDC569F8 /* ImportAuditUITests.swift */; };
 		0AC70FBA0FD3781B9D3C83E6 /* ImportDraftEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 427290E97C9EEF4990D614F5 /* ImportDraftEntity.swift */; };
 		0AED8607B9D56BD77547D929 /* WidgetCompactWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = E640C1A188AC5138D468DFE2 /* WidgetCompactWindow.swift */; };
@@ -150,6 +152,8 @@
 		477159AE23906652A7C7FEBB /* WidgetCompactHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 945AE1E7D6D417CE3FBD4C89 /* WidgetCompactHelpers.swift */; };
 		479E5C2B965DC15E08F05851 /* TodayDateNavStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCF9EC856471726DFD200E17 /* TodayDateNavStore.swift */; };
 		47A68F16AF8D29100394A94A /* WidgetArchiveLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361943C96AEED91260036E34 /* WidgetArchiveLog.swift */; };
+		2A943A35989A47D6AAB8E4D3 /* WidgetBackgroundCompat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 774E1AC2D9CA4F46894B97AA /* WidgetBackgroundCompat.swift */; };
+		E14B4265A0144C01B0D72AA0 /* WidgetBackgroundCompat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 774E1AC2D9CA4F46894B97AA /* WidgetBackgroundCompat.swift */; };
 		486E763FDB230519E148D20E /* MineScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05A3D362C9894D69BFFCEC3F /* MineScreen.swift */; };
 		488B6FCD75861629BFB511C2 /* JwWebViewBlankTargetUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8A0EF2E319E98B292C560CE /* JwWebViewBlankTargetUITests.swift */; };
 		48AA36E34A07C60AC998DCA9 /* IrregularOverflowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ECF5F48FE99625564C23CA6 /* IrregularOverflowTests.swift */; };
@@ -324,6 +328,7 @@
 		9F5B46589CCE6B5952BECCBB /* ButtonHitAreaUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12B67FFE926875C9BA1433BE /* ButtonHitAreaUITests.swift */; };
 		9F9DD303AA9003E7D4137EE3 /* NoRippleClickable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DB8F6871F3F92D04E6106C9 /* NoRippleClickable.swift */; };
 		A10FFEDDC8426FB7CF1F7C74 /* WidgetSemanticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88100984FA669434490F2B3B /* WidgetSemanticsTests.swift */; };
+		5B5713E87D8C45DEB3B11F8B /* WidgetGlassPreviewRenderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 866804A549494D8CB88DFF70 /* WidgetGlassPreviewRenderTests.swift */; };
 		A1A36A06E64B44E4F24812DE /* ReminderRescheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85EA972FB93F27FC5BF76C73 /* ReminderRescheduler.swift */; };
 		A26BA46087BB1EB46853BE83 /* ExitDraftStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05EC5FA0F37BCA99BF0D8ABE /* ExitDraftStateTests.swift */; };
 		A2C80F36D6728FF2F43F453F /* SleepyNativeParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24CB83AF9B32FF2BC4921DB0 /* SleepyNativeParser.swift */; };
@@ -474,6 +479,7 @@
 		EC71988CF2185B0F043DCA31 /* ScheduleScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 449BD8236BF9A935B646F5F3 /* ScheduleScreen.swift */; };
 		ED1304B67D86E2778FC7A12F /* CourseTableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1335D448B44CCFBFCDA813D3 /* CourseTableView.swift */; };
 		EDB9414AA58E9DBF4BC95419 /* PeriodHeaderLayoutModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EE9A72ECBA6F6B95C0697A5 /* PeriodHeaderLayoutModel.swift */; };
+		4372B1961977433683ECF5DD /* PeriodHeaderLayoutModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EE9A72ECBA6F6B95C0697A5 /* PeriodHeaderLayoutModel.swift */; };
 		EE370D4EE99E09A66A682D22 /* TodayScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4416D5B0BDC66E042718596B /* TodayScreen.swift */; };
 		EE79C1A3276E85BDEF5F7C82 /* MigrationDatabaseCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = F251FBCF28A44624A87D96D4 /* MigrationDatabaseCodec.swift */; };
 		EF1ED903407BFCB87EF76E9B /* JwImportDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9610BD61FF13088540D20D20 /* JwImportDraft.swift */; };
@@ -559,6 +565,7 @@
 		0ADF37AF4B24FC388BA9CEE2 /* UndoCaptureCoverageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoCaptureCoverageTests.swift; sourceTree = "<group>"; };
 		0BEBFA267D121F786634455D /* AppearanceNavigationRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceNavigationRow.swift; sourceTree = "<group>"; };
 		0C144DF8370196EBA2816A1B /* WidgetTableResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetTableResolver.swift; sourceTree = "<group>"; };
+		5059FA12415D4C769874BAC6 /* WidgetTextWrap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetTextWrap.swift; sourceTree = "<group>"; };
 		0C14C917D9FFF63F1BDA1150 /* RowKeyDiffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowKeyDiffer.swift; sourceTree = "<group>"; };
 		0CF867A5F45D33213B73226C /* PendingPolicyBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingPolicyBanner.swift; sourceTree = "<group>"; };
 		0ECF5F48FE99625564C23CA6 /* IrregularOverflowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IrregularOverflowTests.swift; sourceTree = "<group>"; };
@@ -623,6 +630,7 @@
 		34F065FDCFDCA2A4AED9B5B8 /* SleepyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepyApp.swift; sourceTree = "<group>"; };
 		35B9FB6B04AC8792BDE0F5C7 /* MigrationPrefsCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationPrefsCodec.swift; sourceTree = "<group>"; };
 		361943C96AEED91260036E34 /* WidgetArchiveLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetArchiveLog.swift; sourceTree = "<group>"; };
+		774E1AC2D9CA4F46894B97AA /* WidgetBackgroundCompat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetBackgroundCompat.swift; sourceTree = "<group>"; };
 		370A630F8E293663E9B52AE2 /* EditTableScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditTableScreen.swift; sourceTree = "<group>"; };
 		3809683F11A502026D9F44C5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		38ACCC7671C8A0AA3121947D /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/Localizable.strings"; sourceTree = "<group>"; };
@@ -742,6 +750,7 @@
 		862D1D03A00150D15C37BF03 /* JwWakeUpCompatParsers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwWakeUpCompatParsers.swift; sourceTree = "<group>"; };
 		87411070D5476B65081E829B /* SleepyWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepyWidgetBundle.swift; sourceTree = "<group>"; };
 		88100984FA669434490F2B3B /* WidgetSemanticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSemanticsTests.swift; sourceTree = "<group>"; };
+		866804A549494D8CB88DFF70 /* WidgetGlassPreviewRenderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetGlassPreviewRenderTests.swift; sourceTree = "<group>"; };
 		883A8F99C25404524386B89E /* WidgetLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetLogicTests.swift; sourceTree = "<group>"; };
 		88A0C2BDE5E35B78392B4C54 /* JwChaoxingParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwChaoxingParser.swift; sourceTree = "<group>"; };
 		8AB83DCC65798AF11C37CD62 /* JwKustParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JwKustParser.swift; sourceTree = "<group>"; };
@@ -946,6 +955,7 @@
 			children = (
 				A3F73FAB76399721B954DF20 /* AppGroupResolver.swift */,
 				DB174180E779B7796964E378 /* AppPrefs.swift */,
+				8EE9A72ECBA6F6B95C0697A5 /* PeriodHeaderLayoutModel.swift */,
 				D31FA03F7AF7A6E296C6B4BD /* ConflictDetailReporter.swift */,
 				D4045004893D9AB9C079A3CF /* ConflictLayoutEngine.swift */,
 				5F8589E7A5EA8C34355C1FFF /* CourseColorUtil.swift */,
@@ -1035,7 +1045,7 @@
 				9103FA65945B83156A93E926 /* NativeColorPicker.swift */,
 				2D5BFC656D3F3C24D3651480 /* NavigationRailBar.swift */,
 				2140942FC998369FA6029236 /* PeriodHeaderCellContent.swift */,
-				8EE9A72ECBA6F6B95C0697A5 /* PeriodHeaderLayoutModel.swift */,
+
 				D2A030E63E72EF0BC18A2CE2 /* PeriodTableShareSheet.swift */,
 				670EC898DF9415793C5762E3 /* PillNavigationBar.swift */,
 				AAA25C6698B82B80FF02AB1B /* SegmentedSwitcher.swift */,
@@ -1144,6 +1154,7 @@
 				12CB5E397A61641128360FA3 /* WeekListWidgetView.swift */,
 				804FD9B63BCC3C1726B9CAFF /* WeekViewWidgetView.swift */,
 				361943C96AEED91260036E34 /* WidgetArchiveLog.swift */,
+				774E1AC2D9CA4F46894B97AA /* WidgetBackgroundCompat.swift */,
 				32FA87FAC3D04B6686F6E0DB /* WidgetBindingStore.swift */,
 				70745609A81489E4D9B7258B /* WidgetBoundaryScheduler.swift */,
 				945AE1E7D6D417CE3FBD4C89 /* WidgetCompactHelpers.swift */,
@@ -1156,6 +1167,7 @@
 				E863D5E148DA13657A66F19F /* WidgetScrollStore.swift */,
 				C7667DFB68961DD43C9A9A5D /* WidgetSizeCore.swift */,
 				0C144DF8370196EBA2816A1B /* WidgetTableResolver.swift */,
+				5059FA12415D4C769874BAC6 /* WidgetTextWrap.swift */,
 				3B140E2A80329256048C9082 /* WidgetVariantInfo.swift */,
 				95FC3092F0599DF4E35D564E /* WidgetVendorActions.swift */,
 				94F5F152011B05D7D4679807 /* WidgetWeekSource.swift */,
@@ -1391,6 +1403,7 @@
 				883A8F99C25404524386B89E /* WidgetLogicTests.swift */,
 				8196FB929621E7BD5615C068 /* WidgetResizeCoreTests.swift */,
 				88100984FA669434490F2B3B /* WidgetSemanticsTests.swift */,
+				866804A549494D8CB88DFF70 /* WidgetGlassPreviewRenderTests.swift */,
 				1C9A3BE407EE0D37AF553C0A /* WidgetSizeCoreTests.swift */,
 				41D143C07BACD39162E504CB /* WidgetThemeModeTests.swift */,
 			);
@@ -1937,6 +1950,7 @@
 				B6B35231467D21A43742BB25 /* WeekRangeOverlap.swift in Sources */,
 				F48DABCC146D655E683D42EF /* WeekViewWidgetView.swift in Sources */,
 				6AD52E7F43DBCB0EDE8839AA /* WidgetArchiveLog.swift in Sources */,
+				2A943A35989A47D6AAB8E4D3 /* WidgetBackgroundCompat.swift in Sources */,
 				A7AE959FB32BEF67BDD67260 /* WidgetBindingStore.swift in Sources */,
 				E8FFF60B891CE44960D70D7B /* WidgetBoundaryScheduler.swift in Sources */,
 				10D9CFAD96128961F82A2FCE /* WidgetCompactHelpers.swift in Sources */,
@@ -1951,6 +1965,7 @@
 				4AE70CB674F0E57B96A92C94 /* WidgetScrollStore.swift in Sources */,
 				45E85F9CE80185D47240DF4A /* WidgetSizeCore.swift in Sources */,
 				08BEFCDFB15D26CC79E26E52 /* WidgetTableResolver.swift in Sources */,
+				AEF091CEB6834198B9C5ABE9 /* WidgetTextWrap.swift in Sources */,
 				DB1C4031168D985F3F73119E /* WidgetVariantInfo.swift in Sources */,
 				B75798C4852058A6C1C208B0 /* WidgetVendorActions.swift in Sources */,
 				77D401EF5F353AAC19186B3F /* WidgetWeekSource.swift in Sources */,
@@ -1990,6 +2005,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4372B1961977433683ECF5DD /* PeriodHeaderLayoutModel.swift in Sources */,
+				EE4112BEF0524BBD981AF508 /* WidgetTextWrap.swift in Sources */,
+				E14B4265A0144C01B0D72AA0 /* WidgetBackgroundCompat.swift in Sources */,
 				92F5FBC94FF2A739A0980E4E /* AppDatabase.swift in Sources */,
 				0721F81C7C4D4E517D11B4D0 /* AppGroupResolver.swift in Sources */,
 				D2E92422ED2FA5E9F9645DE3 /* AppPrefs.swift in Sources */,
@@ -2231,6 +2249,7 @@
 				EC2F5B2FFEEF908131D0D88E /* WidgetLogicTests.swift in Sources */,
 				BADD33ED21D3D2BAB384DBE1 /* WidgetResizeCoreTests.swift in Sources */,
 				A10FFEDDC8426FB7CF1F7C74 /* WidgetSemanticsTests.swift in Sources */,
+				5B5713E87D8C45DEB3B11F8B /* WidgetGlassPreviewRenderTests.swift in Sources */,
 				8F8F9450E0CB0C388697DCFA /* WidgetSizeCoreTests.swift in Sources */,
 				9A95A96C33DCEE2D0BB1B829 /* WidgetThemeModeTests.swift in Sources */,
 			);

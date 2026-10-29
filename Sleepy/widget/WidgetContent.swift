@@ -8,6 +8,7 @@
 
 import Foundation
 import SwiftUI
+import UIKit
 
 /// 小组件渲染数据 — 让渲染端单纯绘制,不读 DB。
 /// TimelineProvider 在后台拉数据,组装成这个 model 喂给 SwiftUI 视图。 ← WidgetData
@@ -65,6 +66,9 @@ struct WidgetScheme {
     let surfaceContainerLowest: Color
     let surfaceVariant: Color
     let isDark: Bool
+    /// iOS 26 主屏「透明/着色」样式 (accented/vibrant 渲染态) — 玻璃档配色标志,
+    /// 渲染层据此跳过课程色/灰显覆盖 (整组已是白 alpha 层级, ← WidgetGlassCompat)
+    let isGlass: Bool
 }
 
 /// 按 themeKey + isDark 派生小组件配色。 ← resolveWidgetScheme
@@ -82,7 +86,11 @@ func effectiveWidgetIsDark(themeMode: String?, snapshotIsDark: Bool, envScheme: 
     return mode == AppPrefs.THEME_MODE_SYSTEM ? envScheme == .dark : snapshotIsDark
 }
 
-func resolveWidgetScheme(themeKey: String, isDark: Bool) -> WidgetScheme {
+func resolveWidgetScheme(themeKey: String, isDark: Bool, isGlass: Bool = false) -> WidgetScheme {
+    // iOS 26 主屏「透明/着色」样式 → accented/vibrant 渲染: 系统把不透明内容整组
+    // 染白(仅保 alpha)+背景换玻璃。预设/自定义色全被判白 → 层级消失。
+    // 玻璃档直接给「白 @ alpha 阶梯」配色 (← WidgetGlassCompat), 与系统染色语义自洽。
+    if isGlass { return glassWidgetScheme() }
     let s: WakeUpColorScheme
     if themeKey.hasPrefix(ThemePresets.CUSTOM_KEY_PREFIX) {
         let id = String(themeKey.dropFirst(ThemePresets.CUSTOM_KEY_PREFIX.count))
@@ -93,7 +101,7 @@ func resolveWidgetScheme(themeKey: String, isDark: Bool) -> WidgetScheme {
             s = isDark ? preset.dark : preset.light
         }
     } else if themeKey == ThemePresets.KEY_SYSTEM {
-        s = SleepyThemeProvider.dynamicSystemScheme(dark: isDark)
+        s = opaqueWidgetSystemScheme(dark: isDark)
     } else {
         let preset = ThemePresets.byKey(themeKey)
         s = isDark ? preset.dark : preset.light
@@ -111,7 +119,73 @@ func resolveWidgetScheme(themeKey: String, isDark: Bool) -> WidgetScheme {
         surfaceContainerLow: s.surfaceContainerLow,
         surfaceContainerLowest: s.surfaceContainerLowest,
         surfaceVariant: s.surfaceVariant,
-        isDark: isDark
+        isDark: isDark,
+        isGlass: false
+    )
+}
+
+/// "system" 主题的 widget 专用配色 — App 视图层的 dynamicSystemScheme 走 UIKit 动态
+/// 语义色 (label/secondarySystemBackground/tertiarySystemFill…), 由视图所在窗口的
+/// trait 解析。widget 扩展进程 + StandBy/锁屏场景下:
+///   1) trait 深浅可能与 entry 快照 isDark (锁定 light/dark 时) 劈叉 → 白字配浅底;
+///   2) tertiarySystemFill 等本身带 alpha → 背景被剥离后胶囊溶解。
+/// Android Material You 动态色恒为不透明且恒匹配深色标志, 无此二坑。
+/// 修法: 按 entry 的 isDark 显式给 trait 解析成**不透明静态色** (无硬编码色值,
+/// 系统升级自动跟随), 半透明填充先合成到 systemBackground 再取色。
+func opaqueWidgetSystemScheme(dark: Bool) -> WakeUpColorScheme {
+    let base = SleepyThemeProvider.dynamicSystemScheme(dark: dark)
+    #if os(watchOS)
+    // watchOS 无 iOS 语义色族 (dynamicSystemScheme 已回落默认预设) → 无需烘焙
+    return base
+    #else
+    let traits = UITraitCollection(traitsFrom: [
+        UITraitCollection(userInterfaceStyle: dark ? .dark : .light),
+        UITraitCollection(displayScale: 2.0),
+    ])
+    let bg = UIColor.systemBackground.resolvedColor(with: traits)
+    func bake(_ c: UIColor) -> Color {
+        let r = c.resolvedColor(with: traits)
+        var rr: CGFloat = 0, gg: CGFloat = 0, bb: CGFloat = 0, aa: CGFloat = 0
+        guard r.getRed(&rr, green: &gg, blue: &bb, alpha: &aa) else { return base.surface }
+        if aa >= 1 { return Color(.sRGB, red: Double(rr), green: Double(gg), blue: Double(bb), opacity: 1) }
+        // 半透明色 (systemFill 系): 合成到 systemBackground 取不透明等价色
+        var br: CGFloat = 0, bgg: CGFloat = 0, bgb: CGFloat = 0, ba: CGFloat = 0
+        bg.getRed(&br, green: &bgg, blue: &bgb, alpha: &ba)
+        return Color(.sRGB, red: Double(br * (1 - aa) + rr * aa),
+                     green: Double(bgg * (1 - aa) + gg * aa),
+                     blue: Double(bgb * (1 - aa) + bb * aa), opacity: 1)
+    }
+    return base.replacing(
+        primary: bake(UIColor.systemPurple),
+        onSurface: bake(UIColor.label),
+        onSurfaceVariant: bake(UIColor.secondaryLabel),
+        surface: bake(UIColor.secondarySystemBackground),
+        surfaceVariant: bake(UIColor.tertiarySystemFill))
+    #endif
+}
+
+/// iOS 26 主屏「透明/着色」小组件样式下的玻璃档配色 — 白 @ alpha 层级 (← WidgetGlassCompat)。
+/// 依据 Apple "Optimizing your widget for accented rendering mode and Liquid Glass":
+/// accented/vibrant 渲染中系统把所有不透明内容整组染白、仅保留 alpha, 背景移除换玻璃 —
+/// 与其被染色打乱, 不如自身就以 alpha 阶梯表达层级: 文字 100%/72%、课程卡底 30%、
+/// 表头容器 20%、chip/surfaceVariant 36%、页脚胶囊 24%; bg 全透明由玻璃材质托底。
+func glassWidgetScheme() -> WidgetScheme {
+    let w: (Double) -> Color = { Color.white.opacity($0) }
+    return WidgetScheme(
+        bg: .clear,
+        surface: w(0),
+        primary: w(1),
+        primaryContainer: w(0.30),
+        secondaryContainer: w(0.30),
+        onPrimaryContainer: w(1),
+        onSurface: w(1),
+        onSurfaceVariant: w(0.72),
+        surfaceContainer: w(0.20),
+        surfaceContainerLow: w(0.20),
+        surfaceContainerLowest: w(0.14),
+        surfaceVariant: w(0.36),
+        isDark: false,
+        isGlass: true
     )
 }
 
@@ -152,6 +226,9 @@ struct WeekData {
     var compactWindow: [DayData] = []
     /// 当前展示周状态 (← v1.0.60 WeekData.weekDisplayStatus)
     var weekDisplayStatus: WeekDisplayStatus = .normal
+    /// NEAREST_BUSY_DAY 档时被自动跳到的那一天 (← Android WeekData.nearestBusyTargetDate,
+    /// 周网格 SMALL 最小档 weekGridMinimumTodayData 定位单日; nil 回退旧口径)
+    var nearestBusyTargetDate: Date? = nil
 }
 
 /// 两天视图数据 ← TwoDayData
