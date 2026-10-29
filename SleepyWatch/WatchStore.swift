@@ -51,6 +51,27 @@ final class WatchStore: ObservableObject {
         (try? repo.getCourses(table.id)) ?? []
     }
 
+    /// 展示日语境 ← WidgetWeekDataLoader.resolve / ScheduleViewModel:259 逐参同口径:
+    /// nearest_busy_day 镜像开时, 今日无剩余课 → 跳最近有课日。
+    /// ⚠ 只作用于「周」语义 (手表周视图锚定周 = iOS 周页/WidgetWeekSource);
+    /// iOS 今日页 (TodayScreen) 恒真实今天不跳日 — 手表今日页同口径, 不调本函数。
+    /// (WeekDisplayResolver 已编入手表 target, 与手机同一决策核)。
+    func displayContext(_ table: TimeTableEntity, now: Date = Date()) -> WeekDisplayContext {
+        let courses = (try? repo.getCourses(table.id)) ?? []
+        return WeekDisplayResolver.resolve(
+            startDate: table.startDate, maxWeek: table.maxWeek, now: now,
+            courses: courses, timeJson: table.timeJson,
+            enabled: AppPrefs.shared.isNearestBusyDay(),
+            transfers: HolidayTransferHelper.transfers(for: table.id))
+    }
+
+    /// 周视图锚定日 — NEAREST_BUSY_DAY 档取 targetDate, 其余为今天
+    /// (← WidgetWeekSource.resolvedToday)
+    func weekAnchorDate(_ table: TimeTableEntity) -> Date {
+        let d = displayContext(table)
+        return d.status == .nearestBusyDay ? d.targetDate : Date()
+    }
+
     /// 某天课 — ← WidgetWeekDataLoader.coursesOn 全语义:
     /// 学期前「第 1 周课」预习照常显示 (previewBeforeStart)、学期后仅调休
     /// 补班日 (该日在 transfer 映射 sourceDate 集内) 显示映射到的周课, 否则空。

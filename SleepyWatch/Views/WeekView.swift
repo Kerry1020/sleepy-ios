@@ -17,7 +17,9 @@ struct WeekView: View {
             if let table = store.currentTable() {
                 ScrollView(.horizontal) {
                     HStack(alignment: .top, spacing: 8) {
-                        ForEach(weekColumns(today: Date()), id: \.self) { date in
+                        // 锚定周 ← ScheduleViewModel:259 / WidgetWeekSource.resolvedToday:
+                        // nearest_busy_day 镜像开且今日无剩余课 → 跳最近有课日所在周
+                        ForEach(weekColumns(anchor: store.weekAnchorDate(table)), id: \.self) { date in
                             dayColumn(date: date, table: table, scheme: scheme)
                         }
                     }
@@ -36,9 +38,9 @@ struct WeekView: View {
         .environment(\.defaultMinListRowHeight, 30)
     }
 
-    /// 周一..周日中可见的星期 (visible_days 1=一..7=日)
-    private func weekColumns(today: Date) -> [Date] {
-        store.weekDates(today: today)
+    /// 锚定周 (周一..周日) 中可见的星期 (visible_days 1=一..7=日)
+    private func weekColumns(anchor: Date) -> [Date] {
+        store.weekDates(today: anchor)
             .filter { store.visibleDays.contains(DateUtils.todayDayOfWeek(today: $0)) }
     }
 
