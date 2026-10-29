@@ -133,8 +133,10 @@ final class JwPekingParser: JwParser, JwParserConfidenceReporting {
 
     // MARK: - companion ← static
 
-    /// 上游 Common.nodePattern1 原文，不可改字符
-    private static let NODE_PATTERN1 = #"\d{1,2}[~]*\d*节"#
+    /// 上游 Common.nodePattern1 的 ASCII 口径等价形 (iOS 26 ICU 实测 `\d` 命中
+    /// CJK 数字 一 U+4E00/NBSP 域数字, Kotlin Regex 默认仅 [0-9] — 同
+    /// SleepyNativeFormat §2 文法注记): 语义逐字符对齐 Android, 仅数字类换 [0-9]。
+    private static let NODE_PATTERN1 = #"[0-9]{1,2}[~]*[0-9]*节"#
     private static let CHINESE_WEEK_LIST = ["", "周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 
     /// T8: table[class=datagrid] = 100; elective.pku = 90
