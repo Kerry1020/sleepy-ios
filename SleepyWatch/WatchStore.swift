@@ -130,8 +130,10 @@ final class WatchStore: ObservableObject {
 
     // MARK: - 显示口径 (v2 镜像 prefs 直读, 零独有开关)
 
-    /// 别名两档对位 iOS (行卡=列表档 week_use_alias, 详情/网格=grid_use_alias)
-    var useListAlias: Bool { AppPrefs.shared.isWeekUseAlias() }
+    /// 别名口径对位 iOS 实况: 仅网格周视图套 grid_use_alias (WeekView);
+    /// week_use_alias 属 iOS 纵向周页 (手表无该形态, 镜像落盘但不消费)。
+    /// 今日行卡/详情恒原名 (← TodayScreen:303 / CourseDetailSheet:44 实况,
+    /// 均不套别名)。
     var useGridAlias: Bool { AppPrefs.shared.isGridUseAlias() }
     /// 星期列显日期 ← show_date
     var showDate: Bool { AppPrefs.shared.isShowDate() }

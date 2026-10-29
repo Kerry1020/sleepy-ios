@@ -1,5 +1,7 @@
 // CourseDetailView.swift — 课程详情 (2026-10 watch 伴侣 App)
 // 手表 List→push 详情: 时间/节次/星期/周次/教师/教室/备注。
+// 名: 恒原名 — iOS CourseDetailSheet:44/72 直读 courseName 不套别名
+//     (别名只活在周视图/网格场景, issue#26 口径), 手表详情同规格。
 
 import SwiftUI
 
@@ -19,7 +21,7 @@ struct CourseDetailView: View {
                 Text(store.slotLabel(course, table: table))
                     .font(.system(size: 13, weight: .medium).monospacedDigit())
                     .foregroundColor(scheme.onSurfaceVariant)
-                Text(CourseDisplayUtil.displayName(course, store.useGridAlias && !course.alias.isEmpty))
+                Text(course.courseName)
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(scheme.onSurface)
                 infoRow(L10n.t("course_field_week"), course.nodeString(), scheme)
@@ -38,7 +40,7 @@ struct CourseDetailView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(10)
         }
-        .navigationTitle(Text(CourseDisplayUtil.displayName(course, !course.alias.isEmpty)))
+        .navigationTitle(Text(course.courseName))
     }
 
     private func infoRow(_ label: String, _ value: String, _ scheme: WidgetScheme) -> some View {

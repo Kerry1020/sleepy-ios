@@ -2,7 +2,8 @@
 // ← WidgetCourseCard 显示语义的 watch 重排: 左色条 + 时段/课名/教师·地点。
 // 色: CourseColorUtil issue#22 三态取色同源 (组行传入同 groupId 行集;
 //     无色模式镜像 course_colorless → 隐色条)。时段: slotLabel 镜像 display_mode。
-// 名: 别名口径镜像 week_use_alias (列表档), 恒「别名即显」是 v1 bug, v2 已修。
+// 名: 恒原名 — iOS 今日页 (TodayScreen:303 ← Android TodayScreen.kt:480) 不套
+//     别名, 手表今日页同口径; 别名只活在周视图/网格 (见 WeekView)。
 // meta「教师 · 地点」← TodayCourseCard 同拼接 (空段自动跳过)。
 
 import SwiftUI
@@ -39,7 +40,7 @@ struct CourseRowView: View {
                 Text(store.slotLabel(course, table: table))
                     .font(.system(size: 11, weight: .medium).monospacedDigit())
                     .foregroundColor(scheme.onSurfaceVariant)
-                Text(CourseDisplayUtil.displayName(course, store.useListAlias && !course.alias.isEmpty))
+                Text(course.courseName)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(scheme.onSurface)
                     .lineLimit(2)
