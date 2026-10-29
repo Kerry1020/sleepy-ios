@@ -9,6 +9,11 @@
 //  2. 每列 FIXED 窗口: availH = hDp − 58 − statusH, 行高 19 / 行距 0 / 页脚预留 19,
 //     截断时列底画「+N」(未截断不画,与 TwoDay 的「恒画」口径不同 —— 安卓即如此);
 //  3. 学期外顶部全宽状态行占位 16dp,同时从列可用高里扣掉。
+//     ★ 定稿 (PR#14 评审 2026-10-28): 仅学期外画状态行, 跳周态不画占位文案 ——
+//     Android 渲染器 (WidgetBitmapRenderers renderWeekListRegular/renderWeekViewRegular)
+//     只消费 statusH 预留高度、从不画跳周字; iOS 若把 statusH 扩到跳周态又不画字,
+//     开启「没课时显示最近有课的一天」(默认 ON) 时桌面 widget 顶部会凭空多一行空白
+//     (用户 2026-10-27 实拍反馈)。statusH 因此只随 semesterStatus != IN_RANGE 取值。
 //
 // v1.0.61 对齐 (F125, ← WeekListWidget.kt L183-206 + Receiver 闸门 L60-64):
 //  4. 装载器走 WidgetWeekDataLoader.resolve(kind) — 日期 = source.dateFor (钳制周=1
@@ -20,8 +25,8 @@
 //     「strikethrough」样式 (Android renderWeekListRegular L871-920);
 //  7. compactWindow = WidgetCompactWindow.build(...) 三天真实日期窗口 (2026-09-15 用户令,
 //     Android L199-205), SMALL 档日列 = compactShownDays 单一口径 (§9.1);
-//  8. statusH 闸门 = semesterStatus != IN_RANGE || weekDisplayStatus != NORMAL
-//     (Android L60-61); 今天列高亮 = isDateToday(day.date) (Android L828, 展示周≠自然周
+//  8. statusH 闸门 = semesterStatus != IN_RANGE (定稿见头注 3★, Android L60-61 的
+//     跳周分支不采); 今天列高亮 = isDateToday(day.date) (Android L828, 展示周≠自然周
 //     时按星期判会错列)。
 // forceScroll 条带 (WidgetScrollStore/ScrollStripService) = Android 专有宿主,
 // iOS 由列底「+N」窗口截断等价承担 (平台差异, 非缺陷; compactFace 不叠窗口的
@@ -130,17 +135,30 @@ struct WeekListWidgetEntryView: View {
     let entry: WeekListWidgetEntry
 
     var body: some View {
+        // iOS 26 「透明/着色」样式探测 (← WidgetBackgroundCompat): glass 态配色换白 alpha
+        WidgetGlassModeContent { isGlass in
+            content(isGlass: isGlass)
+        }
+        .widgetURL(URL(string: "sleepy://open"))
+    }
+
+    @ViewBuilder
+    private func content(isGlass: Bool) -> some View {
         let data = entry.data
         let isDark = effectiveWidgetIsDark(themeMode: data.themeMode, snapshotIsDark: entry.data.isDark, envScheme: widgetColorScheme)
-        let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: isDark)
+        let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: isDark, isGlass: isGlass)
         let colorless = AppPrefs.shared.isWidgetColorless()
         // issue#26: widget 全局一档别名开关
         let useAlias = AppPrefs.shared.isWidgetUseAlias()
         let todayDow = DateUtils.todayDayOfWeek(today: Date())
         let tier = WidgetLayoutTier(family: widgetFamily)
-        // 状态行占位 16dp ← Android push() L60-61:
-        // semesterStatus != IN_RANGE || weekDisplayStatus != NORMAL (自动跳最近有课日时同样抬列顶)
-        let statusH: CGFloat = (data.semesterStatus != .inRange || data.weekDisplayStatus != .normal) ? 16 : 0
+        // 状态行占位 16dp — 仅学期外画状态行才占位。
+        // ★ 定稿 (PR#14 评审 2026-10-28): Android statusH 闸门 (WeekListWidget.kt L60-61)
+        //   = semesterStatus != IN_RANGE || weekDisplayStatus != NORMAL, 但 Android 渲染器
+        //   从不画跳周字 (只消费 statusH 抬列顶); iOS 扩到跳周态会凭空多一行空白
+        //   (开启「没课时显示最近有课的一天」默认 ON 时, 用户 2026-10-27 实拍)。
+        //   statusH 只随 semesterStatus != IN_RANGE 取值。
+        let statusH: CGFloat = (data.semesterStatus != .inRange) ? 16 : 0
 
         return GeometryReader { proxy in
             // ← renderWeekList L786: SMALL 变体 + 容器 <150dp 才走 compact 脸,
@@ -194,7 +212,6 @@ struct WeekListWidgetEntryView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .sleepyWidgetBackground { s.bg }
-        .widgetURL(URL(string: "sleepy://open"))
     }
 }
 
@@ -252,7 +269,11 @@ private struct WeekListDayColumn: View {
                     ForEach(visible, id: \.id) { course in
                         // ★ 课程颜色背景 (对齐 WeekGrid 风格) — 统一入口 CourseColorUtil (决策 D3)
                         // issue#22: 同名课程多地点 — 用 day.courses 同 groupId 全行, 支持 AUTO/CUSTOM 按行判
-                        let bgColor = CourseColorUtil.pickCourseColorSwiftUIWithGroupRows(
+                        // iOS 26 「透明/着色」样式 (s.isGlass): 课程色被系统整组染白 →
+                        // 直接用白 alpha 底 (secondaryContainer=玻璃档 30%), 文字走 onSurface
+                        let glass = s.isGlass
+                        let bgColor = glass ? s.secondaryContainer
+                            : CourseColorUtil.pickCourseColorSwiftUIWithGroupRows(
                             course, groupRows: day.courses.filter { $0.groupId == course.groupId },
                             isDark: s.isDark, neutralColor: s.secondaryContainer, colorless: colorless)
                         Text(CourseDisplayUtil.displayName(course, useAlias))
@@ -263,8 +284,9 @@ private struct WeekListDayColumn: View {
                             // 安卓课名走 Typeface.DEFAULT 常规字重 (L899 在课程循环前重置),
                             // 与 drawCourse 的 BOLD 卡面不同 — 本渲染器是内联循环, 不继承 bold。
                             .font(.system(size: 9))
-                            .foregroundColor(CourseColorUtil.textColorOn(bg: bgColor, isDark: s.isDark,
-                                                                         onSurface: s.onSurface))
+                            .foregroundColor(glass ? s.onSurface
+                                : CourseColorUtil.textColorOn(bg: bgColor, isDark: s.isDark,
+                                                              onSurface: s.onSurface))
                             .opacity(greyAlpha) // 安卓 applyAlpha(文字色, 153/255) (L917-920)
                             .lineLimit(1)
                             .padding(.horizontal, 2) // 文字距胶囊左/右 2dp (安卓 x+coursePad+2, 截断预算 colW-10)

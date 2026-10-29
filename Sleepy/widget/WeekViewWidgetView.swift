@@ -57,17 +57,30 @@ struct WeekViewWidgetEntryView: View {
     let entry: WeekViewWidgetEntry
 
     var body: some View {
+        // iOS 26 「透明/着色」样式探测 (← WidgetBackgroundCompat): glass 态配色换白 alpha
+        WidgetGlassModeContent { isGlass in
+            content(isGlass: isGlass)
+        }
+        .widgetURL(URL(string: "sleepy://open"))
+    }
+
+    @ViewBuilder
+    private func content(isGlass: Bool) -> some View {
         let data = entry.data
         let isDark = effectiveWidgetIsDark(themeMode: data.themeMode, snapshotIsDark: data.isDark, envScheme: widgetColorScheme)
-        let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: isDark)
+        let s = resolveWidgetScheme(themeKey: data.themeKey, isDark: isDark, isGlass: isGlass)
         let showSeparator = AppPrefs.shared.isWidgetSeparator()
         let todayDow = DateUtils.todayDayOfWeek(today: Date())
         // issue#26: widget 全局一档别名开关
         let useAlias = AppPrefs.shared.isWidgetUseAlias()
         let tier = WidgetLayoutTier(family: widgetFamily)
-        // 状态行占位 16dp ← WeekViewWidget.kt L66-67: semesterStatus != IN_RANGE ||
-        // weekDisplayStatus != NORMAL (自动跳最近有课日时同样抬列顶)
-        let statusH: CGFloat = (data.semesterStatus != .inRange || data.weekDisplayStatus != .normal) ? 16 : 0
+        // 状态行占位 16dp — 仅学期外画状态行才占位。
+        // ★ 定稿 (PR#14 评审 2026-10-28): Android statusH 闸门 (WeekViewWidget.kt L66-67)
+        //   = semesterStatus != IN_RANGE || weekDisplayStatus != NORMAL, 但 Android 渲染器
+        //   从不画跳周字 (只消费 statusH 抬列顶); iOS 扩到跳周态又无占位文案时, 桌面
+        //   widget 顶部凭空多一行空白 (开启「没课时显示最近有课的一天」默认 ON 时,
+        //   用户 2026-10-27 实拍)。跳周态的可见标识 = 今天列被最近有课日数据替换本身。
+        let statusH: CGFloat = (data.semesterStatus != .inRange) ? 16 : 0
 
         return GeometryReader { proxy in
             // ← renderWeekView L1067: SMALL 变体 + 容器 <150dp 才走 compact 脸
@@ -123,7 +136,6 @@ struct WeekViewWidgetEntryView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .sleepyWidgetBackground { s.bg }
-        .widgetURL(URL(string: "sleepy://open"))
     }
 }
 

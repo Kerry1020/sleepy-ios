@@ -47,6 +47,7 @@ final class AppPrefs {
     static let KEY_PERIOD_HEADER_STYLE = "period_header_style" // arabic / chinese / financial / circled / roman, default arabic
     static let KEY_PERIOD_HEADER_HANGING = "period_header_hanging" // Float time-width units, -1..1, default 0
     static let KEY_PERIOD_HEADER_SHOW_X = "period_header_show_x" // boolean default false
+    static let KEY_PERIOD_HEADER_HIDE_TIME = "period_header_hide_time" // boolean default false (legacy header only)
     static let KEY_WIDGET_COLORLESS = "widget_colorless" // bool default false
     static let KEY_COURSE_COLORLESS = "course_colorless" // bool default false (App 课程胶囊专用)
     static let KEY_WIDGET_SEPARATOR = "widget_separator" // bool default true (WeekView 纯文字课程间分隔线)
@@ -703,6 +704,12 @@ final class AppPrefs {
     }
     func setPeriodHeaderShowX(_ value: Bool) {
         sp().set(value, forKey: Self.KEY_PERIOD_HEADER_SHOW_X)
+    }
+    func isPeriodHeaderHideTime() -> Bool {
+        sp().bool(forKey: Self.KEY_PERIOD_HEADER_HIDE_TIME)
+    }
+    func setPeriodHeaderHideTime(_ value: Bool) {
+        sp().set(value, forKey: Self.KEY_PERIOD_HEADER_HIDE_TIME)
     }
 
     // MARK: - 实验室开关组 getter(← AppPrefs.kt KEY_GRID_* / KEY_SHOW_VIEW_SWITCHER, v1.0.56)

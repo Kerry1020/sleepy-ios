@@ -102,17 +102,20 @@ final class WidgetLogicTests: XCTestCase {
         XCTAssertEqual(drawn[0].size, 4)  // 缩放至 nameAvailH
     }
 
-    // ==================== parseTimeSlots ====================
+    // ==================== timeSlotsFor (原 parseTimeSlots 消费面) ====================
 
     func testParseTimeSlotsValidJson() {
         let json = #"[{"start":"08:00","end":"08:45"},{"start":"08:55","end":"09:40"}]"#
-        XCTAssertEqual(WeekGridWidgetEntryView.parseTimeSlots(json), ["08:00", "08:55"])
+        let slots = TimeTableUtils.timeSlotsFor(timeJson: json)
+        XCTAssertEqual(slots.map(\.start), ["08:00", "08:55"])
+        XCTAssertEqual(slots.map(\.end), ["08:45", "09:40"])
     }
 
-    func testParseTimeSlotsInvalidFallsBackTo12() {
-        let slots = WeekGridWidgetEntryView.parseTimeSlots("not json")
-        XCTAssertEqual(slots.count, 12)
-        XCTAssertEqual(slots.first, "08:00")
+    /// WeekGrid 对齐 v1.0.61 后 slots 口径 = Android timeSlotsFor:
+    /// 非法/空 → 空数组 (旧入口的「回退默认 12 节」是 iOS 私有语义, Android 无此分支,
+    /// 已随 parseTimeSlots 移除; 默认 12 节兜底语义由 parseTimeSlotRows (编辑面) 承担)
+    func testParseTimeSlotsInvalidFallsBackToEmpty() {
+        XCTAssertEqual(TimeTableUtils.timeSlotsFor(timeJson: "not json"), [])
     }
 
     // ==================== WidgetTableResolver(默认表优先链) ====================
