@@ -955,6 +955,7 @@
 			children = (
 				A3F73FAB76399721B954DF20 /* AppGroupResolver.swift */,
 				DB174180E779B7796964E378 /* AppPrefs.swift */,
+				8EE9A72ECBA6F6B95C0697A5 /* PeriodHeaderLayoutModel.swift */,
 				D31FA03F7AF7A6E296C6B4BD /* ConflictDetailReporter.swift */,
 				D4045004893D9AB9C079A3CF /* ConflictLayoutEngine.swift */,
 				5F8589E7A5EA8C34355C1FFF /* CourseColorUtil.swift */,
@@ -1044,7 +1045,7 @@
 				9103FA65945B83156A93E926 /* NativeColorPicker.swift */,
 				2D5BFC656D3F3C24D3651480 /* NavigationRailBar.swift */,
 				2140942FC998369FA6029236 /* PeriodHeaderCellContent.swift */,
-				8EE9A72ECBA6F6B95C0697A5 /* PeriodHeaderLayoutModel.swift */,
+
 				D2A030E63E72EF0BC18A2CE2 /* PeriodTableShareSheet.swift */,
 				670EC898DF9415793C5762E3 /* PillNavigationBar.swift */,
 				AAA25C6698B82B80FF02AB1B /* SegmentedSwitcher.swift */,
