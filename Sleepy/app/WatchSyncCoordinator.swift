@@ -107,6 +107,21 @@ final class WatchSyncCoordinator: NSObject, WCSessionDelegate {
         scheduleSync()
     }
 
+    /// 手表 → iPhone transferUserInfo 回写通道 (WatchCommand 信封)。
+    /// 与 didReceiveApplicationContext 的「最近意图」语义不同: transferUserInfo
+    /// 是系统队列保序 + 断连重投, 适合需「每条都到、不丢、不重」的命令。
+    /// 幂等: WatchCommandConsumer 按信封 id 去重 — 断连重发的同 id 命令只消费
+    /// 一次。V1 仅接通入口 + 去重闸; requestContents/syncAck 仍各走既有通道
+    /// (sendMessage / context), 真实命令分派留二期 (决策 2: 编辑只在手机)。
+    public func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any]) {
+        guard let cmd = WatchCommand.from(userInfo: userInfo) else { return }
+        guard WatchCommandConsumer.shared.consume(cmd) else { return }  // 重复 id 跳过
+        // V1: 信封入口已接通 + 幂等生效; 按 type 分派留二期。
+        // 此处仅记录, 不触发任何数据修改 (零编辑纪律)。
+        WidgetArchiveLog.append(kind: "watch", family: "cmd",
+                                result: "recv \(cmd.type.rawValue) id=\(cmd.id.prefix(8))")
+    }
+
     // MARK: - 可达性 / 配对状态变化
 
     /// 手表可达性变化 (真实回调名, WCSessionDelegate 协议)。
