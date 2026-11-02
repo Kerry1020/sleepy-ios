@@ -49,7 +49,7 @@ enum CourseColorWriteGlue {
             }
             do {
                 try dao.upsertAll(rows)
-                CourseHueStore.shared.invalidate(mode: mode, dao: dao)
+                await CourseHueStore.shared.invalidate(mode: mode, dao: dao)
             } catch {
                 // 写失败 → 降级为不写, 配色增值数据红线
             }
@@ -76,7 +76,7 @@ enum CourseColorWriteGlue {
             }
             do {
                 try dao.upsertAll(rows)
-                CourseHueStore.shared.invalidate(mode: AppPrefs.shared.getCourseColorMode(), dao: dao)
+                await CourseHueStore.shared.invalidate(mode: AppPrefs.shared.getCourseColorMode(), dao: dao)
             } catch {
                 // 写失败 → 返回已写部分(空), 配色增值数据红线
             }
@@ -151,6 +151,19 @@ extension Array where Element: Hashable {
         var result: [Element] = []
         for element in self {
             let key = element[keyPath: keyPath]
+            if !seen.contains(key) {
+                seen.insert(key)
+                result.append(element)
+            }
+        }
+        return result
+    }
+
+    func distinct<T: Hashable>(by selector: (Element) -> T) -> [Element] {
+        var seen: Set<T> = []
+        var result: [Element] = []
+        for element in self {
+            let key = selector(element)
             if !seen.contains(key) {
                 seen.insert(key)
                 result.append(element)

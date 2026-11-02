@@ -16,7 +16,7 @@ struct CourseColorDao {
             var ids: [Int64] = []
             for var row in rows {
                 try row.insert(db, onConflict: .replace)
-                ids.append(row.rowid ?? 0)
+                ids.append(db.lastInsertedRowID)
             }
             return ids
         }
@@ -28,7 +28,7 @@ struct CourseColorDao {
         var r = row
         return try db.write { db in
             try r.insert(db, onConflict: .replace)
-            return r.rowid ?? 0
+            return db.lastInsertedRowID
         }
     }
 

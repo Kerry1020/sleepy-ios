@@ -26,6 +26,10 @@ struct SleepyWatchApp: App {
         // 调度器 repo 接线 (delegate 到货 handleDailyResync 冷启动即需,
         // 不等首次 applySnapshot)
         store.prepareScheduler()
+        // ← UITest/截图钩子: 无 iPhone 配对时直接播种镜像库 (同 SleepyApp 手法)
+        if ProcessInfo.processInfo.arguments.contains("-SLEEPY_UI_TEST_SEED") {
+            SleepyUITestSeeder.seed(database: AppDatabase.getShared())
+        }
     }
 
     var body: some Scene {

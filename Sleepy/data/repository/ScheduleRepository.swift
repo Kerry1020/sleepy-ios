@@ -322,10 +322,6 @@ final class ScheduleRepository {
 
     // ========== PeriodTable (issue#40 独立时间节次表) ==========
 
-    /// ← Android: 三 DAO 同源 db — init 注入 dbQueue, 禁自取单例
-    /// (测试/多库实例注入时观察流与写路径必须指向同一队列)。
-    private let periodTableDao: PeriodTableDao
-
     func getAllPeriodTables() throws -> [PeriodTableEntity] { try periodTableDao.getAll() }
 
     func getPeriodTable(_ id: Int64) throws -> PeriodTableEntity? { try periodTableDao.getById(id) }
@@ -473,7 +469,7 @@ final class ScheduleRepository {
                 dao: courseColorDao,
                 entities: [course]
             )
-            CourseHueStore.shared.invalidate(mode: AppPrefs.shared.getCourseColorMode(), dao: courseColorDao)
+            await CourseHueStore.shared.invalidate(mode: AppPrefs.shared.getCourseColorMode(), dao: courseColorDao)
         }
         return id
     }
@@ -493,7 +489,7 @@ final class ScheduleRepository {
                 dao: courseColorDao,
                 entities: withGroupIds
             )
-            CourseHueStore.shared.invalidate(mode: AppPrefs.shared.getCourseColorMode(), dao: courseColorDao)
+            await CourseHueStore.shared.invalidate(mode: AppPrefs.shared.getCourseColorMode(), dao: courseColorDao)
         }
         return ids
     }
