@@ -46,24 +46,27 @@ final class LocalPageServer {
             while true {
                 let client = accept(fd, nil, nil)
                 guard client >= 0 else { break }
-                var buf = [UInt8](repeating: 0, count: 4096)
-                _ = read(client, &buf, 4096)
-                let resp = """
-                HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n\
-                Content-Length: \(body.count)\r\nConnection: close\r\n\r\n
-                """
-                var out = resp.data(using: .utf8)!
-                out.append(body)
-                out.withUnsafeBytes { ptr in
-                    var sent = 0
-                    while sent < ptr.count {
-                        let n = write(client, ptr.baseAddress!.advanced(by: sent), ptr.count - sent)
-                        if n <= 0 { break }
-                        sent += n
+                // WebKit 的空预连接不能阻塞 accept 队列中的真实导航请求。
+                Thread {
+                    var buf = [UInt8](repeating: 0, count: 4096)
+                    _ = read(client, &buf, 4096)
+                    let resp = """
+                    HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n\
+                    Content-Length: \(body.count)\r\nConnection: close\r\n\r\n
+                    """
+                    var out = resp.data(using: .utf8)!
+                    out.append(body)
+                    out.withUnsafeBytes { ptr in
+                        var sent = 0
+                        while sent < ptr.count {
+                            let n = write(client, ptr.baseAddress!.advanced(by: sent), ptr.count - sent)
+                            if n <= 0 { break }
+                            sent += n
+                        }
                     }
-                }
-                close(client)
-                _ = pagePath
+                    close(client)
+                    _ = pagePath
+                }.start()
             }
         }
         acceptThread?.stackSize = 256 * 1024
