@@ -38,7 +38,8 @@ jobs:
     # xcodegen 新版生成的 pbxproj 是 format 77 (Xcode 16), macos-14 镜像的
     # Xcode 15.4 读不了 — 必须用 macos-15
     runs-on: macos-15
-    timeout-minutes: 45
+    # archive + 完整单测/UI 套件，避免原 45 分钟上限截断测试。
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
         with:
@@ -65,4 +66,13 @@ jobs:
             -project Sleepy.xcodeproj \
             -scheme Sleepy \
             -destination "platform=iOS Simulator,name=iPhone 16,OS=18.5" \
+            -resultBundlePath build/SimulatorTests.xcresult \
             | xcbeautify
+      - name: Upload simulator test results
+        if: always() && inputs.tests == 'yes'
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-test-results-${{ github.run_number }}
+          path: build/SimulatorTests.xcresult
+          if-no-files-found: warn
+          retention-days: 7
