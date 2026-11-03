@@ -8,6 +8,8 @@ enum DateUtils {
 
     static let isoCalendar: Calendar = {
         var c = Calendar(identifier: .iso8601)
+        // 与 parseDate / fmt 的民事日锚一致，不受设备或 CI 默认时区影响。
+        c.timeZone = TimeZone(identifier: "Asia/Shanghai")!
         c.firstWeekday = 2  // Monday
         c.minimumDaysInFirstWeek = 1
         return c
