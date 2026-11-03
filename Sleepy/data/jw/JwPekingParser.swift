@@ -133,8 +133,8 @@ final class JwPekingParser: JwParser, JwParserConfidenceReporting {
 
     // MARK: - companion ← static
 
-    /// 上游 Common.nodePattern1 原文，不可改字符
-    private static let NODE_PATTERN1 = #"\d{1,2}[~]*\d*节"#
+    /// 显式使用与 Kotlin 默认正则一致的 ASCII 数字，避免 ICU 将「周一」并入节次。
+    private static let NODE_PATTERN1 = #"[0-9]{1,2}[~]*[0-9]*节"#
     private static let CHINESE_WEEK_LIST = ["", "周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 
     /// T8: table[class=datagrid] = 100; elective.pku = 90
