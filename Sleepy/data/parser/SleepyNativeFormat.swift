@@ -303,11 +303,15 @@ enum SleepyNativeFormat {
     /// (NEL U+0085/U+2028 尾缀 find=true), ICU `$` 同构 → 两端一致; `\z` 反而制造分叉。
     static func parseClock(_ s: String) -> (h: Int, min: Int)? {
         let t = trimJava(s).replacingOccurrences(of: "：", with: ":")
-        guard let m = t.range(of: "^([0-9]{1,2}):([0-9]{2})$", options: .regularExpression) else { return nil }
-        let parts = t[m].components(separatedBy: ":")
+        let ns = t as NSString
+        // NSRegularExpression 的 $ 保留 Java 对末尾 Unicode 行终止符的兼容语义。
+        guard let m = CLOCK_RE.firstMatch(in: t, range: NSRange(location: 0, length: ns.length)) else { return nil }
+        let parts = ns.substring(with: m.range).components(separatedBy: ":")
         guard let h = Int(parts[0]), let min = Int(parts[1]), (0...23).contains(h), (0...59).contains(min) else { return nil }
         return (h, min)
     }
+
+    private static let CLOCK_RE = try! NSRegularExpression(pattern: "^([0-9]{1,2}):([0-9]{2})$")
 
     private static let DATE_RE = try! NSRegularExpression(pattern: "^([0-9]{4})[-/.]?([0-9]{1,2})[-/.]?([0-9]{1,2})$")
 
