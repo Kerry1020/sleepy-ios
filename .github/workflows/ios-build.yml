@@ -57,9 +57,12 @@ jobs:
           retention-days: 7
       - name: Run simulator tests
         if: inputs.tests == 'yes'
+        shell: bash
         run: |
+          # 保留 xcodebuild 的失败状态，避免 xcbeautify 管道造成假绿。
+          set -o pipefail
           xcodebuild test \
             -project Sleepy.xcodeproj \
             -scheme Sleepy \
-            -destination "platform=iOS Simulator,name=iPhone 15" \
+            -destination "platform=iOS Simulator,name=iPhone 16,OS=18.5" \
             | xcbeautify
