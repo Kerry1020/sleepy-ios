@@ -31,7 +31,10 @@
 
 import Foundation
 import UserNotifications
+// watchOS 不提供 BackgroundTasks；BGTask 相关实现也已排除 WATCH_APP。
+#if os(iOS)
 import BackgroundTasks
+#endif
 
 final class NotificationScheduler {
     static let shared = NotificationScheduler()
